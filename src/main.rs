@@ -3,7 +3,7 @@ use std::fs;
 use ratatui::{
     backend::CrosstermBackend,
     widgets::{Block, Borders, List, ListItem, ListState},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     Terminal, Frame,
 };
 use crossterm::{
@@ -160,9 +160,31 @@ impl App {
                     self.toggle_node(&path)?;
                 }
             }
+            KeyCode::Char('u') | KeyCode::Backspace => {
+                // Переходим к родительской директории
+                if let Some(parent) = self.root.path.parent() {
+                    let parent_path = parent.to_path_buf();
+                    let current_path = self.root.path.clone();
+
+                    let mut new_root = TreeNode::new(parent_path, 0)?;
+                    new_root.load_children()?;
+                    new_root.is_expanded = true;
+
+                    self.root = new_root;
+                    self.rebuild_flat_list();
+
+                    // Находим и выбираем предыдущую директорию
+                    for (i, node) in self.all_nodes.iter().enumerate() {
+                        if node.path == current_path {
+                            self.selected = i;
+                            break;
+                        }
+                    }
+                }
+            }
             _ => {}
         }
-        
+
         Ok(Some(PathBuf::new())) // Продолжаем работу
     }
     
@@ -206,7 +228,7 @@ impl App {
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
-                .title("Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, Enter: select, q: quit)"))
+                .title("Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, Enter: select, q: quit)"))
             .highlight_style(Style::default()
                 .add_modifier(Modifier::DIM))
             .highlight_symbol(">> ");
