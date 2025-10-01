@@ -3,6 +3,7 @@ use std::fs;
 use ratatui::{
     backend::CrosstermBackend,
     widgets::{Block, Borders, List, ListItem, ListState},
+    style::{Color, Modifier, Style},
     Terminal, Frame,
 };
 use crossterm::{
@@ -205,7 +206,12 @@ impl App {
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
-                .title("Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, Enter: select, q: quit)"));
+                .title("Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, Enter: select, q: quit)"))
+            .highlight_style(Style::default()
+                .bg(Color::Blue)
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD))
+            .highlight_symbol(">> ");
         
         frame.render_stateful_widget(list, frame.area(), &mut state);
     }
