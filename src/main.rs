@@ -208,9 +208,7 @@ impl App {
                 .borders(Borders::ALL)
                 .title("Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, Enter: select, q: quit)"))
             .highlight_style(Style::default()
-                .bg(Color::Blue)
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD))
+                .add_modifier(Modifier::DIM))
             .highlight_symbol(">> ");
         
         frame.render_stateful_widget(list, frame.area(), &mut state);
