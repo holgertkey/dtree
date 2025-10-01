@@ -219,21 +219,21 @@ impl App {
 
 fn main() -> Result<()> {
     let start_path = std::env::current_dir()?;
-    
+
     // Setup terminal
     enable_raw_mode()?;
-    std::io::stdout().execute(EnterAlternateScreen)?;
-    
-    let backend = CrosstermBackend::new(std::io::stdout());
+    std::io::stderr().execute(EnterAlternateScreen)?;
+
+    let backend = CrosstermBackend::new(std::io::stderr());
     let mut terminal = Terminal::new(backend)?;
     
     let mut app = App::new(start_path)?;
     let result = run_app(&mut terminal, &mut app);
-    
-    // Restore terminal
+
+    // Restore terminal BEFORE printing the path
     disable_raw_mode()?;
-    std::io::stdout().execute(LeaveAlternateScreen)?;
-    
+    std::io::stderr().execute(LeaveAlternateScreen)?;
+
     match result? {
         Some(path) => {
             // Выводим путь в stdout для bash-обёртки
@@ -244,7 +244,7 @@ fn main() -> Result<()> {
     }
 }
 
-fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut App) -> Result<Option<PathBuf>> {
+fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: &mut App) -> Result<Option<PathBuf>> {
     loop {
         terminal.draw(|f| app.render(f))?;
         
