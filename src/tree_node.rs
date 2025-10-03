@@ -31,7 +31,7 @@ impl TreeNode {
         })
     }
 
-    pub fn load_children(&mut self) -> Result<()> {
+    pub fn load_children(&mut self, show_files: bool) -> Result<()> {
         if !self.is_dir || !self.children.is_empty() {
             return Ok(());
         }
@@ -40,21 +40,29 @@ impl TreeNode {
 
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
-            // Показываем только директории
-            if path.is_dir() {
+            let is_dir = path.is_dir();
+
+            // Показываем директории всегда, файлы - только если show_files == true
+            if is_dir || show_files {
                 if let Ok(node) = TreeNode::new(path, self.depth + 1) {
                     self.children.push(node);
                 }
             }
         }
 
-        // Сортируем по имени
-        self.children.sort_by(|a, b| a.name.cmp(&b.name));
+        // Сортируем: сначала директории, потом файлы, внутри каждой группы - по имени
+        self.children.sort_by(|a, b| {
+            match (a.is_dir, b.is_dir) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.name.cmp(&b.name),
+            }
+        });
 
         Ok(())
     }
 
-    pub fn toggle_expand(&mut self) -> Result<()> {
+    pub fn toggle_expand(&mut self, show_files: bool) -> Result<()> {
         if !self.is_dir {
             return Ok(());
         }
@@ -62,7 +70,7 @@ impl TreeNode {
         if self.is_expanded {
             self.is_expanded = false;
         } else {
-            self.load_children()?;
+            self.load_children(show_files)?;
             self.is_expanded = true;
         }
 

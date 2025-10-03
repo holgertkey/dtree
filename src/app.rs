@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState},
-    style::{Modifier, Style},
+    style::{Modifier, Style, Color},
     Frame,
 };
 use crossterm::event::{KeyCode, KeyEvent};
@@ -14,12 +14,13 @@ pub struct App {
     flat_list: Vec<usize>, // Индексы видимых узлов
     selected: usize,
     all_nodes: Vec<TreeNode>,
+    show_files: bool,
 }
 
 impl App {
     pub fn new(start_path: PathBuf) -> Result<Self> {
         let mut root = TreeNode::new(start_path, 0)?;
-        root.load_children()?;
+        root.load_children(false)?;
         root.is_expanded = true;
 
         let mut app = App {
@@ -27,6 +28,7 @@ impl App {
             flat_list: Vec::new(),
             selected: 0,
             all_nodes: Vec::new(),
+            show_files: false,
         };
 
         app.rebuild_flat_list();
@@ -70,22 +72,28 @@ impl App {
             }
             KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
                 if key.code == KeyCode::Enter {
-                    // Enter - выбираем директорию
+                    // Enter - выбираем директорию (только если это директория)
                     if let Some(node) = self.get_selected_node() {
-                        return Ok(Some(node.path.clone()));
+                        if node.is_dir {
+                            return Ok(Some(node.path.clone()));
+                        }
                     }
                 } else {
-                    // Right - разворачиваем
+                    // Right - разворачиваем (только директории)
                     if let Some(node) = self.get_selected_node() {
-                        let path = node.path.clone();
-                        self.toggle_node(&path)?;
+                        if node.is_dir {
+                            let path = node.path.clone();
+                            self.toggle_node(&path)?;
+                        }
                     }
                 }
             }
             KeyCode::Char('h') | KeyCode::Left => {
                 if let Some(node) = self.get_selected_node() {
-                    let path = node.path.clone();
-                    self.toggle_node(&path)?;
+                    if node.is_dir {
+                        let path = node.path.clone();
+                        self.toggle_node(&path)?;
+                    }
                 }
             }
             KeyCode::Char('u') | KeyCode::Backspace => {
@@ -95,7 +103,7 @@ impl App {
                     let current_path = self.root.path.clone();
 
                     let mut new_root = TreeNode::new(parent_path, 0)?;
-                    new_root.load_children()?;
+                    new_root.load_children(self.show_files)?;
                     new_root.is_expanded = true;
 
                     self.root = new_root;
@@ -110,6 +118,11 @@ impl App {
                     }
                 }
             }
+            KeyCode::Char('s') => {
+                // Переключаем режим показа файлов
+                self.show_files = !self.show_files;
+                self.reload_tree()?;
+            }
             _ => {}
         }
 
@@ -117,24 +130,45 @@ impl App {
     }
 
     fn toggle_node(&mut self, path: &Path) -> Result<()> {
-        Self::toggle_node_recursive(&mut self.root, path)?;
+        Self::toggle_node_recursive(&mut self.root, path, self.show_files)?;
         self.rebuild_flat_list();
         Ok(())
     }
 
-    fn toggle_node_recursive(node: &mut TreeNode, target_path: &Path) -> Result<bool> {
+    fn toggle_node_recursive(node: &mut TreeNode, target_path: &Path, show_files: bool) -> Result<bool> {
         if node.path == target_path {
-            node.toggle_expand()?;
+            node.toggle_expand(show_files)?;
             return Ok(true);
         }
 
         for child in &mut node.children {
-            if Self::toggle_node_recursive(child, target_path)? {
+            if Self::toggle_node_recursive(child, target_path, show_files)? {
                 return Ok(true);
             }
         }
 
         Ok(false)
+    }
+
+    fn reload_tree(&mut self) -> Result<()> {
+        // Перезагружаем дерево с новым режимом показа файлов
+        Self::reload_node_recursive(&mut self.root, self.show_files)?;
+        self.rebuild_flat_list();
+        Ok(())
+    }
+
+    fn reload_node_recursive(node: &mut TreeNode, show_files: bool) -> Result<()> {
+        if node.is_expanded && node.is_dir {
+            // Очищаем детей и перезагружаем с новым режимом
+            node.children.clear();
+            node.load_children(show_files)?;
+
+            // Рекурсивно перезагружаем дочерние узлы
+            for child in &mut node.children {
+                Self::reload_node_recursive(child, show_files)?;
+            }
+        }
+        Ok(())
     }
 
     pub fn render(&mut self, frame: &mut Frame) {
@@ -147,16 +181,30 @@ impl App {
             };
 
             let text = format!("{}{}{}", indent, icon, node.name);
-            ListItem::new(text)
+
+            // Директории - белым, файлы - серым
+            let style = if node.is_dir {
+                Style::default().fg(Color::White)
+            } else {
+                Style::default().fg(Color::DarkGray)
+            };
+
+            ListItem::new(text).style(style)
         }).collect();
 
         let mut state = ListState::default();
         state.select(Some(self.selected));
 
+        let title = if self.show_files {
+            "Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, s: hide files, Enter: select, q: quit)"
+        } else {
+            "Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, s: show files, Enter: select, q: quit)"
+        };
+
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
-                .title("Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, Enter: select, q: quit)"))
+                .title(title))
             .highlight_style(Style::default()
                 .add_modifier(Modifier::DIM))
             .highlight_symbol(">> ");
