@@ -37,6 +37,7 @@ pub struct App {
     viewer_area_start: u16,    // Начало области просмотра файла (x)
     viewer_area_top: u16,      // Верхняя граница области просмотра (y)
     viewer_area_height: u16,   // Высота области просмотра
+    show_help: bool,           // Показывать ли help вместо содержимого файла
 }
 
 impl App {
@@ -67,6 +68,7 @@ impl App {
             viewer_area_start: 0,
             viewer_area_top: 0,
             viewer_area_height: 0,
+            show_help: false,
         };
 
         app.rebuild_flat_list();
@@ -93,6 +95,66 @@ impl App {
 
     fn get_selected_node(&self) -> Option<&TreeNode> {
         self.all_nodes.get(self.selected)
+    }
+
+    fn get_help_content() -> Vec<String> {
+        vec![
+            "DTREE - Interactive Directory Tree Navigator".to_string(),
+            "".to_string(),
+            "DESCRIPTION".to_string(),
+            "  dtree is a lightweight TUI application for interactive directory tree".to_string(),
+            "  navigation. It provides a visual tree view with file preview capabilities.".to_string(),
+            "".to_string(),
+            "KEYBOARD NAVIGATION".to_string(),
+            "  ↑/k, ↓/j       Navigate up/down through the tree".to_string(),
+            "  →/l            Expand directory (show subdirectories)".to_string(),
+            "  ←/h            Collapse directory (hide subdirectories)".to_string(),
+            "  u, Backspace   Go to parent directory (change root)".to_string(),
+            "  Enter          Select directory and exit (cd to selected)".to_string(),
+            "  q, Esc         Quit without selection".to_string(),
+            "".to_string(),
+            "FILE VIEWER".to_string(),
+            "  s              Toggle file viewer mode".to_string(),
+            "                 When enabled: shows files and preview panel".to_string(),
+            "                 When disabled: shows only directories".to_string(),
+            "  Ctrl+j         Scroll down in file preview".to_string(),
+            "  Ctrl+k         Scroll up in file preview".to_string(),
+            "".to_string(),
+            "MOUSE SUPPORT".to_string(),
+            "  Click          Select item in tree / Drag splitter".to_string(),
+            "  Double-click   Expand/collapse directory".to_string(),
+            "  Scroll wheel   Navigate tree or scroll file preview".to_string(),
+            "                 (depends on cursor position)".to_string(),
+            "".to_string(),
+            "INFORMATION".to_string(),
+            "  i              Show this help screen".to_string(),
+            "".to_string(),
+            "FILE PREVIEW FEATURES".to_string(),
+            "  • First 1000 lines of text files".to_string(),
+            "  • File information: name, size, lines, permissions".to_string(),
+            "  • Binary file detection".to_string(),
+            "  • Adjustable split view (drag the divider)".to_string(),
+            "".to_string(),
+            "USAGE EXAMPLE".to_string(),
+            "  Add this function to your ~/.bashrc:".to_string(),
+            "".to_string(),
+            "    dt() {".to_string(),
+            "      local result=$(command dtree \"$@\")".to_string(),
+            "      if [ -n \"$result\" ]; then".to_string(),
+            "        cd \"$result\" || return".to_string(),
+            "      fi".to_string(),
+            "    }".to_string(),
+            "".to_string(),
+            "  Then use: dt".to_string(),
+            "".to_string(),
+            "TIPS".to_string(),
+            "  • Files are filtered out by default - press 's' to see them".to_string(),
+            "  • Use mouse to quickly navigate - double-click to expand".to_string(),
+            "  • The selected path is printed to stdout on exit".to_string(),
+            "  • UI is rendered to stderr, so path output is clean".to_string(),
+            "".to_string(),
+            "Press 'i' again to close this help screen".to_string(),
+        ]
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<Option<PathBuf>> {
@@ -196,6 +258,7 @@ impl App {
             KeyCode::Char('s') => {
                 // Переключаем режим показа файлов
                 self.show_files = !self.show_files;
+                self.show_help = false; // Закрываем help при переключении режима
                 self.reload_tree()?;
 
                 // Загружаем содержимое текущего файла при включении режима
@@ -204,6 +267,17 @@ impl App {
                     if let Some(p) = path {
                         let _ = self.load_file_content(&p);
                     }
+                }
+            }
+            KeyCode::Char('i') => {
+                // Переключаем показ help
+                self.show_help = !self.show_help;
+                self.file_scroll = 0; // Сбрасываем скролл при открытии help
+
+                // Включаем режим файлов, если он еще не включен
+                if self.show_help && !self.show_files {
+                    self.show_files = true;
+                    self.reload_tree()?;
                 }
             }
             _ => {}
@@ -486,11 +560,7 @@ impl App {
         let mut state = ListState::default();
         state.select(Some(self.selected));
 
-        let title = if self.show_files {
-            "Tree (↑↓/jk/scroll: nav, →l/dblclick: expand, ←h: collapse, u: parent, s: hide files, Ctrl+j/k: scroll, Enter: select, q: quit)"
-        } else {
-            "Tree (↑↓/jk/scroll: navigate, →l/dblclick: expand, ←h: collapse, u/Backspace: parent, s: show files, Enter: select, q: quit)"
-        };
+        let title = "Directory Tree (↑↓/jk: navigate | Enter: select | q: quit | i: help)";
 
         let list = List::new(items)
             .block(Block::default()
@@ -511,19 +581,26 @@ impl App {
 
         let content_height = area.height.saturating_sub(2) as usize; // -2 для рамки
 
+        // Если показываем help, используем его содержимое
+        let content_to_display = if self.show_help {
+            Self::get_help_content()
+        } else {
+            self.file_content.clone()
+        };
+
         // Формируем отображаемые строки с учетом скролла
         // Оставляем место для разделителя (1 строка) + информации о файле (1 строка)
         let lines_to_show = content_height.saturating_sub(2);
 
-        let mut visible_lines: Vec<Line> = self.file_content
+        let mut visible_lines: Vec<Line> = content_to_display
             .iter()
             .skip(self.file_scroll)
             .take(lines_to_show)
             .map(|line| Line::from(line.as_str()))
             .collect();
 
-        // Добавляем разделитель и информацию о файле в конец
-        if !self.current_file_path.as_os_str().is_empty() {
+        // Добавляем разделитель и информацию о файле в конец (только если не help)
+        if !self.show_help && !self.current_file_path.as_os_str().is_empty() {
             let file_info = self.format_file_info();
             let separator = "─".repeat(area.width.saturating_sub(2) as usize);
 
@@ -535,13 +612,17 @@ impl App {
             ));
         }
 
-        let scroll_info = if self.file_content.len() > lines_to_show {
-            format!(" [↕ {}/{}]", self.file_scroll + 1, self.file_content.len())
+        let scroll_info = if content_to_display.len() > lines_to_show {
+            format!(" [↕ {}/{}]", self.file_scroll + 1, content_to_display.len())
         } else {
             String::new()
         };
 
-        let title = format!("File Viewer{}", scroll_info);
+        let title = if self.show_help {
+            format!("Help{}", scroll_info)
+        } else {
+            format!("File Viewer{}", scroll_info)
+        };
 
         let paragraph = Paragraph::new(visible_lines)
             .block(Block::default()
