@@ -97,7 +97,7 @@ impl App {
         self.all_nodes.get(self.selected)
     }
 
-    fn get_help_content() -> Vec<String> {
+    pub fn get_help_content() -> Vec<String> {
         vec![
             "DTREE - Interactive Directory Tree Navigator".to_string(),
             "".to_string(),
