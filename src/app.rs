@@ -236,6 +236,7 @@ impl App {
                         let path = self.get_selected_node().map(|n| n.path.clone());
                         if let Some(p) = path {
                             let _ = self.load_file_content(&p);
+                            self.show_help = false; // Закрываем help при просмотре файла
                         }
                     }
                 }
@@ -247,6 +248,7 @@ impl App {
                     let path = self.get_selected_node().map(|n| n.path.clone());
                     if let Some(p) = path {
                         let _ = self.load_file_content(&p);
+                        self.show_help = false; // Закрываем help при просмотре файла
                     }
                 }
             }
@@ -407,6 +409,7 @@ impl App {
                             if self.show_files {
                                 let path = self.all_nodes[clicked_row].path.clone();
                                 let _ = self.load_file_content(&path);
+                                self.show_help = false; // Закрываем help при просмотре файла
                             }
                         }
                     }
@@ -446,6 +449,7 @@ impl App {
                         let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
                         if let Some(p) = path {
                             let _ = self.load_file_content(&p);
+                            self.show_help = false; // Закрываем help при просмотре файла
                         }
                     }
                 }
@@ -479,6 +483,7 @@ impl App {
                             let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
                             if let Some(p) = path {
                                 let _ = self.load_file_content(&p);
+                                self.show_help = false; // Закрываем help при просмотре файла
                             }
                         }
                     }
