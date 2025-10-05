@@ -1,10 +1,14 @@
 use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use ratatui::{
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     style::{Modifier, Style, Color},
+    layout::{Layout, Constraint, Direction},
+    text::Line,
     Frame,
 };
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
 use anyhow::Result;
 
 use crate::tree_node::TreeNode;
@@ -15,6 +19,10 @@ pub struct App {
     selected: usize,
     all_nodes: Vec<TreeNode>,
     show_files: bool,
+    file_content: Vec<String>, // Содержимое просматриваемого файла
+    file_scroll: usize,        // Позиция скролла в файле
+    split_position: u16,       // Позиция разделителя (ширина левой панели в %)
+    dragging: bool,            // Флаг перетаскивания разделителя
 }
 
 impl App {
@@ -29,6 +37,10 @@ impl App {
             selected: 0,
             all_nodes: Vec::new(),
             show_files: false,
+            file_content: Vec::new(),
+            file_scroll: 0,
+            split_position: 50, // 50% ширины по умолчанию
+            dragging: false,
         };
 
         app.rebuild_flat_list();
@@ -58,6 +70,29 @@ impl App {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<Option<PathBuf>> {
+        // Обработка Ctrl+j/k для скролла в области просмотра файла
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            match key.code {
+                KeyCode::Char('j') => {
+                    // Скролл вниз в области просмотра
+                    if self.show_files && !self.file_content.is_empty() {
+                        if self.file_scroll < self.file_content.len().saturating_sub(1) {
+                            self.file_scroll += 1;
+                        }
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('k') => {
+                    // Скролл вверх в области просмотра
+                    if self.show_files {
+                        self.file_scroll = self.file_scroll.saturating_sub(1);
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
+                _ => {}
+            }
+        }
+
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 return Ok(None);
@@ -65,10 +100,24 @@ impl App {
             KeyCode::Char('j') | KeyCode::Down => {
                 if self.selected < self.all_nodes.len().saturating_sub(1) {
                     self.selected += 1;
+                    // Обновляем содержимое файла при навигации
+                    if self.show_files {
+                        let path = self.get_selected_node().map(|n| n.path.clone());
+                        if let Some(p) = path {
+                            let _ = self.load_file_content(&p);
+                        }
+                    }
                 }
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 self.selected = self.selected.saturating_sub(1);
+                // Обновляем содержимое файла при навигации
+                if self.show_files {
+                    let path = self.get_selected_node().map(|n| n.path.clone());
+                    if let Some(p) = path {
+                        let _ = self.load_file_content(&p);
+                    }
+                }
             }
             KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
                 if key.code == KeyCode::Enter {
@@ -122,6 +171,14 @@ impl App {
                 // Переключаем режим показа файлов
                 self.show_files = !self.show_files;
                 self.reload_tree()?;
+
+                // Загружаем содержимое текущего файла при включении режима
+                if self.show_files {
+                    let path = self.get_selected_node().map(|n| n.path.clone());
+                    if let Some(p) = path {
+                        let _ = self.load_file_content(&p);
+                    }
+                }
             }
             _ => {}
         }
@@ -171,7 +228,114 @@ impl App {
         Ok(())
     }
 
+    pub fn handle_mouse(&mut self, mouse: MouseEvent) {
+        if !self.show_files {
+            return; // Мышь работает только в режиме просмотра файлов
+        }
+
+        match mouse.kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                // Начинаем перетаскивание, если клик рядом с разделителем
+                let terminal_width = 100; // Будем использовать проценты
+                let divider_pos = self.split_position;
+                let click_pos = (mouse.column as u16 * 100) / terminal_width;
+
+                // Проверяем, что клик в зоне разделителя (±2%)
+                if click_pos.abs_diff(divider_pos) <= 2 {
+                    self.dragging = true;
+                }
+            }
+            MouseEventKind::Drag(MouseButton::Left) => {
+                if self.dragging {
+                    // Обновляем позицию разделителя
+                    let terminal_width = 100;
+                    let new_pos = (mouse.column as u16 * 100) / terminal_width;
+
+                    // Ограничиваем диапазон 20-80%
+                    self.split_position = new_pos.clamp(20, 80);
+                }
+            }
+            MouseEventKind::Up(MouseButton::Left) => {
+                self.dragging = false;
+            }
+            _ => {}
+        }
+    }
+
+    fn load_file_content(&mut self, path: &Path) -> Result<()> {
+        const MAX_LINES: usize = 1000;
+
+        self.file_content.clear();
+        self.file_scroll = 0;
+
+        // Проверяем, что это файл
+        if !path.is_file() {
+            self.file_content.push("[Directory]".to_string());
+            return Ok(());
+        }
+
+        // Пытаемся открыть файл
+        let file = match File::open(path) {
+            Ok(f) => f,
+            Err(e) => {
+                self.file_content.push(format!("[Error: {}]", e));
+                return Ok(());
+            }
+        };
+
+        let reader = BufReader::new(file);
+        let mut line_count = 0;
+
+        for line in reader.lines() {
+            if line_count >= MAX_LINES {
+                self.file_content.push(format!("\n[... truncated at {} lines ...]", MAX_LINES));
+                break;
+            }
+
+            match line {
+                Ok(content) => {
+                    self.file_content.push(content);
+                    line_count += 1;
+                }
+                Err(_) => {
+                    // Возможно бинарный файл
+                    self.file_content.clear();
+                    self.file_content.push("[Binary file]".to_string());
+                    break;
+                }
+            }
+        }
+
+        if self.file_content.is_empty() {
+            self.file_content.push("[Empty file]".to_string());
+        }
+
+        Ok(())
+    }
+
     pub fn render(&mut self, frame: &mut Frame) {
+        // Если режим просмотра файлов включен, делим экран
+        if self.show_files {
+            let chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(self.split_position),
+                    Constraint::Percentage(100 - self.split_position),
+                ])
+                .split(frame.area());
+
+            // Левая панель - дерево каталогов
+            self.render_tree(frame, chunks[0]);
+
+            // Правая панель - просмотр файла
+            self.render_file_viewer(frame, chunks[1]);
+        } else {
+            // Полноэкранный режим - только дерево
+            self.render_tree(frame, frame.area());
+        }
+    }
+
+    fn render_tree(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {
         let items: Vec<ListItem> = self.all_nodes.iter().map(|node| {
             let indent = "  ".repeat(node.depth);
             let icon = if node.is_dir {
@@ -196,9 +360,9 @@ impl App {
         state.select(Some(self.selected));
 
         let title = if self.show_files {
-            "Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, s: hide files, Enter: select, q: quit)"
+            "Tree (↑↓/jk: nav, →l: expand, ←h: collapse, u: parent, s: hide files, Ctrl+j/k: scroll, Enter: select, q: quit)"
         } else {
-            "Directory Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, s: show files, Enter: select, q: quit)"
+            "Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, s: show files, Enter: select, q: quit)"
         };
 
         let list = List::new(items)
@@ -209,6 +373,33 @@ impl App {
                 .add_modifier(Modifier::DIM))
             .highlight_symbol(">> ");
 
-        frame.render_stateful_widget(list, frame.area(), &mut state);
+        frame.render_stateful_widget(list, area, &mut state);
+    }
+
+    fn render_file_viewer(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let content_height = area.height.saturating_sub(2) as usize; // -2 для рамки
+
+        // Формируем отображаемые строки с учетом скролла
+        let visible_lines: Vec<Line> = self.file_content
+            .iter()
+            .skip(self.file_scroll)
+            .take(content_height)
+            .map(|line| Line::from(line.as_str()))
+            .collect();
+
+        let scroll_info = if self.file_content.len() > content_height {
+            format!(" [↕ {}/{}]", self.file_scroll + 1, self.file_content.len())
+        } else {
+            String::new()
+        };
+
+        let title = format!("File Viewer{}", scroll_info);
+
+        let paragraph = Paragraph::new(visible_lines)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(title));
+
+        frame.render_widget(paragraph, area);
     }
 }
