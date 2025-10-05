@@ -423,7 +423,10 @@ impl App {
             self.render_file_viewer(frame, chunks[1]);
         } else {
             // Полноэкранный режим - только дерево
-            self.render_tree(frame, frame.area());
+            let area = frame.area();
+            self.tree_area_start = area.x;
+            self.tree_area_end = area.x + area.width;
+            self.render_tree(frame, area);
         }
     }
 
