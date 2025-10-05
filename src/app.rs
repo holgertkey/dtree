@@ -34,6 +34,9 @@ pub struct App {
     last_click_time: Option<(Instant, usize)>, // Время и индекс последнего клика для двойного клика
     tree_area_top: u16,        // Верхняя граница области дерева (y)
     tree_area_height: u16,     // Высота области дерева
+    viewer_area_start: u16,    // Начало области просмотра файла (x)
+    viewer_area_top: u16,      // Верхняя граница области просмотра (y)
+    viewer_area_height: u16,   // Высота области просмотра
 }
 
 impl App {
@@ -61,6 +64,9 @@ impl App {
             last_click_time: None,
             tree_area_top: 0,
             tree_area_height: 0,
+            viewer_area_start: 0,
+            viewer_area_top: 0,
+            viewer_area_height: 0,
         };
 
         app.rebuild_flat_list();
@@ -308,27 +314,49 @@ impl App {
                 self.dragging = false;
             }
             MouseEventKind::ScrollUp => {
-                // Скролл вверх в дереве
-                self.selected = self.selected.saturating_sub(1);
-
-                // Обновляем содержимое файла
-                if self.show_files {
-                    let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
-                    if let Some(p) = path {
-                        let _ = self.load_file_content(&p);
-                    }
-                }
-            }
-            MouseEventKind::ScrollDown => {
-                // Скролл вниз в дереве
-                if self.selected < self.all_nodes.len().saturating_sub(1) {
-                    self.selected += 1;
+                // Проверяем, над какой областью происходит скролл
+                if self.show_files && mouse.column >= self.viewer_area_start
+                    && mouse.row >= self.viewer_area_top
+                    && mouse.row < self.viewer_area_top + self.viewer_area_height {
+                    // Скролл в области просмотра файла
+                    self.file_scroll = self.file_scroll.saturating_sub(1);
+                } else {
+                    // Скролл вверх в дереве
+                    self.selected = self.selected.saturating_sub(1);
 
                     // Обновляем содержимое файла
                     if self.show_files {
                         let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
                         if let Some(p) = path {
                             let _ = self.load_file_content(&p);
+                        }
+                    }
+                }
+            }
+            MouseEventKind::ScrollDown => {
+                // Проверяем, над какой областью происходит скролл
+                if self.show_files && mouse.column >= self.viewer_area_start
+                    && mouse.row >= self.viewer_area_top
+                    && mouse.row < self.viewer_area_top + self.viewer_area_height {
+                    // Скролл в области просмотра файла
+                    let content_height = self.viewer_area_height.saturating_sub(2) as usize;
+                    let lines_to_show = content_height.saturating_sub(2);
+                    let max_scroll = self.file_content.len().saturating_sub(lines_to_show);
+
+                    if self.file_scroll < max_scroll {
+                        self.file_scroll += 1;
+                    }
+                } else {
+                    // Скролл вниз в дереве
+                    if self.selected < self.all_nodes.len().saturating_sub(1) {
+                        self.selected += 1;
+
+                        // Обновляем содержимое файла
+                        if self.show_files {
+                            let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
+                            if let Some(p) = path {
+                                let _ = self.load_file_content(&p);
+                            }
                         }
                     }
                 }
@@ -475,7 +503,12 @@ impl App {
         frame.render_stateful_widget(list, area, &mut state);
     }
 
-    fn render_file_viewer(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+    fn render_file_viewer(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        // Сохраняем координаты области просмотра для обработки мыши
+        self.viewer_area_start = area.x;
+        self.viewer_area_top = area.y;
+        self.viewer_area_height = area.height;
+
         let content_height = area.height.saturating_sub(2) as usize; // -2 для рамки
 
         // Формируем отображаемые строки с учетом скролла
