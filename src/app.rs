@@ -23,6 +23,9 @@ pub struct App {
     file_scroll: usize,        // Позиция скролла в файле
     split_position: u16,       // Позиция разделителя (ширина левой панели в %)
     dragging: bool,            // Флаг перетаскивания разделителя
+    terminal_width: u16,       // Текущая ширина терминала
+    tree_area_start: u16,      // Начало области дерева
+    tree_area_end: u16,        // Конец области дерева
 }
 
 impl App {
@@ -41,6 +44,9 @@ impl App {
             file_scroll: 0,
             split_position: 50, // 50% ширины по умолчанию
             dragging: false,
+            terminal_width: 0,
+            tree_area_start: 0,
+            tree_area_end: 0,
         };
 
         app.rebuild_flat_list();
@@ -235,21 +241,18 @@ impl App {
 
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                // Начинаем перетаскивание, если клик рядом с разделителем
-                let terminal_width = 100; // Будем использовать проценты
-                let divider_pos = self.split_position;
-                let click_pos = (mouse.column as u16 * 100) / terminal_width;
+                // Вычисляем реальную позицию разделителя в пикселях
+                let divider_col = (self.terminal_width * self.split_position) / 100;
 
-                // Проверяем, что клик в зоне разделителя (±2%)
-                if click_pos.abs_diff(divider_pos) <= 2 {
+                // Проверяем, что клик рядом с разделителем (±2 символа)
+                if mouse.column.abs_diff(divider_col) <= 2 {
                     self.dragging = true;
                 }
             }
             MouseEventKind::Drag(MouseButton::Left) => {
-                if self.dragging {
-                    // Обновляем позицию разделителя
-                    let terminal_width = 100;
-                    let new_pos = (mouse.column as u16 * 100) / terminal_width;
+                if self.dragging && self.terminal_width > 0 {
+                    // Конвертируем позицию мыши в проценты
+                    let new_pos = (mouse.column as u16 * 100) / self.terminal_width;
 
                     // Ограничиваем диапазон 20-80%
                     self.split_position = new_pos.clamp(20, 80);
@@ -314,6 +317,9 @@ impl App {
     }
 
     pub fn render(&mut self, frame: &mut Frame) {
+        // Сохраняем ширину терминала для обработки мыши
+        self.terminal_width = frame.area().width;
+
         // Если режим просмотра файлов включен, делим экран
         if self.show_files {
             let chunks = Layout::default()
@@ -323,6 +329,10 @@ impl App {
                     Constraint::Percentage(100 - self.split_position),
                 ])
                 .split(frame.area());
+
+            // Сохраняем границы области дерева
+            self.tree_area_start = chunks[0].x;
+            self.tree_area_end = chunks[0].x + chunks[0].width;
 
             // Левая панель - дерево каталогов
             self.render_tree(frame, chunks[0]);
