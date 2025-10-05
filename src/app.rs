@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     style::{Modifier, Style, Color},
     layout::{Layout, Constraint, Direction},
-    text::Line,
+    text::{Line, Span},
     Frame,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
@@ -26,6 +26,8 @@ pub struct App {
     terminal_width: u16,       // Текущая ширина терминала
     tree_area_start: u16,      // Начало области дерева
     tree_area_end: u16,        // Конец области дерева
+    current_file_path: PathBuf, // Путь к текущему просматриваемому файлу
+    current_file_size: u64,    // Размер файла в байтах
 }
 
 impl App {
@@ -47,6 +49,8 @@ impl App {
             terminal_width: 0,
             tree_area_start: 0,
             tree_area_end: 0,
+            current_file_path: PathBuf::new(),
+            current_file_size: 0,
         };
 
         app.rebuild_flat_list();
@@ -270,11 +274,18 @@ impl App {
 
         self.file_content.clear();
         self.file_scroll = 0;
+        self.current_file_path = path.to_path_buf();
+        self.current_file_size = 0;
 
         // Проверяем, что это файл
         if !path.is_file() {
             self.file_content.push("[Directory]".to_string());
             return Ok(());
+        }
+
+        // Получаем метаданные файла
+        if let Ok(metadata) = std::fs::metadata(path) {
+            self.current_file_size = metadata.len();
         }
 
         // Пытаемся открыть файл
@@ -390,14 +401,30 @@ impl App {
         let content_height = area.height.saturating_sub(2) as usize; // -2 для рамки
 
         // Формируем отображаемые строки с учетом скролла
-        let visible_lines: Vec<Line> = self.file_content
+        // Оставляем место для разделителя (1 строка) + информации о файле (1 строка)
+        let lines_to_show = content_height.saturating_sub(2);
+
+        let mut visible_lines: Vec<Line> = self.file_content
             .iter()
             .skip(self.file_scroll)
-            .take(content_height)
+            .take(lines_to_show)
             .map(|line| Line::from(line.as_str()))
             .collect();
 
-        let scroll_info = if self.file_content.len() > content_height {
+        // Добавляем разделитель и информацию о файле в конец
+        if !self.current_file_path.as_os_str().is_empty() {
+            let file_info = self.format_file_info();
+            let separator = "─".repeat(area.width.saturating_sub(2) as usize);
+
+            visible_lines.push(Line::from(
+                Span::styled(separator, Style::default().fg(Color::DarkGray))
+            ));
+            visible_lines.push(Line::from(
+                Span::styled(file_info, Style::default().fg(Color::DarkGray))
+            ));
+        }
+
+        let scroll_info = if self.file_content.len() > lines_to_show {
             format!(" [↕ {}/{}]", self.file_scroll + 1, self.file_content.len())
         } else {
             String::new()
@@ -411,5 +438,45 @@ impl App {
                 .title(title));
 
         frame.render_widget(paragraph, area);
+    }
+
+    fn format_file_info(&self) -> String {
+        if self.current_file_path.as_os_str().is_empty() {
+            return String::new();
+        }
+
+        let file_name = self.current_file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Unknown");
+
+        // Форматируем размер файла
+        let size_str = format_file_size(self.current_file_size);
+
+        // Получаем количество строк
+        let lines_count = self.file_content.len();
+        let lines_info = if lines_count >= 1000 {
+            format!("{}+ lines", lines_count)
+        } else {
+            format!("{} lines", lines_count)
+        };
+
+        format!(" {} | {} | {}", file_name, size_str, lines_info)
+    }
+}
+
+fn format_file_size(size: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+
+    if size >= GB {
+        format!("{:.2} GB", size as f64 / GB as f64)
+    } else if size >= MB {
+        format!("{:.2} MB", size as f64 / MB as f64)
+    } else if size >= KB {
+        format!("{:.2} KB", size as f64 / KB as f64)
+    } else {
+        format!("{} B", size)
     }
 }
