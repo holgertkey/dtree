@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::os::unix::fs::PermissionsExt;
 use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     style::{Modifier, Style, Color},
@@ -28,6 +29,7 @@ pub struct App {
     tree_area_end: u16,        // Конец области дерева
     current_file_path: PathBuf, // Путь к текущему просматриваемому файлу
     current_file_size: u64,    // Размер файла в байтах
+    current_file_permissions: u32, // Права доступа к файлу
 }
 
 impl App {
@@ -51,6 +53,7 @@ impl App {
             tree_area_end: 0,
             current_file_path: PathBuf::new(),
             current_file_size: 0,
+            current_file_permissions: 0,
         };
 
         app.rebuild_flat_list();
@@ -276,6 +279,7 @@ impl App {
         self.file_scroll = 0;
         self.current_file_path = path.to_path_buf();
         self.current_file_size = 0;
+        self.current_file_permissions = 0;
 
         // Проверяем, что это файл
         if !path.is_file() {
@@ -286,6 +290,7 @@ impl App {
         // Получаем метаданные файла
         if let Ok(metadata) = std::fs::metadata(path) {
             self.current_file_size = metadata.len();
+            self.current_file_permissions = metadata.permissions().mode();
         }
 
         // Пытаемся открыть файл
@@ -461,7 +466,10 @@ impl App {
             format!("{} lines", lines_count)
         };
 
-        format!(" {} | {} | {}", file_name, size_str, lines_info)
+        // Форматируем права доступа
+        let permissions_str = format_permissions(self.current_file_permissions);
+
+        format!(" {} | {} | {} | {}", file_name, size_str, lines_info, permissions_str)
     }
 }
 
@@ -479,4 +487,32 @@ fn format_file_size(size: u64) -> String {
     } else {
         format!("{} B", size)
     }
+}
+
+fn format_permissions(mode: u32) -> String {
+    // Извлекаем биты прав доступа (последние 9 бит)
+    let perms = mode & 0o777;
+
+    // Определяем тип файла
+    let file_type = if mode & 0o170000 == 0o040000 {
+        'd' // directory
+    } else if mode & 0o170000 == 0o120000 {
+        'l' // symbolic link
+    } else {
+        '-' // regular file
+    };
+
+    // Форматируем права для владельца, группы и остальных
+    let user = format_permission_triplet((perms >> 6) & 0o7);
+    let group = format_permission_triplet((perms >> 3) & 0o7);
+    let other = format_permission_triplet(perms & 0o7);
+
+    format!("{}{}{}{} ({:04o})", file_type, user, group, other, perms)
+}
+
+fn format_permission_triplet(triplet: u32) -> String {
+    let r = if triplet & 0o4 != 0 { 'r' } else { '-' };
+    let w = if triplet & 0o2 != 0 { 'w' } else { '-' };
+    let x = if triplet & 0o1 != 0 { 'x' } else { '-' };
+    format!("{}{}{}", r, w, x)
 }
