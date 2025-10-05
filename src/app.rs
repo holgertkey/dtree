@@ -560,7 +560,7 @@ impl App {
         let mut state = ListState::default();
         state.select(Some(self.selected));
 
-        let title = "Directory Tree (↑↓/jk: navigate | Enter: select | q: quit | i: help)";
+        let title = " Directory Tree (↑↓/jk: navigate | Enter: select | q: quit | i: help) ";
 
         let list = List::new(items)
             .block(Block::default()
@@ -619,9 +619,9 @@ impl App {
         };
 
         let title = if self.show_help {
-            format!("Help{}", scroll_info)
+            format!(" Help{} ", scroll_info)
         } else {
-            format!("File Viewer{}", scroll_info)
+            format!(" File Viewer{} ", scroll_info)
         };
 
         let paragraph = Paragraph::new(visible_lines)
