@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
+use std::time::{Duration, Instant};
 use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     style::{Modifier, Style, Color},
@@ -30,6 +31,9 @@ pub struct App {
     current_file_path: PathBuf, // Путь к текущему просматриваемому файлу
     current_file_size: u64,    // Размер файла в байтах
     current_file_permissions: u32, // Права доступа к файлу
+    last_click_time: Option<(Instant, usize)>, // Время и индекс последнего клика для двойного клика
+    tree_area_top: u16,        // Верхняя граница области дерева (y)
+    tree_area_height: u16,     // Высота области дерева
 }
 
 impl App {
@@ -54,6 +58,9 @@ impl App {
             current_file_path: PathBuf::new(),
             current_file_size: 0,
             current_file_permissions: 0,
+            last_click_time: None,
+            tree_area_top: 0,
+            tree_area_height: 0,
         };
 
         app.rebuild_flat_list();
@@ -241,19 +248,51 @@ impl App {
         Ok(())
     }
 
-    pub fn handle_mouse(&mut self, mouse: MouseEvent) {
-        if !self.show_files {
-            return; // Мышь работает только в режиме просмотра файлов
-        }
-
+    pub fn handle_mouse(&mut self, mouse: MouseEvent) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                // Вычисляем реальную позицию разделителя в пикселях
-                let divider_col = (self.terminal_width * self.split_position) / 100;
+                // Проверяем клик по области дерева
+                if mouse.column >= self.tree_area_start && mouse.column < self.tree_area_end
+                    && mouse.row >= self.tree_area_top && mouse.row < self.tree_area_top + self.tree_area_height {
 
-                // Проверяем, что клик рядом с разделителем (±2 символа)
-                if mouse.column.abs_diff(divider_col) <= 2 {
-                    self.dragging = true;
+                    // Вычисляем индекс элемента (учитываем рамку +1)
+                    let clicked_row = mouse.row.saturating_sub(self.tree_area_top + 1) as usize;
+
+                    if clicked_row < self.all_nodes.len() {
+                        // Проверка на двойной клик
+                        let now = Instant::now();
+                        let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time {
+                            clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(500)
+                        } else {
+                            false
+                        };
+
+                        if is_double_click {
+                            // Двойной клик - разворачиваем/сворачиваем
+                            let node = &self.all_nodes[clicked_row];
+                            if node.is_dir {
+                                let path = node.path.clone();
+                                self.toggle_node(&path)?;
+                            }
+                            self.last_click_time = None;
+                        } else {
+                            // Одиночный клик - выбираем элемент
+                            self.selected = clicked_row;
+                            self.last_click_time = Some((now, clicked_row));
+
+                            // Обновляем содержимое файла если режим просмотра включен
+                            if self.show_files {
+                                let path = self.all_nodes[clicked_row].path.clone();
+                                let _ = self.load_file_content(&path);
+                            }
+                        }
+                    }
+                } else if self.show_files {
+                    // Проверяем клик по разделителю
+                    let divider_col = (self.terminal_width * self.split_position) / 100;
+                    if mouse.column.abs_diff(divider_col) <= 2 {
+                        self.dragging = true;
+                    }
                 }
             }
             MouseEventKind::Drag(MouseButton::Left) => {
@@ -268,8 +307,35 @@ impl App {
             MouseEventKind::Up(MouseButton::Left) => {
                 self.dragging = false;
             }
+            MouseEventKind::ScrollUp => {
+                // Скролл вверх в дереве
+                self.selected = self.selected.saturating_sub(1);
+
+                // Обновляем содержимое файла
+                if self.show_files {
+                    let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
+                    if let Some(p) = path {
+                        let _ = self.load_file_content(&p);
+                    }
+                }
+            }
+            MouseEventKind::ScrollDown => {
+                // Скролл вниз в дереве
+                if self.selected < self.all_nodes.len().saturating_sub(1) {
+                    self.selected += 1;
+
+                    // Обновляем содержимое файла
+                    if self.show_files {
+                        let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
+                        if let Some(p) = path {
+                            let _ = self.load_file_content(&p);
+                        }
+                    }
+                }
+            }
             _ => {}
         }
+        Ok(())
     }
 
     fn load_file_content(&mut self, path: &Path) -> Result<()> {
@@ -362,6 +428,10 @@ impl App {
     }
 
     fn render_tree(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        // Сохраняем координаты области дерева для обработки мыши
+        self.tree_area_top = area.y;
+        self.tree_area_height = area.height;
+
         let items: Vec<ListItem> = self.all_nodes.iter().map(|node| {
             let indent = "  ".repeat(node.depth);
             let icon = if node.is_dir {
@@ -386,9 +456,9 @@ impl App {
         state.select(Some(self.selected));
 
         let title = if self.show_files {
-            "Tree (↑↓/jk: nav, →l: expand, ←h: collapse, u: parent, s: hide files, Ctrl+j/k: scroll, Enter: select, q: quit)"
+            "Tree (↑↓/jk/scroll: nav, →l/dblclick: expand, ←h: collapse, u: parent, s: hide files, Ctrl+j/k: scroll, Enter: select, q: quit)"
         } else {
-            "Tree (↑↓/jk: navigate, →l: expand, ←h: collapse, u/Backspace: parent, s: show files, Enter: select, q: quit)"
+            "Tree (↑↓/jk/scroll: navigate, →l/dblclick: expand, ←h: collapse, u/Backspace: parent, s: show files, Enter: select, q: quit)"
         };
 
         let list = List::new(items)

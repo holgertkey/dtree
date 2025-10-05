@@ -47,7 +47,7 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
                 }
             }
             Event::Mouse(mouse) => {
-                app.handle_mouse(mouse);
+                let _ = app.handle_mouse(mouse);
             }
             _ => {}
         }
