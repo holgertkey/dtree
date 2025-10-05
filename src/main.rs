@@ -10,9 +10,9 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "dtree")]
-#[command(version)]
 #[command(about = "Interactive directory tree navigator")]
 #[command(disable_help_flag = true)]
+#[command(disable_version_flag = true)]
 struct Args {
     /// Starting directory path (defaults to current directory)
     #[arg(value_name = "PATH")]
@@ -21,10 +21,20 @@ struct Args {
     /// Print help information
     #[arg(short = 'h', long = "help")]
     help: bool,
+
+    /// Print version information
+    #[arg(short = 'v', long = "version")]
+    version: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    // Если запрошена версия, выводим её
+    if args.version {
+        println!("dtree {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
 
     // Если запрошен help, выводим полную справку
     if args.help {
