@@ -199,16 +199,22 @@ impl App {
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
                 KeyCode::Char('j') => {
-                    // Скролл вниз в области просмотра
-                    if self.show_files && !self.file_content.is_empty() {
-                        if self.file_scroll < self.file_content.len().saturating_sub(1) {
+                    // Скролл вниз в области просмотра (работает для файлов и help)
+                    if self.show_files {
+                        let content_len = if self.show_help {
+                            Self::get_help_content().len()
+                        } else {
+                            self.file_content.len()
+                        };
+
+                        if self.file_scroll < content_len.saturating_sub(1) {
                             self.file_scroll += 1;
                         }
                     }
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char('k') => {
-                    // Скролл вверх в области просмотра
+                    // Скролл вверх в области просмотра (работает для файлов и help)
                     if self.show_files {
                         self.file_scroll = self.file_scroll.saturating_sub(1);
                     }
@@ -449,10 +455,16 @@ impl App {
                 if self.show_files && mouse.column >= self.viewer_area_start
                     && mouse.row >= self.viewer_area_top
                     && mouse.row < self.viewer_area_top + self.viewer_area_height {
-                    // Скролл в области просмотра файла
+                    // Скролл в области просмотра файла или help
+                    let content_len = if self.show_help {
+                        Self::get_help_content().len()
+                    } else {
+                        self.file_content.len()
+                    };
+
                     let content_height = self.viewer_area_height.saturating_sub(2) as usize;
                     let lines_to_show = content_height.saturating_sub(2);
-                    let max_scroll = self.file_content.len().saturating_sub(lines_to_show);
+                    let max_scroll = content_len.saturating_sub(lines_to_show);
 
                     if self.file_scroll < max_scroll {
                         self.file_scroll += 1;
