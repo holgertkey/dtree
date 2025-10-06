@@ -38,6 +38,12 @@ pub struct App {
     viewer_area_top: u16,      // Верхняя граница области просмотра (y)
     viewer_area_height: u16,   // Высота области просмотра
     show_help: bool,           // Показывать ли help вместо содержимого файла
+    search_mode: bool,         // Активен ли режим поиска
+    search_query: String,      // Текущий поисковый запрос
+    search_results: Vec<PathBuf>, // Найденные пути (полные пути к файлам/директориям)
+    search_results_selected: usize, // Выбранный элемент в списке результатов
+    show_search_results: bool, // Показывать ли панель с результатами поиска
+    focus_on_search: bool,     // Фокус на панели поиска (true) или на дереве (false)
 }
 
 impl App {
@@ -69,6 +75,12 @@ impl App {
             viewer_area_top: 0,
             viewer_area_height: 0,
             show_help: false,
+            search_mode: false,
+            search_query: String::new(),
+            search_results: Vec::new(),
+            search_results_selected: 0,
+            show_search_results: false,
+            focus_on_search: false,
         };
 
         app.rebuild_flat_list();
@@ -116,6 +128,28 @@ impl App {
             "  q / Esc        Quit without selection".to_string(),
             "  s              Toggle file viewer mode (show/hide files)".to_string(),
             "  i              Show/hide this help screen".to_string(),
+            "".to_string(),
+            "SEARCH".to_string(),
+            "  /              Enter search mode".to_string(),
+            "  Type query     Type your search query (case-insensitive)".to_string(),
+            "  Enter          Execute search and show results panel".to_string(),
+            "  Esc            Cancel search (in search mode) or close results panel".to_string(),
+            "  q              Close search results panel (when panel is open)".to_string(),
+            "".to_string(),
+            "  In Search Results Panel:".to_string(),
+            "  Tab            Switch focus between tree and search results".to_string(),
+            "  ↑↓ / jk        Navigate through search results".to_string(),
+            "  Enter          Select result and jump to it in the tree".to_string(),
+            "".to_string(),
+            "  Search features:".to_string(),
+            "  • Search scope: from current root directory and below".to_string(),
+            "  • Normal mode: searches ONLY directories (fast)".to_string(),
+            "  • File viewer mode (s): searches both files and directories".to_string(),
+            "  • Searches through the ENTIRE tree (including collapsed nodes)".to_string(),
+            "  • Shows all results in a separate panel at the bottom".to_string(),
+            "  • Select a result to automatically expand and jump to it in the tree".to_string(),
+            "  • Case-insensitive substring matching".to_string(),
+            "  • Cyan border indicates which panel has focus".to_string(),
             "".to_string(),
             "FILE VIEWER MODE (press 's' to toggle)".to_string(),
             "  When enabled:".to_string(),
@@ -225,6 +259,33 @@ impl App {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<Option<PathBuf>> {
+        // Режим поиска - отдельная обработка
+        if self.search_mode {
+            match key.code {
+                KeyCode::Esc => {
+                    self.exit_search_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Enter => {
+                    // Выполняем поиск и выходим из режима ввода
+                    self.perform_search();
+                    self.search_mode = false;
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char(c) => {
+                    // Добавляем символ к запросу
+                    self.search_query.push(c);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Backspace => {
+                    // Удаляем последний символ
+                    self.search_query.pop();
+                    return Ok(Some(PathBuf::new()));
+                }
+                _ => return Ok(Some(PathBuf::new())),
+            }
+        }
+
         // Обработка Ctrl+j/k для скролла в области просмотра файла
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
@@ -255,47 +316,97 @@ impl App {
         }
 
         match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => {
-                return Ok(None);
+            KeyCode::Char('q') => {
+                // Если панель результатов открыта, закрываем её
+                if self.show_search_results {
+                    self.close_search_results();
+                    return Ok(Some(PathBuf::new()));
+                } else {
+                    return Ok(None);
+                }
+            }
+            KeyCode::Esc => {
+                // Закрываем панель результатов если открыта, иначе выходим
+                if self.show_search_results {
+                    self.close_search_results();
+                    return Ok(Some(PathBuf::new()));
+                } else {
+                    return Ok(None);
+                }
+            }
+            KeyCode::Char('/') => {
+                // Входим в режим поиска
+                self.search_mode = true;
+                self.search_query.clear();
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Tab => {
+                // Переключение фокуса между панелями (если результаты видны)
+                if self.show_search_results {
+                    self.focus_on_search = !self.focus_on_search;
+                }
+                return Ok(Some(PathBuf::new()));
             }
             KeyCode::Char('j') | KeyCode::Down => {
-                if self.selected < self.all_nodes.len().saturating_sub(1) {
-                    self.selected += 1;
-                    // Обновляем содержимое файла при навигации
-                    if self.show_files {
-                        let path = self.get_selected_node().map(|n| n.path.clone());
-                        if let Some(p) = path {
-                            let _ = self.load_file_content(&p);
-                            self.show_help = false; // Закрываем help при просмотре файла
+                if self.focus_on_search {
+                    // Навигация в панели результатов поиска
+                    if self.search_results_selected < self.search_results.len().saturating_sub(1) {
+                        self.search_results_selected += 1;
+                    }
+                } else {
+                    // Навигация в дереве
+                    if self.selected < self.all_nodes.len().saturating_sub(1) {
+                        self.selected += 1;
+                        // Обновляем содержимое файла при навигации
+                        if self.show_files {
+                            let path = self.get_selected_node().map(|n| n.path.clone());
+                            if let Some(p) = path {
+                                let _ = self.load_file_content(&p);
+                                self.show_help = false;
+                            }
                         }
                     }
                 }
             }
             KeyCode::Char('k') | KeyCode::Up => {
-                self.selected = self.selected.saturating_sub(1);
-                // Обновляем содержимое файла при навигации
-                if self.show_files {
-                    let path = self.get_selected_node().map(|n| n.path.clone());
-                    if let Some(p) = path {
-                        let _ = self.load_file_content(&p);
-                        self.show_help = false; // Закрываем help при просмотре файла
+                if self.focus_on_search {
+                    // Навигация в панели результатов поиска
+                    self.search_results_selected = self.search_results_selected.saturating_sub(1);
+                } else {
+                    // Навигация в дереве
+                    self.selected = self.selected.saturating_sub(1);
+                    // Обновляем содержимое файла при навигации
+                    if self.show_files {
+                        let path = self.get_selected_node().map(|n| n.path.clone());
+                        if let Some(p) = path {
+                            let _ = self.load_file_content(&p);
+                            self.show_help = false;
+                        }
                     }
                 }
             }
             KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
                 if key.code == KeyCode::Enter {
-                    // Enter - выбираем директорию (только если это директория)
-                    if let Some(node) = self.get_selected_node() {
-                        if node.is_dir {
-                            return Ok(Some(node.path.clone()));
+                    if self.focus_on_search && self.show_search_results {
+                        // Enter в панели результатов - выбираем результат и переходим к нему
+                        self.select_search_result();
+                        return Ok(Some(PathBuf::new()));
+                    } else {
+                        // Enter в дереве - выбираем директорию (только если это директория)
+                        if let Some(node) = self.get_selected_node() {
+                            if node.is_dir {
+                                return Ok(Some(node.path.clone()));
+                            }
                         }
                     }
                 } else {
                     // Right - разворачиваем (только директории)
-                    if let Some(node) = self.get_selected_node() {
-                        if node.is_dir {
-                            let path = node.path.clone();
-                            self.toggle_node(&path)?;
+                    if !self.focus_on_search {
+                        if let Some(node) = self.get_selected_node() {
+                            if node.is_dir {
+                                let path = node.path.clone();
+                                self.toggle_node(&path)?;
+                            }
                         }
                     }
                 }
@@ -588,7 +699,37 @@ impl App {
         // Сохраняем ширину терминала для обработки мыши
         self.terminal_width = frame.area().width;
 
-        // Если режим просмотра файлов включен, делим экран
+        let main_area = frame.area();
+
+        // Если режим поиска активен, резервируем место для поисковой строки
+        let (content_area, search_bar_area) = if self.search_mode {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(3),
+                    Constraint::Length(3),
+                ])
+                .split(main_area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (main_area, None)
+        };
+
+        // Если показываем результаты поиска, делим экран вертикально
+        let (tree_area, search_results_area) = if self.show_search_results {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage(70),
+                    Constraint::Percentage(30),
+                ])
+                .split(content_area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (content_area, None)
+        };
+
+        // Если режим просмотра файлов включен, делим экран горизонтально
         if self.show_files {
             let chunks = Layout::default()
                 .direction(Direction::Horizontal)
@@ -596,7 +737,7 @@ impl App {
                     Constraint::Percentage(self.split_position),
                     Constraint::Percentage(100 - self.split_position),
                 ])
-                .split(frame.area());
+                .split(tree_area);
 
             // Сохраняем границы области дерева
             self.tree_area_start = chunks[0].x;
@@ -609,10 +750,19 @@ impl App {
             self.render_file_viewer(frame, chunks[1]);
         } else {
             // Полноэкранный режим - только дерево
-            let area = frame.area();
-            self.tree_area_start = area.x;
-            self.tree_area_end = area.x + area.width;
-            self.render_tree(frame, area);
+            self.tree_area_start = tree_area.x;
+            self.tree_area_end = tree_area.x + tree_area.width;
+            self.render_tree(frame, tree_area);
+        }
+
+        // Рендерим панель результатов поиска если она активна
+        if let Some(area) = search_results_area {
+            self.render_search_results(frame, area);
+        }
+
+        // Рендерим поисковую строку если режим ввода активен
+        if let Some(area) = search_bar_area {
+            self.render_search_bar(frame, area);
         }
     }
 
@@ -644,7 +794,7 @@ impl App {
         let mut state = ListState::default();
         state.select(Some(self.selected));
 
-        let title = " Directory Tree (↑↓/jk: navigate | Enter: select | q: quit | i: help) ";
+        let title = " Directory Tree (↑↓/jk: navigate | /: search | Enter: select | q: quit | i: help) ";
 
         let list = List::new(items)
             .block(Block::default()
@@ -652,6 +802,55 @@ impl App {
                 .title(title))
             .highlight_style(Style::default()
                 .add_modifier(Modifier::DIM))
+            .highlight_symbol(">> ");
+
+        frame.render_stateful_widget(list, area, &mut state);
+    }
+
+    fn render_search_bar(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let search_text = format!("Search: {}", self.search_query);
+
+        let paragraph = Paragraph::new(search_text)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(" Enter to search, Esc to cancel "))
+            .style(Style::default().fg(Color::Cyan));
+
+        frame.render_widget(paragraph, area);
+    }
+
+    fn render_search_results(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        // Форматируем результаты для отображения
+        let items: Vec<ListItem> = self.search_results.iter().map(|path| {
+            let display_path = path.strip_prefix(&self.root.path.parent().unwrap_or(&self.root.path))
+                .unwrap_or(path)
+                .display()
+                .to_string();
+
+            let style = Style::default().fg(Color::White);
+            ListItem::new(display_path).style(style)
+        }).collect();
+
+        let mut state = ListState::default();
+        state.select(Some(self.search_results_selected));
+
+        let title = format!(" Search Results: {} found (Enter to select, q to close) ",
+            self.search_results.len());
+
+        let border_style = if self.focus_on_search {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        };
+
+        let list = List::new(items)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(title)
+                .border_style(border_style))
+            .highlight_style(Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
 
         frame.render_stateful_widget(list, area, &mut state);
@@ -741,6 +940,127 @@ impl App {
         let permissions_str = format_permissions(self.current_file_permissions);
 
         format!(" {} | {} | {} | {}", file_name, size_str, lines_info, permissions_str)
+    }
+
+    fn perform_search(&mut self) {
+        self.search_results.clear();
+        self.search_results_selected = 0;
+
+        if self.search_query.is_empty() {
+            self.show_search_results = false;
+            return;
+        }
+
+        let query_lower = self.search_query.to_lowercase();
+
+        // Собираем все пути которые соответствуют поиску, обходя всё дерево
+        Self::search_recursive(&self.root, &query_lower, &mut self.search_results, self.show_files);
+
+        // Показываем панель результатов если что-то найдено
+        self.show_search_results = !self.search_results.is_empty();
+        self.focus_on_search = self.show_search_results;
+    }
+
+    fn select_search_result(&mut self) {
+        if self.search_results.is_empty() || self.search_results_selected >= self.search_results.len() {
+            return;
+        }
+
+        let selected_path = self.search_results[self.search_results_selected].clone();
+
+        // Разворачиваем путь к выбранному элементу
+        let _ = Self::expand_path_to_node(&mut self.root, &selected_path, self.show_files);
+
+        // Перестраиваем плоский список
+        self.rebuild_flat_list();
+
+        // Находим и выбираем элемент в дереве
+        for (idx, node) in self.all_nodes.iter().enumerate() {
+            if node.path == selected_path {
+                self.selected = idx;
+                break;
+            }
+        }
+
+        // Переключаем фокус на дерево
+        self.focus_on_search = false;
+
+        // Обновляем содержимое файла если режим просмотра включен
+        if self.show_files {
+            let _ = self.load_file_content(&selected_path);
+            self.show_help = false;
+        }
+    }
+
+    // Рекурсивный поиск по всему дереву
+    // show_files = true: ищем и по файлам, и по директориям
+    // show_files = false: ищем только по директориям
+    fn search_recursive(node: &TreeNode, query: &str, results: &mut Vec<PathBuf>, show_files: bool) {
+        let name_lower = node.name.to_lowercase();
+
+        // Проверяем текущий узел
+        // Если show_files = false, ищем только директории
+        // Если show_files = true, ищем и файлы, и директории
+        if show_files || node.is_dir {
+            if name_lower.contains(query) {
+                results.push(node.path.clone());
+            }
+        }
+
+        // Если это директория, загружаем детей и ищем рекурсивно
+        if node.is_dir {
+            let mut temp_node = node.clone();
+            if temp_node.children.is_empty() {
+                let _ = temp_node.load_children(show_files);
+            }
+
+            // Рекурсивно ищем в детях
+            for child in &temp_node.children {
+                Self::search_recursive(child, query, results, show_files);
+            }
+        }
+    }
+
+    // Разворачивает все родительские директории до указанного пути
+    fn expand_path_to_node(node: &mut TreeNode, target_path: &PathBuf, show_files: bool) -> Result<bool> {
+        // Если это целевой узел, ничего не делаем
+        if &node.path == target_path {
+            return Ok(true);
+        }
+
+        // Проверяем, является ли target_path потомком текущего узла
+        if !target_path.starts_with(&node.path) {
+            return Ok(false);
+        }
+
+        // Загружаем детей если нужно
+        if node.children.is_empty() && node.is_dir {
+            node.load_children(show_files)?;
+        }
+
+        // Разворачиваем текущий узел
+        node.is_expanded = true;
+
+        // Рекурсивно ищем в детях
+        for child in &mut node.children {
+            if Self::expand_path_to_node(child, target_path, show_files)? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    fn exit_search_mode(&mut self) {
+        self.search_mode = false;
+        self.search_query.clear();
+    }
+
+    fn close_search_results(&mut self) {
+        self.show_search_results = false;
+        self.search_results.clear();
+        self.search_results_selected = 0;
+        self.focus_on_search = false;
     }
 }
 
