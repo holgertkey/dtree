@@ -12,6 +12,7 @@ use ratatui::{
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
 use anyhow::Result;
+use arboard::Clipboard;
 
 use crate::tree_node::TreeNode;
 
@@ -127,6 +128,7 @@ impl App {
             "  Enter          Select directory and exit (cd to selected)".to_string(),
             "  q / Esc        Quit without selection".to_string(),
             "  s              Toggle file viewer mode (show/hide files)".to_string(),
+            "  c              Copy current path to clipboard (files and directories)".to_string(),
             "  i              Show/hide this help screen".to_string(),
             "".to_string(),
             "SEARCH".to_string(),
@@ -183,6 +185,7 @@ impl App {
             "TIPS & TRICKS".to_string(),
             "  • Files are filtered out by default - press 's' to see them".to_string(),
             "  • Use mouse to quickly navigate - double-click to expand folders".to_string(),
+            "  • Press 'c' to copy any path to clipboard - works for both files and directories".to_string(),
             "  • The selected path is printed to stdout on exit".to_string(),
             "  • UI is rendered to stderr, so path output is clean for scripting".to_string(),
             "  • Directories are shown in white, files in gray".to_string(),
@@ -444,6 +447,14 @@ impl App {
                 if self.show_help && !self.show_files {
                     self.show_files = true;
                     self.reload_tree()?;
+                }
+            }
+            KeyCode::Char('c') => {
+                // Копируем путь в буфер обмена
+                if let Some(node) = self.get_selected_node() {
+                    if let Ok(mut clipboard) = Clipboard::new() {
+                        let _ = clipboard.set_text(node.path.display().to_string());
+                    }
                 }
             }
             _ => {}
@@ -774,7 +785,7 @@ impl App {
         let mut state = ListState::default();
         state.select(Some(self.selected));
 
-        let title = " Directory Tree (↑↓/jk: navigate | /: search | Enter: select | q: quit | i: help) ";
+        let title = " Directory Tree (↑↓/jk: navigate | /: search | c: copy | Enter: select | q: quit | i: help) ";
 
         let list = List::new(items)
             .block(Block::default()
