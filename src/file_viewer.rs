@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use anyhow::Result;
+use unicode_truncate::UnicodeTruncateStr;
+use unicode_width::UnicodeWidthStr;
 
 /// File viewer state and logic for displaying file contents
 pub struct FileViewer {
@@ -24,9 +26,12 @@ impl FileViewer {
         }
     }
 
-    /// Load file content from path (max 1000 lines)
-    pub fn load_file(&mut self, path: &Path) -> Result<()> {
+    /// Load file content with specified max width for each line
+    pub fn load_file_with_width(&mut self, path: &Path, max_width: Option<usize>) -> Result<()> {
         const MAX_LINES: usize = 1000;
+        const DEFAULT_MAX_WIDTH: usize = 10000; // Very large default to avoid truncation
+
+        let max_width = max_width.unwrap_or(DEFAULT_MAX_WIDTH);
 
         self.content.clear();
         self.scroll = 0;
@@ -78,7 +83,9 @@ impl FileViewer {
 
             match line {
                 Ok(content) => {
-                    self.content.push(content);
+                    // Truncate line to prevent Unicode artifacts
+                    let truncated = Self::truncate_line(&content, max_width);
+                    self.content.push(truncated);
                     line_count += 1;
                 }
                 Err(e) => {
@@ -95,6 +102,24 @@ impl FileViewer {
         }
 
         Ok(())
+    }
+
+    /// Truncate a line to max_width using Unicode-aware truncation
+    fn truncate_line(line: &str, max_width: usize) -> String {
+        // Use visual width, not byte length
+        let line_width = line.width();
+
+        if line_width <= max_width {
+            return line.to_string();
+        }
+
+        // Use unicode-aware truncation
+        let (truncated, _) = line.unicode_truncate(max_width.saturating_sub(3));
+        if truncated.len() < line.len() {
+            format!("{}...", truncated)
+        } else {
+            truncated.to_string()
+        }
     }
 
     /// Scroll down in file content

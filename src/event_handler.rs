@@ -32,6 +32,8 @@ impl EventHandler {
         search: &mut Search,
         show_files: &mut bool,
         show_help: &mut bool,
+        fullscreen_viewer: &mut bool,
+        ui: &UI,
     ) -> Result<Option<PathBuf>> {
         // Search mode - separate handling
         if search.mode {
@@ -59,7 +61,10 @@ impl EventHandler {
 
         match key.code {
             KeyCode::Char('q') => {
-                if search.show_results {
+                if *fullscreen_viewer {
+                    *fullscreen_viewer = false;
+                    return Ok(Some(PathBuf::new()));
+                } else if search.show_results {
                     search.close_results();
                     return Ok(Some(PathBuf::new()));
                 } else {
@@ -67,7 +72,10 @@ impl EventHandler {
                 }
             }
             KeyCode::Esc => {
-                if search.show_results {
+                if *fullscreen_viewer {
+                    *fullscreen_viewer = false;
+                    return Ok(Some(PathBuf::new()));
+                } else if search.show_results {
                     search.close_results();
                     return Ok(Some(PathBuf::new()));
                 } else {
@@ -89,7 +97,7 @@ impl EventHandler {
                     nav.move_down();
                     if *show_files {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = file_viewer.load_file(&node.borrow().path);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
                             *show_help = false;
                         }
                     }
@@ -102,7 +110,7 @@ impl EventHandler {
                     nav.move_up();
                     if *show_files {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = file_viewer.load_file(&node.borrow().path);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
                             *show_help = false;
                         }
                     }
@@ -115,7 +123,7 @@ impl EventHandler {
                             let _ = nav.expand_path_to_node(&path, *show_files);
                             search.focus_on_results = false;
                             if *show_files {
-                                let _ = file_viewer.load_file(&path);
+                                let _ = ui.load_file_for_viewer(file_viewer, &path);
                                 *show_help = false;
                             }
                         }
@@ -166,7 +174,7 @@ impl EventHandler {
 
                 if *show_files {
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = file_viewer.load_file(&node.borrow().path);
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
                     }
                 }
             }
@@ -177,6 +185,21 @@ impl EventHandler {
                 if *show_help && !*show_files {
                     *show_files = true;
                     nav.reload_tree(*show_files)?;
+                }
+            }
+            KeyCode::Char('v') => {
+                // Toggle fullscreen viewer mode
+                if let Some(node) = nav.get_selected_node() {
+                    let node_borrowed = node.borrow();
+                    if !node_borrowed.is_dir {
+                        *fullscreen_viewer = !*fullscreen_viewer;
+                        *show_help = false;
+
+                        if *fullscreen_viewer {
+                            // Load file for fullscreen viewing
+                            let _ = ui.load_file_for_viewer(file_viewer, &node_borrowed.path);
+                        }
+                    }
                 }
             }
             KeyCode::Char('c') => {
@@ -269,7 +292,9 @@ impl EventHandler {
         if mouse.column >= ui.tree_area_start && mouse.column < ui.tree_area_end
             && mouse.row >= ui.tree_area_top && mouse.row < ui.tree_area_top + ui.tree_area_height {
 
-            let clicked_row = mouse.row.saturating_sub(ui.tree_area_top + 1) as usize;
+            // Calculate clicked row accounting for scroll offset
+            let clicked_row_visible = mouse.row.saturating_sub(ui.tree_area_top + 1) as usize;
+            let clicked_row = clicked_row_visible + ui.tree_scroll_offset;
 
             if clicked_row < nav.flat_list.len() {
                 let now = Instant::now();
@@ -294,7 +319,7 @@ impl EventHandler {
 
                     if show_files {
                         let path = nav.flat_list[clicked_row].borrow().path.clone();
-                        let _ = file_viewer.load_file(&path);
+                        let _ = ui.load_file_for_viewer(file_viewer, &path);
                         *show_help = false;
                     }
                 }
@@ -326,7 +351,7 @@ impl EventHandler {
             nav.move_up();
             if show_files {
                 if let Some(node) = nav.get_selected_node() {
-                    let _ = file_viewer.load_file(&node.borrow().path);
+                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
                     *show_help = false;
                 }
             }
@@ -354,7 +379,7 @@ impl EventHandler {
                 nav.move_down();
                 if show_files {
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = file_viewer.load_file(&node.borrow().path);
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
                         *show_help = false;
                     }
                 }

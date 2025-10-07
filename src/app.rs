@@ -18,6 +18,7 @@ pub struct App {
     event_handler: EventHandler,
     show_files: bool,
     show_help: bool,
+    fullscreen_viewer: bool,
 }
 
 impl App {
@@ -36,6 +37,7 @@ impl App {
             event_handler,
             show_files: false,
             show_help: false,
+            fullscreen_viewer: false,
         })
     }
 
@@ -47,6 +49,8 @@ impl App {
             &mut self.search,
             &mut self.show_files,
             &mut self.show_help,
+            &mut self.fullscreen_viewer,
+            &self.ui,
         )
     }
 
@@ -69,6 +73,16 @@ impl App {
             &self.search,
             self.show_files,
             self.show_help,
+            self.fullscreen_viewer,
         );
+    }
+
+    /// Set fullscreen viewer mode and load the specified file
+    pub fn set_fullscreen_viewer(&mut self, file_path: &std::path::Path) -> Result<()> {
+        self.fullscreen_viewer = true;
+        self.show_files = true;
+        // Load file with very large width for fullscreen (terminal width unknown at this point)
+        self.file_viewer.load_file_with_width(file_path, Some(10000))?;
+        Ok(())
     }
 }

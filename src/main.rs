@@ -27,8 +27,12 @@ struct Args {
     #[arg(short = 'h', long = "help")]
     help: bool,
 
+    /// View file directly in fullscreen mode
+    #[arg(short = 'v', long = "view", conflicts_with = "version")]
+    view: bool,
+
     /// Print version information
-    #[arg(short = 'v', long = "version")]
+    #[arg(long = "version")]
     version: bool,
 }
 
@@ -56,17 +60,45 @@ fn main() -> Result<()> {
         std::env::current_dir()?
     };
 
-    let mut terminal = setup_terminal()?;
-    let mut app = App::new(start_path)?;
-    let result = run_app(&mut terminal, &mut app);
-
-    cleanup_terminal()?;
-
-    match result? {
-        Some(path) => {
-            println!("{}", path.display());
-            Ok(())
+    // If view mode requested, check that the path is a file
+    if args.view {
+        if !start_path.is_file() {
+            eprintln!("Error: --view requires a file path, got: {}", start_path.display());
+            std::process::exit(1);
         }
-        None => Ok(()),
+
+        // Start app in fullscreen viewer mode
+        let mut terminal = setup_terminal()?;
+        let parent_dir = start_path.parent().unwrap_or(&start_path).to_path_buf();
+        let mut app = App::new(parent_dir)?;
+
+        // Set fullscreen mode and load the file
+        app.set_fullscreen_viewer(&start_path)?;
+
+        let result = run_app(&mut terminal, &mut app);
+        cleanup_terminal()?;
+
+        match result? {
+            Some(path) => {
+                println!("{}", path.display());
+                Ok(())
+            }
+            None => Ok(()),
+        }
+    } else {
+        // Normal tree navigation mode
+        let mut terminal = setup_terminal()?;
+        let mut app = App::new(start_path)?;
+        let result = run_app(&mut terminal, &mut app);
+
+        cleanup_terminal()?;
+
+        match result? {
+            Some(path) => {
+                println!("{}", path.display());
+                Ok(())
+            }
+            None => Ok(()),
+        }
     }
 }

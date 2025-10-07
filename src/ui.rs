@@ -21,6 +21,7 @@ pub struct UI {
     pub viewer_area_height: u16,
     pub terminal_width: u16,
     pub split_position: u16,
+    pub tree_scroll_offset: usize,
 }
 
 impl UI {
@@ -35,6 +36,7 @@ impl UI {
             viewer_area_height: 0,
             terminal_width: 0,
             split_position: 50,
+            tree_scroll_offset: 0,
         }
     }
 
@@ -52,9 +54,16 @@ impl UI {
         search: &Search,
         show_files: bool,
         show_help: bool,
+        fullscreen_viewer: bool,
     ) {
         self.terminal_width = frame.area().width;
         let main_area = frame.area();
+
+        // If in fullscreen viewer mode, render only the file viewer
+        if fullscreen_viewer {
+            self.render_file_viewer(frame, main_area, file_viewer, false);
+            return;
+        }
 
         // Reserve space for search bar if in search mode
         let (content_area, search_bar_area) = if search.mode {
@@ -166,15 +175,18 @@ impl UI {
         let visible_height = area.height.saturating_sub(2) as usize; // Account for borders
         let total_items = nav.flat_list.len();
 
-        if nav.selected > scroll_threshold {
+        let final_offset = if nav.selected > scroll_threshold {
             let offset = nav.selected.saturating_sub(scroll_threshold);
 
             // Stop scrolling when the end of the list is visible
             let max_offset = total_items.saturating_sub(visible_height);
-            let final_offset = offset.min(max_offset);
+            offset.min(max_offset)
+        } else {
+            0
+        };
 
-            *state.offset_mut() = final_offset;
-        }
+        *state.offset_mut() = final_offset;
+        self.tree_scroll_offset = final_offset;
 
         let title = " Directory Tree (↑↓/jk: navigate | /: search | c: copy | Enter: select | q: quit | i: help) ";
 
@@ -240,6 +252,16 @@ impl UI {
         frame.render_stateful_widget(list, area, &mut state);
     }
 
+    /// Helper method to load file with correct width for the viewer
+    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path) -> anyhow::Result<()> {
+        // Calculate available width (accounting for borders and padding)
+        let max_width = self.terminal_width
+            .saturating_sub(self.split_position * self.terminal_width / 100)
+            .saturating_sub(4) as usize; // Account for borders and padding
+
+        file_viewer.load_file_with_width(path, Some(max_width))
+    }
+
     fn render_file_viewer(&mut self, frame: &mut Frame, area: Rect, file_viewer: &FileViewer, show_help: bool) {
         self.viewer_area_start = area.x;
         self.viewer_area_top = area.y;
@@ -284,6 +306,9 @@ impl UI {
 
         let title = if show_help {
             format!(" Help{} ", scroll_info)
+        } else if area == frame.area() {
+            // Fullscreen mode
+            format!(" File Viewer (Fullscreen - q/Esc to exit){} ", scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
@@ -315,6 +340,7 @@ pub fn get_help_content() -> Vec<String> {
         "  Enter          Select directory and exit (cd to selected)".to_string(),
         "  q / Esc        Quit without selection".to_string(),
         "  s              Toggle file viewer mode (show/hide files)".to_string(),
+        "  v              Open file in fullscreen viewer (only for files)".to_string(),
         "  c              Copy current path to clipboard (files and directories)".to_string(),
         "  i              Show/hide this help screen".to_string(),
         "".to_string(),
@@ -358,6 +384,13 @@ pub fn get_help_content() -> Vec<String> {
         "  Scroll wheel   Navigate tree (when mouse over tree area)".to_string(),
         "                 Scroll file preview (when mouse over preview area)".to_string(),
         "  Drag           Resize split view (drag the vertical divider)".to_string(),
+        "".to_string(),
+        "COMMAND LINE OPTIONS".to_string(),
+        "  dtree [PATH]           Navigate directory tree from PATH".to_string(),
+        "  dtree -v FILE          View FILE directly in fullscreen mode".to_string(),
+        "  dtree --view FILE      View FILE directly in fullscreen mode".to_string(),
+        "  dtree --version        Print version information".to_string(),
+        "  dtree -h / --help      Print this help message".to_string(),
         "".to_string(),
         "Press 'i' again to close this help screen".to_string(),
     ]
