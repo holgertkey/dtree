@@ -170,19 +170,31 @@ impl UI {
         let mut state = ListState::default();
         state.select(Some(nav.selected));
 
-        // Calculate scroll offset: start scrolling when cursor is below line 17
-        let scroll_threshold = 17;
+        // Calculate scroll offset with margins from top and bottom
         let visible_height = area.height.saturating_sub(2) as usize; // Account for borders
         let total_items = nav.flat_list.len();
+        let lines_from_bottom = 5;
+        let lines_from_top = 7;
 
-        let final_offset = if nav.selected > scroll_threshold {
-            let offset = nav.selected.saturating_sub(scroll_threshold);
+        // Calculate max possible offset (when end of list is visible)
+        let max_offset = total_items.saturating_sub(visible_height);
 
-            // Stop scrolling when the end of the list is visible
-            let max_offset = total_items.saturating_sub(visible_height);
-            offset.min(max_offset)
-        } else {
+        let final_offset = if max_offset == 0 {
+            // List fits entirely in window - no scrolling needed
             0
+        } else if nav.selected < lines_from_top {
+            // At the beginning: cursor moves freely until line 7
+            0
+        } else if nav.selected >= total_items.saturating_sub(lines_from_bottom) {
+            // At the end: show end of list, cursor moves freely
+            max_offset
+        } else {
+            // In the middle: keep cursor at line 7 from top (or 5 from bottom, whichever comes first)
+            let offset_from_top = nav.selected.saturating_sub(lines_from_top);
+            let offset_from_bottom = nav.selected.saturating_sub(visible_height.saturating_sub(lines_from_bottom));
+
+            // Use the smaller offset, but not more than max_offset
+            offset_from_top.max(offset_from_bottom).min(max_offset)
         };
 
         *state.offset_mut() = final_offset;
