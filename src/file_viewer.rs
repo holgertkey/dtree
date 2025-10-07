@@ -93,6 +93,13 @@ impl FileViewer {
         }
     }
 
+    /// Scroll down by one line (simplified version)
+    pub fn scroll_down_simple(&mut self) {
+        if self.scroll < self.content.len().saturating_sub(1) {
+            self.scroll += 1;
+        }
+    }
+
     /// Scroll up in file content
     pub fn scroll_up(&mut self) {
         self.scroll = self.scroll.saturating_sub(1);

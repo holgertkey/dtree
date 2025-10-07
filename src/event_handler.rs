@@ -35,7 +35,7 @@ impl EventHandler {
     ) -> Result<Option<PathBuf>> {
         // Search mode - separate handling
         if search.mode {
-            return self.handle_search_input(key, search, nav);
+            return self.handle_search_input(key, search, nav, *show_files);
         }
 
         // Handle Ctrl+j/k for scrolling in file viewer
@@ -43,12 +43,7 @@ impl EventHandler {
             match key.code {
                 KeyCode::Char('j') => {
                     if *show_files {
-                        let content_len = if *show_help {
-                            crate::ui::get_help_content().len()
-                        } else {
-                            file_viewer.content.len()
-                        };
-                        file_viewer.scroll_down(content_len.saturating_sub(1));
+                        file_viewer.scroll_down_simple();
                     }
                     return Ok(Some(PathBuf::new()));
                 }
@@ -197,6 +192,7 @@ impl EventHandler {
         key: KeyEvent,
         search: &mut Search,
         nav: &Navigation,
+        show_files: bool,
     ) -> Result<Option<PathBuf>> {
         match key.code {
             KeyCode::Esc => {
@@ -204,7 +200,7 @@ impl EventHandler {
                 return Ok(Some(PathBuf::new()));
             }
             KeyCode::Enter => {
-                search.perform_search(&nav.root, false);
+                search.perform_search(&nav.root, show_files);
                 return Ok(Some(PathBuf::new()));
             }
             KeyCode::Char(c) => {
