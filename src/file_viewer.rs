@@ -147,6 +147,15 @@ impl FileViewer {
         self.scroll = 0;
     }
 
+    /// Load custom content (e.g., help text)
+    pub fn load_content(&mut self, content: Vec<String>) {
+        self.content = content;
+        self.scroll = 0;
+        self.current_path = PathBuf::new();
+        self.current_size = 0;
+        self.current_permissions = 0;
+    }
+
     /// Format file information string
     pub fn format_file_info(&self) -> String {
         if self.current_path.as_os_str().is_empty() {

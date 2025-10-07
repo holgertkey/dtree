@@ -40,17 +40,17 @@ impl EventHandler {
             return self.handle_search_input(key, search, nav, *show_files);
         }
 
-        // Handle Ctrl+j/k for scrolling in file viewer
+        // Handle Ctrl+j/k for scrolling in file viewer or help
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
                 KeyCode::Char('j') => {
-                    if *show_files {
+                    if *show_files || *show_help {
                         file_viewer.scroll_down_simple();
                     }
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char('k') => {
-                    if *show_files {
+                    if *show_files || *show_help {
                         file_viewer.scroll_up();
                     }
                     return Ok(Some(PathBuf::new()));
@@ -180,11 +180,16 @@ impl EventHandler {
             }
             KeyCode::Char('i') => {
                 *show_help = !*show_help;
-                file_viewer.reset_scroll();
 
-                if *show_help && !*show_files {
-                    *show_files = true;
-                    nav.reload_tree(*show_files)?;
+                if *show_help {
+                    // Load help content into file viewer for scrolling
+                    file_viewer.load_content(crate::ui::get_help_content());
+                    if !*show_files {
+                        *show_files = true;
+                        nav.reload_tree(*show_files)?;
+                    }
+                } else {
+                    file_viewer.reset_scroll();
                 }
             }
             KeyCode::Char('v') => {
@@ -343,16 +348,15 @@ impl EventHandler {
         show_files: bool,
         show_help: &mut bool,
     ) -> Result<()> {
-        if show_files && mouse.column >= ui.viewer_area_start
+        if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
             && mouse.row < ui.viewer_area_top + ui.viewer_area_height {
             file_viewer.scroll_up();
         } else {
             nav.move_up();
-            if show_files {
+            if show_files && !*show_help {
                 if let Some(node) = nav.get_selected_node() {
                     let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
-                    *show_help = false;
                 }
             }
         }
@@ -368,7 +372,7 @@ impl EventHandler {
         show_files: bool,
         show_help: &mut bool,
     ) -> Result<()> {
-        if show_files && mouse.column >= ui.viewer_area_start
+        if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
             && mouse.row < ui.viewer_area_top + ui.viewer_area_height {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
@@ -377,10 +381,9 @@ impl EventHandler {
         } else {
             if nav.selected < nav.flat_list.len().saturating_sub(1) {
                 nav.move_down();
-                if show_files {
+                if show_files && !*show_help {
                     if let Some(node) = nav.get_selected_node() {
                         let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
-                        *show_help = false;
                     }
                 }
             }
