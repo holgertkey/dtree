@@ -14,13 +14,14 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKi
 use anyhow::Result;
 use arboard::Clipboard;
 
-use crate::tree_node::TreeNode;
+use crate::tree_node::{TreeNode, TreeNodeRef};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct App {
-    root: TreeNode,
-    flat_list: Vec<usize>, // Индексы видимых узлов
+    root: TreeNodeRef,
+    flat_list: Vec<TreeNodeRef>, // References to visible nodes
     selected: usize,
-    all_nodes: Vec<TreeNode>,
     show_files: bool,
     file_content: Vec<String>, // Содержимое просматриваемого файла
     file_scroll: usize,        // Позиция скролла в файле
@@ -52,12 +53,12 @@ impl App {
         let mut root = TreeNode::new(start_path, 0)?;
         root.load_children(false)?;
         root.is_expanded = true;
+        let root = Rc::new(RefCell::new(root));
 
         let mut app = App {
             root,
             flat_list: Vec::new(),
             selected: 0,
-            all_nodes: Vec::new(),
             show_files: false,
             file_content: Vec::new(),
             file_scroll: 0,
@@ -89,25 +90,23 @@ impl App {
     }
 
     fn rebuild_flat_list(&mut self) {
-        self.all_nodes.clear();
         self.flat_list.clear();
-        let root = self.root.clone();
-        Self::collect_visible_nodes(&root, &mut self.all_nodes);
-        self.flat_list = (0..self.all_nodes.len()).collect();
+        Self::collect_visible_nodes(&self.root, &mut self.flat_list);
     }
 
-    fn collect_visible_nodes(node: &TreeNode, result: &mut Vec<TreeNode>) {
-        result.push(node.clone());
+    fn collect_visible_nodes(node: &TreeNodeRef, result: &mut Vec<TreeNodeRef>) {
+        result.push(Rc::clone(node));
 
-        if node.is_expanded {
-            for child in &node.children {
+        let node_borrowed = node.borrow();
+        if node_borrowed.is_expanded {
+            for child in &node_borrowed.children {
                 Self::collect_visible_nodes(child, result);
             }
         }
     }
 
-    fn get_selected_node(&self) -> Option<&TreeNode> {
-        self.all_nodes.get(self.selected)
+    fn get_selected_node(&self) -> Option<TreeNodeRef> {
+        self.flat_list.get(self.selected).map(|n| Rc::clone(n))
     }
 
     pub fn get_help_content() -> Vec<String> {
@@ -332,17 +331,17 @@ impl App {
             }
             KeyCode::Char('j') | KeyCode::Down => {
                 if self.focus_on_search {
-                    // Навигация в панели результатов поиска
+                    // Navigation in search results panel
                     if self.search_results_selected < self.search_results.len().saturating_sub(1) {
                         self.search_results_selected += 1;
                     }
                 } else {
-                    // Навигация в дереве
-                    if self.selected < self.all_nodes.len().saturating_sub(1) {
+                    // Navigation in tree
+                    if self.selected < self.flat_list.len().saturating_sub(1) {
                         self.selected += 1;
-                        // Обновляем содержимое файла при навигации
+                        // Update file content on navigation
                         if self.show_files {
-                            let path = self.get_selected_node().map(|n| n.path.clone());
+                            let path = self.get_selected_node().map(|n| n.borrow().path.clone());
                             if let Some(p) = path {
                                 let _ = self.load_file_content(&p);
                                 self.show_help = false;
@@ -353,14 +352,14 @@ impl App {
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 if self.focus_on_search {
-                    // Навигация в панели результатов поиска
+                    // Navigation in search results panel
                     self.search_results_selected = self.search_results_selected.saturating_sub(1);
                 } else {
-                    // Навигация в дереве
+                    // Navigation in tree
                     self.selected = self.selected.saturating_sub(1);
-                    // Обновляем содержимое файла при навигации
+                    // Update file content on navigation
                     if self.show_files {
-                        let path = self.get_selected_node().map(|n| n.path.clone());
+                        let path = self.get_selected_node().map(|n| n.borrow().path.clone());
                         if let Some(p) = path {
                             let _ = self.load_file_content(&p);
                             self.show_help = false;
@@ -375,19 +374,22 @@ impl App {
                         self.select_search_result();
                         return Ok(Some(PathBuf::new()));
                     } else {
-                        // Enter в дереве - выбираем директорию (только если это директория)
+                        // Enter in tree - select directory (only if it's a directory)
                         if let Some(node) = self.get_selected_node() {
-                            if node.is_dir {
-                                return Ok(Some(node.path.clone()));
+                            let node_borrowed = node.borrow();
+                            if node_borrowed.is_dir {
+                                return Ok(Some(node_borrowed.path.clone()));
                             }
                         }
                     }
                 } else {
-                    // Right - разворачиваем (только директории)
+                    // Right - expand (directories only)
                     if !self.focus_on_search {
                         if let Some(node) = self.get_selected_node() {
-                            if node.is_dir {
-                                let path = node.path.clone();
+                            let node_borrowed = node.borrow();
+                            if node_borrowed.is_dir {
+                                let path = node_borrowed.path.clone();
+                                drop(node_borrowed);
                                 self.toggle_node(&path)?;
                             }
                         }
@@ -396,28 +398,34 @@ impl App {
             }
             KeyCode::Char('h') | KeyCode::Left => {
                 if let Some(node) = self.get_selected_node() {
-                    if node.is_dir {
-                        let path = node.path.clone();
+                    let node_borrowed = node.borrow();
+                    if node_borrowed.is_dir {
+                        let path = node_borrowed.path.clone();
+                        drop(node_borrowed);
                         self.toggle_node(&path)?;
                     }
                 }
             }
             KeyCode::Char('u') | KeyCode::Backspace => {
-                // Переходим к родительской директории
-                if let Some(parent) = self.root.path.parent() {
-                    let parent_path = parent.to_path_buf();
-                    let current_path = self.root.path.clone();
+                // Go to parent directory
+                let parent_path = {
+                    let root_borrowed = self.root.borrow();
+                    root_borrowed.path.parent().map(|p| p.to_path_buf())
+                };
+
+                if let Some(parent_path) = parent_path {
+                    let current_path = self.root.borrow().path.clone();
 
                     let mut new_root = TreeNode::new(parent_path, 0)?;
                     new_root.load_children(self.show_files)?;
                     new_root.is_expanded = true;
 
-                    self.root = new_root;
+                    self.root = Rc::new(RefCell::new(new_root));
                     self.rebuild_flat_list();
 
-                    // Находим и выбираем предыдущую директорию
-                    for (i, node) in self.all_nodes.iter().enumerate() {
-                        if node.path == current_path {
+                    // Find and select previous directory
+                    for (i, node) in self.flat_list.iter().enumerate() {
+                        if node.borrow().path == current_path {
                             self.selected = i;
                             break;
                         }
@@ -430,9 +438,9 @@ impl App {
                 self.show_help = false; // Закрываем help при переключении режима
                 self.reload_tree()?;
 
-                // Загружаем содержимое текущего файла при включении режима
+                // Load current file content when enabling the mode
                 if self.show_files {
-                    let path = self.get_selected_node().map(|n| n.path.clone());
+                    let path = self.get_selected_node().map(|n| n.borrow().path.clone());
                     if let Some(p) = path {
                         let _ = self.load_file_content(&p);
                     }
@@ -450,10 +458,10 @@ impl App {
                 }
             }
             KeyCode::Char('c') => {
-                // Копируем путь в буфер обмена
+                // Copy path to clipboard
                 if let Some(node) = self.get_selected_node() {
                     if let Ok(mut clipboard) = Clipboard::new() {
-                        let _ = clipboard.set_text(node.path.display().to_string());
+                        let _ = clipboard.set_text(node.borrow().path.display().to_string());
                     }
                 }
             }
@@ -464,18 +472,22 @@ impl App {
     }
 
     fn toggle_node(&mut self, path: &Path) -> Result<()> {
-        Self::toggle_node_recursive(&mut self.root, path, self.show_files)?;
+        Self::toggle_node_recursive(&self.root, path, self.show_files)?;
         self.rebuild_flat_list();
         Ok(())
     }
 
-    fn toggle_node_recursive(node: &mut TreeNode, target_path: &Path, show_files: bool) -> Result<bool> {
-        if node.path == target_path {
-            node.toggle_expand(show_files)?;
+    fn toggle_node_recursive(node: &TreeNodeRef, target_path: &Path, show_files: bool) -> Result<bool> {
+        let mut node_borrowed = node.borrow_mut();
+        if node_borrowed.path == target_path {
+            node_borrowed.toggle_expand(show_files)?;
             return Ok(true);
         }
 
-        for child in &mut node.children {
+        let children = node_borrowed.children.clone();
+        drop(node_borrowed);
+
+        for child in &children {
             if Self::toggle_node_recursive(child, target_path, show_files)? {
                 return Ok(true);
             }
@@ -485,20 +497,24 @@ impl App {
     }
 
     fn reload_tree(&mut self) -> Result<()> {
-        // Перезагружаем дерево с новым режимом показа файлов
-        Self::reload_node_recursive(&mut self.root, self.show_files)?;
+        // Reload tree with new file display mode
+        Self::reload_node_recursive(&self.root, self.show_files)?;
         self.rebuild_flat_list();
         Ok(())
     }
 
-    fn reload_node_recursive(node: &mut TreeNode, show_files: bool) -> Result<()> {
-        if node.is_expanded && node.is_dir {
-            // Очищаем детей и перезагружаем с новым режимом
-            node.children.clear();
-            node.load_children(show_files)?;
+    fn reload_node_recursive(node: &TreeNodeRef, show_files: bool) -> Result<()> {
+        let mut node_borrowed = node.borrow_mut();
+        if node_borrowed.is_expanded && node_borrowed.is_dir {
+            // Clear children and reload with new mode
+            node_borrowed.children.clear();
+            node_borrowed.load_children(show_files)?;
 
-            // Рекурсивно перезагружаем дочерние узлы
-            for child in &mut node.children {
+            // Recursively reload child nodes
+            let children = node_borrowed.children.clone();
+            drop(node_borrowed);
+
+            for child in &children {
                 Self::reload_node_recursive(child, show_files)?;
             }
         }
@@ -512,11 +528,11 @@ impl App {
                 if mouse.column >= self.tree_area_start && mouse.column < self.tree_area_end
                     && mouse.row >= self.tree_area_top && mouse.row < self.tree_area_top + self.tree_area_height {
 
-                    // Вычисляем индекс элемента (учитываем рамку +1)
+                    // Calculate element index (accounting for border +1)
                     let clicked_row = mouse.row.saturating_sub(self.tree_area_top + 1) as usize;
 
-                    if clicked_row < self.all_nodes.len() {
-                        // Проверка на двойной клик
+                    if clicked_row < self.flat_list.len() {
+                        // Check for double click
                         let now = Instant::now();
                         let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time {
                             clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(500)
@@ -525,23 +541,25 @@ impl App {
                         };
 
                         if is_double_click {
-                            // Двойной клик - разворачиваем/сворачиваем
-                            let node = &self.all_nodes[clicked_row];
-                            if node.is_dir {
-                                let path = node.path.clone();
+                            // Double click - expand/collapse
+                            let node = &self.flat_list[clicked_row];
+                            let node_borrowed = node.borrow();
+                            if node_borrowed.is_dir {
+                                let path = node_borrowed.path.clone();
+                                drop(node_borrowed);
                                 self.toggle_node(&path)?;
                             }
                             self.last_click_time = None;
                         } else {
-                            // Одиночный клик - выбираем элемент
+                            // Single click - select element
                             self.selected = clicked_row;
                             self.last_click_time = Some((now, clicked_row));
 
-                            // Обновляем содержимое файла если режим просмотра включен
+                            // Update file content if viewer mode is enabled
                             if self.show_files {
-                                let path = self.all_nodes[clicked_row].path.clone();
+                                let path = self.flat_list[clicked_row].borrow().path.clone();
                                 let _ = self.load_file_content(&path);
-                                self.show_help = false; // Закрываем help при просмотре файла
+                                self.show_help = false; // Close help when viewing file
                             }
                         }
                     }
@@ -573,25 +591,25 @@ impl App {
                     // Скролл в области просмотра файла
                     self.file_scroll = self.file_scroll.saturating_sub(1);
                 } else {
-                    // Скролл вверх в дереве
+                    // Scroll up in tree
                     self.selected = self.selected.saturating_sub(1);
 
-                    // Обновляем содержимое файла
+                    // Update file content
                     if self.show_files {
-                        let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
+                        let path = self.flat_list.get(self.selected).map(|n| n.borrow().path.clone());
                         if let Some(p) = path {
                             let _ = self.load_file_content(&p);
-                            self.show_help = false; // Закрываем help при просмотре файла
+                            self.show_help = false; // Close help when viewing file
                         }
                     }
                 }
             }
             MouseEventKind::ScrollDown => {
-                // Проверяем, над какой областью происходит скролл
+                // Check which area is being scrolled
                 if self.show_files && mouse.column >= self.viewer_area_start
                     && mouse.row >= self.viewer_area_top
                     && mouse.row < self.viewer_area_top + self.viewer_area_height {
-                    // Скролл в области просмотра файла или help
+                    // Scroll in file viewer area or help
                     let content_len = if self.show_help {
                         Self::get_help_content().len()
                     } else {
@@ -606,16 +624,16 @@ impl App {
                         self.file_scroll += 1;
                     }
                 } else {
-                    // Скролл вниз в дереве
-                    if self.selected < self.all_nodes.len().saturating_sub(1) {
+                    // Scroll down in tree
+                    if self.selected < self.flat_list.len().saturating_sub(1) {
                         self.selected += 1;
 
-                        // Обновляем содержимое файла
+                        // Update file content
                         if self.show_files {
-                            let path = self.all_nodes.get(self.selected).map(|n| n.path.clone());
+                            let path = self.flat_list.get(self.selected).map(|n| n.borrow().path.clone());
                             if let Some(p) = path {
                                 let _ = self.load_file_content(&p);
-                                self.show_help = false; // Закрываем help при просмотре файла
+                                self.show_help = false; // Close help when viewing file
                             }
                         }
                     }
@@ -758,22 +776,23 @@ impl App {
     }
 
     fn render_tree(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {
-        // Сохраняем координаты области дерева для обработки мыши
+        // Save tree area coordinates for mouse handling
         self.tree_area_top = area.y;
         self.tree_area_height = area.height;
 
-        let items: Vec<ListItem> = self.all_nodes.iter().map(|node| {
-            let indent = "  ".repeat(node.depth);
-            let icon = if node.is_dir {
-                if node.is_expanded { "▼ " } else { "▶ " }
+        let items: Vec<ListItem> = self.flat_list.iter().map(|node| {
+            let node_borrowed = node.borrow();
+            let indent = "  ".repeat(node_borrowed.depth);
+            let icon = if node_borrowed.is_dir {
+                if node_borrowed.is_expanded { "▼ " } else { "▶ " }
             } else {
                 "  "
             };
 
-            let text = format!("{}{}{}", indent, icon, node.name);
+            let text = format!("{}{}{}", indent, icon, node_borrowed.name);
 
-            // Директории - белым, файлы - серым
-            let style = if node.is_dir {
+            // Directories - white, files - gray
+            let style = if node_borrowed.is_dir {
                 Style::default().fg(Color::White)
             } else {
                 Style::default().fg(Color::DarkGray)
@@ -811,9 +830,12 @@ impl App {
     }
 
     fn render_search_results(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
-        // Форматируем результаты для отображения
+        // Format results for display
+        let root_path = self.root.borrow().path.clone();
+        let root_parent = root_path.parent().unwrap_or(&root_path);
+
         let items: Vec<ListItem> = self.search_results.iter().map(|path| {
-            let display_path = path.strip_prefix(&self.root.path.parent().unwrap_or(&self.root.path))
+            let display_path = path.strip_prefix(root_parent)
                 .unwrap_or(path)
                 .display()
                 .to_string();
@@ -965,9 +987,9 @@ impl App {
         // Перестраиваем плоский список
         self.rebuild_flat_list();
 
-        // Находим и выбираем элемент в дереве
-        for (idx, node) in self.all_nodes.iter().enumerate() {
-            if node.path == selected_path {
+        // Find and select element in tree
+        for (idx, node) in self.flat_list.iter().enumerate() {
+            if node.borrow().path == selected_path {
                 self.selected = idx;
                 break;
             }
@@ -983,57 +1005,65 @@ impl App {
         }
     }
 
-    // Рекурсивный поиск по всему дереву
-    // show_files = true: ищем и по файлам, и по директориям
-    // show_files = false: ищем только по директориям
-    fn search_recursive(node: &TreeNode, query: &str, results: &mut Vec<PathBuf>, show_files: bool) {
-        let name_lower = node.name.to_lowercase();
+    // Recursive search through entire tree
+    // show_files = true: search both files and directories
+    // show_files = false: search only directories
+    fn search_recursive(node: &TreeNodeRef, query: &str, results: &mut Vec<PathBuf>, show_files: bool) {
+        let mut node_borrowed = node.borrow_mut();
+        let name_lower = node_borrowed.name.to_lowercase();
 
-        // Проверяем текущий узел
-        // Если show_files = false, ищем только директории
-        // Если show_files = true, ищем и файлы, и директории
-        if show_files || node.is_dir {
+        // Check current node
+        // If show_files = false, search only directories
+        // If show_files = true, search both files and directories
+        if show_files || node_borrowed.is_dir {
             if name_lower.contains(query) {
-                results.push(node.path.clone());
+                results.push(node_borrowed.path.clone());
             }
         }
 
-        // Если это директория, загружаем детей и ищем рекурсивно
-        if node.is_dir {
-            let mut temp_node = node.clone();
-            if temp_node.children.is_empty() {
-                let _ = temp_node.load_children(show_files);
+        // If this is a directory, load children and search recursively
+        if node_borrowed.is_dir {
+            if node_borrowed.children.is_empty() {
+                let _ = node_borrowed.load_children(show_files);
             }
 
-            // Рекурсивно ищем в детях
-            for child in &temp_node.children {
+            // Recursively search in children
+            let children = node_borrowed.children.clone();
+            drop(node_borrowed);
+
+            for child in &children {
                 Self::search_recursive(child, query, results, show_files);
             }
         }
     }
 
-    // Разворачивает все родительские директории до указанного пути
-    fn expand_path_to_node(node: &mut TreeNode, target_path: &PathBuf, show_files: bool) -> Result<bool> {
-        // Если это целевой узел, ничего не делаем
-        if &node.path == target_path {
+    // Expands all parent directories up to the specified path
+    fn expand_path_to_node(node: &TreeNodeRef, target_path: &PathBuf, show_files: bool) -> Result<bool> {
+        let mut node_borrowed = node.borrow_mut();
+
+        // If this is the target node, do nothing
+        if &node_borrowed.path == target_path {
             return Ok(true);
         }
 
-        // Проверяем, является ли target_path потомком текущего узла
-        if !target_path.starts_with(&node.path) {
+        // Check if target_path is a descendant of current node
+        if !target_path.starts_with(&node_borrowed.path) {
             return Ok(false);
         }
 
-        // Загружаем детей если нужно
-        if node.children.is_empty() && node.is_dir {
-            node.load_children(show_files)?;
+        // Load children if needed
+        if node_borrowed.children.is_empty() && node_borrowed.is_dir {
+            node_borrowed.load_children(show_files)?;
         }
 
-        // Разворачиваем текущий узел
-        node.is_expanded = true;
+        // Expand current node
+        node_borrowed.is_expanded = true;
 
-        // Рекурсивно ищем в детях
-        for child in &mut node.children {
+        // Recursively search in children
+        let children = node_borrowed.children.clone();
+        drop(node_borrowed);
+
+        for child in &children {
             if Self::expand_path_to_node(child, target_path, show_files)? {
                 return Ok(true);
             }
