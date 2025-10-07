@@ -1,6 +1,11 @@
 mod tree_node;
 mod app;
 mod terminal;
+mod navigation;
+mod file_viewer;
+mod search;
+mod ui;
+mod event_handler;
 
 use anyhow::Result;
 use app::App;
@@ -36,9 +41,9 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Если запрошен help, выводим полную справку
+    // If help requested, print full help
     if args.help {
-        let help_lines = App::get_help_content();
+        let help_lines = ui::get_help_content();
         for line in help_lines {
             println!("{}", line);
         }
