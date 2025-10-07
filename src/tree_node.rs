@@ -13,6 +13,8 @@ pub struct TreeNode {
     pub is_expanded: bool,
     pub depth: usize,
     pub children: Vec<TreeNodeRef>,
+    pub has_error: bool,           // Indicates read/access errors
+    pub error_message: Option<String>, // Optional error description
 }
 
 impl TreeNode {
@@ -31,6 +33,8 @@ impl TreeNode {
             is_expanded: false,
             depth,
             children: Vec::new(),
+            has_error: false,
+            error_message: None,
         })
     }
 
@@ -39,17 +43,55 @@ impl TreeNode {
             return Ok(());
         }
 
-        let entries = fs::read_dir(&self.path)?;
+        // Try to read directory
+        let entries = match fs::read_dir(&self.path) {
+            Ok(entries) => entries,
+            Err(e) => {
+                // Mark this node as having an error
+                self.has_error = true;
+                self.error_message = Some(format!("Cannot read: {}", e));
+                return Ok(()); // Don't propagate error, just mark the node
+            }
+        };
 
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            let is_dir = path.is_dir();
+        let mut error_count = 0;
+        let mut skipped_entries = Vec::new();
 
-            // Show directories always, files only if show_files == true
-            if is_dir || show_files {
-                if let Ok(node) = TreeNode::new(path, self.depth + 1) {
-                    self.children.push(Rc::new(RefCell::new(node)));
+        // Process entries, tracking errors
+        for entry in entries {
+            match entry {
+                Ok(entry) => {
+                    let path = entry.path();
+                    let is_dir = path.is_dir();
+
+                    // Show directories always, files only if show_files == true
+                    if is_dir || show_files {
+                        match TreeNode::new(path.clone(), self.depth + 1) {
+                            Ok(node) => {
+                                self.children.push(Rc::new(RefCell::new(node)));
+                            }
+                            Err(e) => {
+                                error_count += 1;
+                                skipped_entries.push(format!("{}: {}",
+                                    path.file_name().unwrap_or_default().to_string_lossy(), e));
+                            }
+                        }
+                    }
                 }
+                Err(e) => {
+                    error_count += 1;
+                    skipped_entries.push(format!("unknown entry: {}", e));
+                }
+            }
+        }
+
+        // If we had errors, mark the node and store summary
+        if error_count > 0 {
+            self.has_error = true;
+            if error_count <= 3 {
+                self.error_message = Some(skipped_entries.join(", "));
+            } else {
+                self.error_message = Some(format!("{} entries inaccessible", error_count));
             }
         }
 

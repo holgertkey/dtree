@@ -123,15 +123,33 @@ impl UI {
         let items: Vec<ListItem> = nav.flat_list.iter().map(|node| {
             let node_borrowed = node.borrow();
             let indent = "  ".repeat(node_borrowed.depth);
-            let icon = if node_borrowed.is_dir {
+
+            // Icon with error indicator
+            let icon = if node_borrowed.has_error {
+                if node_borrowed.is_dir {
+                    if node_borrowed.is_expanded { "⚠ " } else { "⚠ " }
+                } else {
+                    "⚠ "
+                }
+            } else if node_borrowed.is_dir {
                 if node_borrowed.is_expanded { "▼ " } else { "▶ " }
             } else {
                 "  "
             };
 
-            let text = format!("{}{}{}", indent, icon, node_borrowed.name);
+            // Add error message to name if present
+            let name_with_error = if let Some(ref error_msg) = node_borrowed.error_message {
+                format!("{} [{}]", node_borrowed.name, error_msg)
+            } else {
+                node_borrowed.name.clone()
+            };
 
-            let style = if node_borrowed.is_dir {
+            let text = format!("{}{}{}", indent, icon, name_with_error);
+
+            // Color coding: errors in red, directories in white, files in gray
+            let style = if node_borrowed.has_error {
+                Style::default().fg(Color::Red)
+            } else if node_borrowed.is_dir {
                 Style::default().fg(Color::White)
             } else {
                 Style::default().fg(Color::DarkGray)

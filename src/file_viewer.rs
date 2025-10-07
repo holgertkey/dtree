@@ -36,14 +36,26 @@ impl FileViewer {
 
         // Check if this is a file
         if !path.is_file() {
-            self.content.push("[Directory]".to_string());
+            if path.is_dir() {
+                self.content.push("[Directory - use arrow keys to navigate]".to_string());
+            } else if path.is_symlink() {
+                self.content.push("[Symbolic link]".to_string());
+            } else {
+                self.content.push("[Not a regular file]".to_string());
+            }
             return Ok(());
         }
 
         // Get file metadata
-        if let Ok(metadata) = std::fs::metadata(path) {
-            self.current_size = metadata.len();
-            self.current_permissions = metadata.permissions().mode();
+        match std::fs::metadata(path) {
+            Ok(metadata) => {
+                self.current_size = metadata.len();
+                self.current_permissions = metadata.permissions().mode();
+            }
+            Err(e) => {
+                self.content.push(format!("[Cannot read metadata: {}]", e));
+                return Ok(());
+            }
         }
 
         // Try to open file
@@ -69,10 +81,10 @@ impl FileViewer {
                     self.content.push(content);
                     line_count += 1;
                 }
-                Err(_) => {
-                    // Possibly binary file
+                Err(e) => {
+                    // Possibly binary file or encoding error
                     self.content.clear();
-                    self.content.push("[Binary file]".to_string());
+                    self.content.push(format!("[Binary file or encoding error: {}]", e));
                     break;
                 }
             }
