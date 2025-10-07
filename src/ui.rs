@@ -161,6 +161,21 @@ impl UI {
         let mut state = ListState::default();
         state.select(Some(nav.selected));
 
+        // Calculate scroll offset: start scrolling when cursor is below line 17
+        let scroll_threshold = 17;
+        let visible_height = area.height.saturating_sub(2) as usize; // Account for borders
+        let total_items = nav.flat_list.len();
+
+        if nav.selected > scroll_threshold {
+            let offset = nav.selected.saturating_sub(scroll_threshold);
+
+            // Stop scrolling when the end of the list is visible
+            let max_offset = total_items.saturating_sub(visible_height);
+            let final_offset = offset.min(max_offset);
+
+            *state.offset_mut() = final_offset;
+        }
+
         let title = " Directory Tree (↑↓/jk: navigate | /: search | c: copy | Enter: select | q: quit | i: help) ";
 
         let list = List::new(items)
