@@ -55,7 +55,7 @@ impl App {
             mouse,
             &mut self.nav,
             &mut self.file_viewer,
-            &self.ui,
+            &mut self.ui,
             self.show_files,
             &mut self.show_help,
         )

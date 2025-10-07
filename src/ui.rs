@@ -39,7 +39,6 @@ impl UI {
     }
 
     /// Adjust split position (20-80% range)
-    #[allow(dead_code)]
     pub fn adjust_split(&mut self, position: u16) {
         self.split_position = position.clamp(20, 80);
     }

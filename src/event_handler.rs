@@ -225,7 +225,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
-        ui: &UI,
+        ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
     ) -> Result<()> {
@@ -236,8 +236,9 @@ impl EventHandler {
             MouseEventKind::Drag(MouseButton::Left) => {
                 if self.dragging && ui.terminal_width > 0 {
                     // Convert mouse position to percentage
-                    let _new_pos = (mouse.column as u16 * 100) / ui.terminal_width;
-                    // TODO: Communicate split position back to UI
+                    let new_pos = (mouse.column as u16 * 100) / ui.terminal_width;
+                    // Update split position in UI (clamped to 20-80%)
+                    ui.adjust_split(new_pos);
                 }
             }
             MouseEventKind::Up(MouseButton::Left) => {
@@ -259,7 +260,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
-        ui: &UI,
+        ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
     ) -> Result<()> {
@@ -312,7 +313,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
-        ui: &UI,
+        ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
     ) -> Result<()> {
@@ -337,7 +338,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
-        ui: &UI,
+        ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
     ) -> Result<()> {
