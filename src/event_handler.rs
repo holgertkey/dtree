@@ -159,6 +159,11 @@ impl EventHandler {
                 *show_help = false;
                 nav.reload_tree(*show_files)?;
 
+                // Fix selection if it's out of bounds after reload
+                if nav.selected >= nav.flat_list.len() && !nav.flat_list.is_empty() {
+                    nav.selected = nav.flat_list.len() - 1;
+                }
+
                 if *show_files {
                     if let Some(node) = nav.get_selected_node() {
                         let _ = file_viewer.load_file(&node.borrow().path);
