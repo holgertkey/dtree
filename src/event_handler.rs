@@ -64,6 +64,7 @@ impl EventHandler {
         match key.code {
             KeyCode::Char('q') => {
                 if *fullscreen_viewer {
+                    // Exit fullscreen but stay in program
                     *fullscreen_viewer = false;
                     return Ok(Some(PathBuf::new()));
                 } else if search.show_results {
@@ -75,8 +76,8 @@ impl EventHandler {
             }
             KeyCode::Esc => {
                 if *fullscreen_viewer {
-                    *fullscreen_viewer = false;
-                    return Ok(Some(PathBuf::new()));
+                    // Exit program completely from fullscreen mode
+                    return Ok(None);
                 } else if search.show_results {
                     search.close_results();
                     return Ok(Some(PathBuf::new()));

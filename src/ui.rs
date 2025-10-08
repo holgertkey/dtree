@@ -337,7 +337,7 @@ impl UI {
             format!(" Help{} ", scroll_info)
         } else if area == frame.area() {
             // Fullscreen mode
-            format!(" File Viewer (Fullscreen - q/Esc to exit){} ", scroll_info)
+            format!(" File Viewer (Fullscreen - q: back to tree | Esc: exit program){} ", scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
@@ -406,6 +406,13 @@ pub fn get_help_content() -> Vec<String> {
         "    Ctrl+j       Scroll down in file preview".to_string(),
         "    Ctrl+k       Scroll up in file preview".to_string(),
         "    Scroll wheel Scroll file preview (when mouse over preview area)".to_string(),
+        "".to_string(),
+        "FULLSCREEN VIEWER (press 'v' on a file)".to_string(),
+        "  When viewing a file in fullscreen mode:".to_string(),
+        "    q            Return to tree view (stay in program)".to_string(),
+        "    Esc          Exit program completely (return to terminal)".to_string(),
+        "    Ctrl+j       Scroll down".to_string(),
+        "    Ctrl+k       Scroll up".to_string(),
         "".to_string(),
         "MOUSE SUPPORT".to_string(),
         "  Click          Select item in tree".to_string(),
