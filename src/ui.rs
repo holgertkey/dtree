@@ -1,6 +1,6 @@
 use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    style::{Modifier, Style, Color},
+    style::{Modifier, Style},
     layout::{Layout, Constraint, Direction, Rect},
     text::{Line, Span},
     Frame,
@@ -9,6 +9,7 @@ use crate::tree_node::TreeNodeRef;
 use crate::file_viewer::FileViewer;
 use crate::navigation::Navigation;
 use crate::search::Search;
+use crate::config::Config;
 
 /// UI rendering module
 pub struct UI {
@@ -52,6 +53,7 @@ impl UI {
         nav: &Navigation,
         file_viewer: &FileViewer,
         search: &Search,
+        config: &Config,
         show_files: bool,
         show_help: bool,
         fullscreen_viewer: bool,
@@ -61,7 +63,7 @@ impl UI {
 
         // If in fullscreen viewer mode, render only the file viewer
         if fullscreen_viewer {
-            self.render_file_viewer(frame, main_area, file_viewer, false);
+            self.render_file_viewer(frame, main_area, file_viewer, false, config);
             return;
         }
 
@@ -106,26 +108,26 @@ impl UI {
             self.tree_area_start = chunks[0].x;
             self.tree_area_end = chunks[0].x + chunks[0].width;
 
-            self.render_tree(frame, chunks[0], nav);
-            self.render_file_viewer(frame, chunks[1], file_viewer, show_help);
+            self.render_tree(frame, chunks[0], nav, config);
+            self.render_file_viewer(frame, chunks[1], file_viewer, show_help, config);
         } else {
             self.tree_area_start = tree_area.x;
             self.tree_area_end = tree_area.x + tree_area.width;
-            self.render_tree(frame, tree_area, nav);
+            self.render_tree(frame, tree_area, nav, config);
         }
 
         // Render search results panel if active
         if let Some(area) = search_results_area {
-            self.render_search_results(frame, area, search, &nav.root);
+            self.render_search_results(frame, area, search, &nav.root, config);
         }
 
         // Render search bar if in input mode
         if let Some(area) = search_bar_area {
-            self.render_search_bar(frame, area, search);
+            self.render_search_bar(frame, area, search, config);
         }
     }
 
-    fn render_tree(&mut self, frame: &mut Frame, area: Rect, nav: &Navigation) {
+    fn render_tree(&mut self, frame: &mut Frame, area: Rect, nav: &Navigation, config: &Config) {
         self.tree_area_top = area.y;
         self.tree_area_height = area.height;
 
@@ -155,13 +157,16 @@ impl UI {
 
             let text = format!("{}{}{}", indent, icon, name_with_error);
 
-            // Color coding: errors in red, directories in white, files in gray
+            // Color coding: errors in configured color, directories and files use theme colors
             let style = if node_borrowed.has_error {
-                Style::default().fg(Color::Red)
+                let error_color = Config::parse_color(&config.appearance.colors.error_color);
+                Style::default().fg(error_color)
             } else if node_borrowed.is_dir {
-                Style::default().fg(Color::White)
+                let dir_color = Config::parse_color(&config.appearance.colors.directory_color);
+                Style::default().fg(dir_color)
             } else {
-                Style::default().fg(Color::DarkGray)
+                let file_color = Config::parse_color(&config.appearance.colors.file_color);
+                Style::default().fg(file_color)
             };
 
             ListItem::new(text).style(style)
@@ -213,21 +218,27 @@ impl UI {
         frame.render_stateful_widget(list, area, &mut state);
     }
 
-    fn render_search_bar(&self, frame: &mut Frame, area: Rect, search: &Search) {
+    fn render_search_bar(&self, frame: &mut Frame, area: Rect, search: &Search, config: &Config) {
         let search_text = format!("Search: {}", search.query);
+
+        let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
 
         let paragraph = Paragraph::new(search_text)
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title(" Enter to search, Esc to cancel "))
-            .style(Style::default().fg(Color::Cyan));
+            .style(Style::default().fg(selected_color));
 
         frame.render_widget(paragraph, area);
     }
 
-    fn render_search_results(&self, frame: &mut Frame, area: Rect, search: &Search, root: &TreeNodeRef) {
+    fn render_search_results(&self, frame: &mut Frame, area: Rect, search: &Search, root: &TreeNodeRef, config: &Config) {
         let root_path = root.borrow().path.clone();
         let root_parent = root_path.parent().unwrap_or(&root_path);
+
+        let file_color = Config::parse_color(&config.appearance.colors.file_color);
+        let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
+        let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
 
         let items: Vec<ListItem> = search.results.iter().map(|path| {
             let display_path = path.strip_prefix(root_parent)
@@ -235,7 +246,7 @@ impl UI {
                 .display()
                 .to_string();
 
-            let style = Style::default().fg(Color::White);
+            let style = Style::default().fg(file_color);
             ListItem::new(display_path).style(style)
         }).collect();
 
@@ -246,7 +257,7 @@ impl UI {
             search.results.len());
 
         let border_style = if search.focus_on_results {
-            Style::default().fg(Color::Cyan)
+            Style::default().fg(selected_color)
         } else {
             Style::default()
         };
@@ -257,7 +268,7 @@ impl UI {
                 .title(title)
                 .border_style(border_style))
             .highlight_style(Style::default()
-                .fg(Color::Yellow)
+                .fg(highlight_color)
                 .add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
 
@@ -265,16 +276,16 @@ impl UI {
     }
 
     /// Helper method to load file with correct width for the viewer
-    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path) -> anyhow::Result<()> {
+    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path, max_lines: usize) -> anyhow::Result<()> {
         // Calculate available width (accounting for borders and padding)
         let max_width = self.terminal_width
             .saturating_sub(self.split_position * self.terminal_width / 100)
             .saturating_sub(4) as usize; // Account for borders and padding
 
-        file_viewer.load_file_with_width(path, Some(max_width))
+        file_viewer.load_file_with_width(path, Some(max_width), max_lines)
     }
 
-    fn render_file_viewer(&mut self, frame: &mut Frame, area: Rect, file_viewer: &FileViewer, show_help: bool) {
+    fn render_file_viewer(&mut self, frame: &mut Frame, area: Rect, file_viewer: &FileViewer, show_help: bool, config: &Config) {
         self.viewer_area_start = area.x;
         self.viewer_area_top = area.y;
         self.viewer_area_height = area.height;
@@ -302,11 +313,13 @@ impl UI {
             let file_info = file_viewer.format_file_info();
             let separator = "─".repeat(area.width.saturating_sub(2) as usize);
 
+            let border_color = Config::parse_color(&config.appearance.colors.border_color);
+
             visible_lines.push(Line::from(
-                Span::styled(separator, Style::default().fg(Color::DarkGray))
+                Span::styled(separator, Style::default().fg(border_color))
             ));
             visible_lines.push(Line::from(
-                Span::styled(file_info, Style::default().fg(Color::DarkGray))
+                Span::styled(file_info, Style::default().fg(border_color))
             ));
         }
 

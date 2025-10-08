@@ -8,6 +8,7 @@ use crate::file_viewer::FileViewer;
 use crate::search::Search;
 use crate::ui::UI;
 use crate::event_handler::EventHandler;
+use crate::config::Config;
 
 /// Main application state
 pub struct App {
@@ -16,6 +17,7 @@ pub struct App {
     search: Search,
     ui: UI,
     event_handler: EventHandler,
+    config: Config,
     show_files: bool,
     show_help: bool,
     fullscreen_viewer: bool,
@@ -23,11 +25,17 @@ pub struct App {
 
 impl App {
     pub fn new(start_path: PathBuf) -> Result<Self> {
-        let nav = Navigation::new(start_path, false)?;
+        // Load configuration from global and local config files
+        let config = Config::load(&start_path);
+
+        let nav = Navigation::new(start_path, config.behavior.show_hidden)?;
         let file_viewer = FileViewer::new();
         let search = Search::new();
-        let ui = UI::new();
+        let mut ui = UI::new();
         let event_handler = EventHandler::new();
+
+        // Apply config to UI
+        ui.split_position = config.appearance.split_position;
 
         Ok(App {
             nav,
@@ -35,10 +43,16 @@ impl App {
             search,
             ui,
             event_handler,
+            config,
             show_files: false,
             show_help: false,
             fullscreen_viewer: false,
         })
+    }
+
+    /// Get reference to the configuration
+    pub fn config(&self) -> &Config {
+        &self.config
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<Option<PathBuf>> {
@@ -51,6 +65,7 @@ impl App {
             &mut self.show_help,
             &mut self.fullscreen_viewer,
             &self.ui,
+            &self.config,
         )
     }
 
@@ -62,6 +77,7 @@ impl App {
             &mut self.ui,
             self.show_files,
             &mut self.show_help,
+            &self.config,
         )
     }
 
@@ -71,6 +87,7 @@ impl App {
             &self.nav,
             &self.file_viewer,
             &self.search,
+            &self.config,
             self.show_files,
             self.show_help,
             self.fullscreen_viewer,
@@ -82,7 +99,8 @@ impl App {
         self.fullscreen_viewer = true;
         self.show_files = true;
         // Load file with very large width for fullscreen (terminal width unknown at this point)
-        self.file_viewer.load_file_with_width(file_path, Some(10000))?;
+        let max_lines = self.config.behavior.max_file_lines;
+        self.file_viewer.load_file_with_width(file_path, Some(10000), max_lines)?;
         Ok(())
     }
 }

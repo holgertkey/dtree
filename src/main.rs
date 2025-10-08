@@ -6,6 +6,7 @@ mod file_viewer;
 mod search;
 mod ui;
 mod event_handler;
+mod config;
 
 use anyhow::Result;
 use app::App;

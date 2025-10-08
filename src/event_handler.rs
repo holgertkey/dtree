@@ -8,6 +8,7 @@ use crate::navigation::Navigation;
 use crate::file_viewer::FileViewer;
 use crate::search::Search;
 use crate::ui::UI;
+use crate::config::Config;
 
 /// Event handler for keyboard and mouse input
 pub struct EventHandler {
@@ -34,6 +35,7 @@ impl EventHandler {
         show_help: &mut bool,
         fullscreen_viewer: &mut bool,
         ui: &UI,
+        config: &Config,
     ) -> Result<Option<PathBuf>> {
         // Search mode - separate handling
         if search.mode {
@@ -97,7 +99,7 @@ impl EventHandler {
                     nav.move_down();
                     if *show_files {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
                             *show_help = false;
                         }
                     }
@@ -110,7 +112,7 @@ impl EventHandler {
                     nav.move_up();
                     if *show_files {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
                             *show_help = false;
                         }
                     }
@@ -123,7 +125,7 @@ impl EventHandler {
                             let _ = nav.expand_path_to_node(&path, *show_files);
                             search.focus_on_results = false;
                             if *show_files {
-                                let _ = ui.load_file_for_viewer(file_viewer, &path);
+                                let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines);
                                 *show_help = false;
                             }
                         }
@@ -174,7 +176,7 @@ impl EventHandler {
 
                 if *show_files {
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
                     }
                 }
             }
@@ -202,7 +204,7 @@ impl EventHandler {
 
                         if *fullscreen_viewer {
                             // Load file for fullscreen viewing
-                            let _ = ui.load_file_for_viewer(file_viewer, &node_borrowed.path);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node_borrowed.path, config.behavior.max_file_lines);
                         }
                     }
                 }
@@ -257,10 +259,11 @@ impl EventHandler {
         ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
+        config: &Config,
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse, nav, file_viewer, ui, show_files, show_help)?;
+                self.handle_mouse_click(mouse, nav, file_viewer, ui, show_files, show_help, config)?;
             }
             MouseEventKind::Drag(MouseButton::Left) => {
                 if self.dragging && ui.terminal_width > 0 {
@@ -274,10 +277,10 @@ impl EventHandler {
                 self.dragging = false;
             }
             MouseEventKind::ScrollUp => {
-                self.handle_scroll_up(mouse, nav, file_viewer, ui, show_files, show_help)?;
+                self.handle_scroll_up(mouse, nav, file_viewer, ui, show_files, show_help, config)?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_scroll_down(mouse, nav, file_viewer, ui, show_files, show_help)?;
+                self.handle_scroll_down(mouse, nav, file_viewer, ui, show_files, show_help, config)?;
             }
             _ => {}
         }
@@ -292,6 +295,7 @@ impl EventHandler {
         ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
+        config: &Config,
     ) -> Result<()> {
         // Check click in tree area
         if mouse.column >= ui.tree_area_start && mouse.column < ui.tree_area_end
@@ -304,7 +308,7 @@ impl EventHandler {
             if clicked_row < nav.flat_list.len() {
                 let now = Instant::now();
                 let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time {
-                    clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(500)
+                    clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(config.behavior.double_click_timeout_ms)
                 } else {
                     false
                 };
@@ -324,7 +328,7 @@ impl EventHandler {
 
                     if show_files {
                         let path = nav.flat_list[clicked_row].borrow().path.clone();
-                        let _ = ui.load_file_for_viewer(file_viewer, &path);
+                        let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines);
                         *show_help = false;
                     }
                 }
@@ -347,6 +351,7 @@ impl EventHandler {
         ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
+        config: &Config,
     ) -> Result<()> {
         if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
@@ -356,7 +361,7 @@ impl EventHandler {
             nav.move_up();
             if show_files && !*show_help {
                 if let Some(node) = nav.get_selected_node() {
-                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
+                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
                 }
             }
         }
@@ -371,6 +376,7 @@ impl EventHandler {
         ui: &mut UI,
         show_files: bool,
         show_help: &mut bool,
+        config: &Config,
     ) -> Result<()> {
         if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
@@ -383,7 +389,7 @@ impl EventHandler {
                 nav.move_down();
                 if show_files && !*show_help {
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path);
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
                     }
                 }
             }

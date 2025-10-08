@@ -26,9 +26,8 @@ impl FileViewer {
         }
     }
 
-    /// Load file content with specified max width for each line
-    pub fn load_file_with_width(&mut self, path: &Path, max_width: Option<usize>) -> Result<()> {
-        const MAX_LINES: usize = 1000;
+    /// Load file content with specified max width and max lines
+    pub fn load_file_with_width(&mut self, path: &Path, max_width: Option<usize>, max_lines: usize) -> Result<()> {
         const DEFAULT_MAX_WIDTH: usize = 10000; // Very large default to avoid truncation
 
         let max_width = max_width.unwrap_or(DEFAULT_MAX_WIDTH);
@@ -76,8 +75,8 @@ impl FileViewer {
         let mut line_count = 0;
 
         for line in reader.lines() {
-            if line_count >= MAX_LINES {
-                self.content.push(format!("\n[... truncated at {} lines ...]", MAX_LINES));
+            if line_count >= max_lines {
+                self.content.push(format!("\n[... truncated at {} lines ...]", max_lines));
                 break;
             }
 
