@@ -245,45 +245,31 @@ impl Config {
         dirs::config_dir().map(|p| p.join("dtree").join("config.toml"))
     }
 
-    /// Get the local config file path (.dtree.toml in current directory)
-    pub fn local_config_path(dir: &Path) -> PathBuf {
-        dir.join(".dtree.toml")
-    }
-
     /// Load configuration with fallback order:
-    /// 1. Local config (.dtree.toml in the directory)
-    /// 2. Global config (~/.config/dtree/config.toml)
-    /// 3. Default config
-    pub fn load(dir: &Path) -> Self {
+    /// 1. Global config (~/.config/dtree/config.toml)
+    /// 2. Default config
+    ///
+    /// If config file doesn't exist, it will be created automatically with default values.
+    pub fn load() -> Self {
         let mut config = Config::default();
 
-        // Try to load global config
+        // Get global config path
         if let Some(global_path) = Self::global_config_path() {
+            // Create config file if it doesn't exist
+            if !global_path.exists() {
+                // Silently create default config file
+                let _ = Self::create_default_file(&global_path);
+            }
+
+            // Load config from file
             if global_path.exists() {
                 if let Ok(global_config) = Self::from_file(&global_path) {
-                    config = config.merge(global_config);
+                    config = global_config;
                 }
             }
         }
 
-        // Try to load local config (overrides global)
-        let local_path = Self::local_config_path(dir);
-        if local_path.exists() {
-            if let Ok(local_config) = Self::from_file(&local_path) {
-                config = config.merge(local_config);
-            }
-        }
-
         config
-    }
-
-    /// Merge another config into this one (other takes precedence)
-    pub fn merge(self, other: Self) -> Self {
-        Self {
-            appearance: merge_appearance(self.appearance, other.appearance),
-            behavior: merge_behavior(self.behavior, other.behavior),
-            keybindings: merge_keybindings(self.keybindings, other.keybindings),
-        }
     }
 
     /// Create a default config file with comments
@@ -345,35 +331,6 @@ copy_path = ["c"]
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
 
         Ok(())
-    }
-}
-
-// Helper functions for merging configs
-fn merge_appearance(_base: AppearanceConfig, other: AppearanceConfig) -> AppearanceConfig {
-    AppearanceConfig {
-        theme: other.theme,
-        show_icons: other.show_icons,
-        split_position: other.split_position,
-        colors: other.colors,
-    }
-}
-
-fn merge_behavior(_base: BehaviorConfig, other: BehaviorConfig) -> BehaviorConfig {
-    BehaviorConfig {
-        max_file_lines: other.max_file_lines,
-        show_hidden: other.show_hidden,
-        follow_symlinks: other.follow_symlinks,
-        double_click_timeout_ms: other.double_click_timeout_ms,
-    }
-}
-
-fn merge_keybindings(_base: KeybindingsConfig, other: KeybindingsConfig) -> KeybindingsConfig {
-    KeybindingsConfig {
-        quit: other.quit,
-        search: other.search,
-        toggle_files: other.toggle_files,
-        toggle_help: other.toggle_help,
-        copy_path: other.copy_path,
     }
 }
 

@@ -455,6 +455,18 @@ pub fn get_help_content() -> Vec<String> {
         "    dt -h                Show help".to_string(),
         "    dt --version         Show version".to_string(),
         "".to_string(),
+        "CONFIGURATION".to_string(),
+        "  dtree uses a configuration file located at:".to_string(),
+        "    ~/.config/dtree/config.toml".to_string(),
+        "".to_string(),
+        "  On first run, this file is automatically created with default values.".to_string(),
+        "  You can edit it to customize:".to_string(),
+        "    • Appearance (colors, split position, icons)".to_string(),
+        "    • Behavior (max file lines, show hidden files, double-click timeout)".to_string(),
+        "    • Keybindings (customize keyboard shortcuts)".to_string(),
+        "".to_string(),
+        "  To reset to defaults: delete the config file, it will be recreated on next run.".to_string(),
+        "".to_string(),
         "Press 'i' again to close this help screen".to_string(),
     ]
 }

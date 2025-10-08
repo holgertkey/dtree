@@ -25,8 +25,8 @@ pub struct App {
 
 impl App {
     pub fn new(start_path: PathBuf) -> Result<Self> {
-        // Load configuration from global and local config files
-        let config = Config::load(&start_path);
+        // Load configuration from global config file
+        let config = Config::load();
 
         let nav = Navigation::new(start_path, config.behavior.show_hidden)?;
         let file_viewer = FileViewer::new();

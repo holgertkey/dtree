@@ -13,6 +13,7 @@ use app::App;
 use terminal::{setup_terminal, cleanup_terminal, run_app};
 use clap::Parser;
 use std::path::PathBuf;
+use config::Config;
 
 #[derive(Parser)]
 #[command(name = "dtree")]
@@ -38,6 +39,9 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    // Ensure config file exists (create if missing)
+    let _ = Config::load();
+
     let args = Args::parse();
 
     // Если запрошена версия, выводим её
