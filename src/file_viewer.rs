@@ -5,26 +5,42 @@ use std::os::unix::fs::PermissionsExt;
 use anyhow::Result;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
+use ratatui::text::{Line, Span};
+use ratatui::style::{Style, Color};
+use once_cell::sync::Lazy;
+use syntect::parsing::SyntaxSet;
+use syntect::highlighting::ThemeSet;
+use syntect::easy::HighlightLines;
+
+/// Lazy-loaded syntax set (loaded once on first use)
+static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(|| SyntaxSet::load_defaults_newlines());
+
+/// Lazy-loaded theme set (loaded once on first use)
+static THEME_SET: Lazy<ThemeSet> = Lazy::new(|| ThemeSet::load_defaults());
 
 /// File viewer state and logic for displaying file contents
 pub struct FileViewer {
     pub content: Vec<String>,
+    pub highlighted_content: Vec<Line<'static>>,
     pub scroll: usize,
     pub current_path: PathBuf,
     pub current_size: u64,
     pub current_permissions: u32,
     pub show_line_numbers: bool,
+    pub syntax_name: Option<String>,
 }
 
 impl FileViewer {
     pub fn new() -> Self {
         Self {
             content: Vec::new(),
+            highlighted_content: Vec::new(),
             scroll: 0,
             current_path: PathBuf::new(),
             current_size: 0,
             current_permissions: 0,
             show_line_numbers: false,
+            syntax_name: None,
         }
     }
 
@@ -34,16 +50,18 @@ impl FileViewer {
     }
 
     /// Load file content with specified max width and max lines
-    pub fn load_file_with_width(&mut self, path: &Path, max_width: Option<usize>, max_lines: usize) -> Result<()> {
+    pub fn load_file_with_width(&mut self, path: &Path, max_width: Option<usize>, max_lines: usize, enable_syntax_highlighting: bool, syntax_theme: &str) -> Result<()> {
         const DEFAULT_MAX_WIDTH: usize = 10000; // Very large default to avoid truncation
 
         let max_width = max_width.unwrap_or(DEFAULT_MAX_WIDTH);
 
         self.content.clear();
+        self.highlighted_content.clear();
         self.scroll = 0;
         self.current_path = path.to_path_buf();
         self.current_size = 0;
         self.current_permissions = 0;
+        self.syntax_name = None;
 
         // Check if this is a file
         if !path.is_file() {
@@ -107,7 +125,58 @@ impl FileViewer {
             self.content.push("[Empty file]".to_string());
         }
 
+        // Apply syntax highlighting if enabled
+        if enable_syntax_highlighting && !self.content.is_empty() {
+            self.apply_syntax_highlighting(syntax_theme);
+        }
+
         Ok(())
+    }
+
+    /// Apply syntax highlighting to content
+    fn apply_syntax_highlighting(&mut self, theme_name: &str) {
+        // Detect syntax based on file extension
+        let syntax = SYNTAX_SET
+            .find_syntax_for_file(&self.current_path)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+
+        self.syntax_name = Some(syntax.name.clone());
+
+        // Get theme
+        let theme = THEME_SET.themes.get(theme_name)
+            .unwrap_or_else(|| THEME_SET.themes.get("base16-ocean.dark").unwrap());
+
+        // Highlight lines
+        let mut highlighter = HighlightLines::new(syntax, theme);
+
+        for line_text in &self.content {
+            let highlighted = highlighter.highlight_line(line_text, &SYNTAX_SET);
+
+            match highlighted {
+                Ok(ranges) => {
+                    let spans: Vec<Span> = ranges
+                        .iter()
+                        .map(|(style, text)| {
+                            let fg_color = Self::syntect_color_to_ratatui(style.foreground);
+                            Span::styled(text.to_string(), Style::default().fg(fg_color))
+                        })
+                        .collect();
+
+                    self.highlighted_content.push(Line::from(spans));
+                }
+                Err(_) => {
+                    // Fallback to plain text
+                    self.highlighted_content.push(Line::from(line_text.clone()));
+                }
+            }
+        }
+    }
+
+    /// Convert syntect color to ratatui color
+    fn syntect_color_to_ratatui(color: syntect::highlighting::Color) -> Color {
+        Color::Rgb(color.r, color.g, color.b)
     }
 
     /// Truncate a line to max_width using Unicode-aware truncation
@@ -156,10 +225,12 @@ impl FileViewer {
     /// Load custom content (e.g., help text)
     pub fn load_content(&mut self, content: Vec<String>) {
         self.content = content;
+        self.highlighted_content.clear();
         self.scroll = 0;
         self.current_path = PathBuf::new();
         self.current_size = 0;
         self.current_permissions = 0;
+        self.syntax_name = None;
     }
 
     /// Format file information string

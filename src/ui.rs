@@ -276,16 +276,19 @@ impl UI {
     }
 
     /// Helper method to load file with correct width for the viewer
-    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path, max_lines: usize, fullscreen: bool) -> anyhow::Result<()> {
+    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path, max_lines: usize, fullscreen: bool, config: &Config) -> anyhow::Result<()> {
+        let enable_highlighting = config.appearance.enable_syntax_highlighting;
+        let theme = &config.appearance.syntax_theme;
+
         if fullscreen {
             // For fullscreen, use None to get maximum width (no truncation)
-            file_viewer.load_file_with_width(path, None, max_lines)
+            file_viewer.load_file_with_width(path, None, max_lines, enable_highlighting, theme)
         } else {
             // For split view, calculate available width based on split position
             let max_width = self.terminal_width
                 .saturating_sub(self.split_position * self.terminal_width / 100)
                 .saturating_sub(4) as usize;
-            file_viewer.load_file_with_width(path, Some(max_width), max_lines)
+            file_viewer.load_file_with_width(path, Some(max_width), max_lines, enable_highlighting, theme)
         }
     }
 
@@ -309,25 +312,53 @@ impl UI {
         let is_fullscreen = area == frame.area();
         let show_numbers = is_fullscreen && file_viewer.show_line_numbers && !show_help;
 
-        let mut visible_lines: Vec<Line> = content_to_display
-            .iter()
-            .enumerate()
-            .skip(file_viewer.scroll)
-            .take(lines_to_show)
-            .map(|(idx, line)| {
-                if show_numbers {
-                    // Add line numbers (1-indexed, starting from scroll position)
-                    let line_num = file_viewer.scroll + idx + 1;
-                    let border_color = Config::parse_color(&config.appearance.colors.border_color);
-                    Line::from(vec![
-                        Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
-                        Span::raw(line.as_str()),
-                    ])
-                } else {
-                    Line::from(line.as_str())
-                }
-            })
-            .collect();
+        // Use highlighted content if available, otherwise fall back to plain text
+        let use_highlighting = !file_viewer.highlighted_content.is_empty() && !show_help;
+
+        let mut visible_lines: Vec<Line> = if use_highlighting {
+            // Use pre-highlighted content
+            file_viewer.highlighted_content
+                .iter()
+                .enumerate()
+                .skip(file_viewer.scroll)
+                .take(lines_to_show)
+                .map(|(idx, line)| {
+                    if show_numbers {
+                        // Add line numbers to highlighted lines
+                        let line_num = file_viewer.scroll + idx + 1;
+                        let border_color = Config::parse_color(&config.appearance.colors.border_color);
+                        let mut spans = vec![
+                            Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
+                        ];
+                        spans.extend(line.spans.iter().cloned());
+                        Line::from(spans)
+                    } else {
+                        line.clone()
+                    }
+                })
+                .collect()
+        } else {
+            // Fallback to plain text
+            content_to_display
+                .iter()
+                .enumerate()
+                .skip(file_viewer.scroll)
+                .take(lines_to_show)
+                .map(|(idx, line)| {
+                    if show_numbers {
+                        // Add line numbers (1-indexed, starting from scroll position)
+                        let line_num = file_viewer.scroll + idx + 1;
+                        let border_color = Config::parse_color(&config.appearance.colors.border_color);
+                        Line::from(vec![
+                            Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
+                            Span::raw(line.as_str()),
+                        ])
+                    } else {
+                        Line::from(line.as_str())
+                    }
+                })
+                .collect()
+        };
 
         // Add separator and file info at the end (only if not help)
         if !show_help && !file_viewer.current_path.as_os_str().is_empty() {

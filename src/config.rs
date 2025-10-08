@@ -116,6 +116,14 @@ pub struct AppearanceConfig {
     #[serde(default = "default_show_line_numbers")]
     pub show_line_numbers: bool,
 
+    /// Enable syntax highlighting for code files
+    #[serde(default = "default_enable_syntax_highlighting")]
+    pub enable_syntax_highlighting: bool,
+
+    /// Syntax highlighting theme name
+    #[serde(default = "default_syntax_theme")]
+    pub syntax_theme: String,
+
     /// Custom theme colors
     #[serde(default)]
     pub colors: ThemeConfig,
@@ -128,6 +136,8 @@ impl Default for AppearanceConfig {
             show_icons: default_show_icons(),
             split_position: default_split_position(),
             show_line_numbers: default_show_line_numbers(),
+            enable_syntax_highlighting: default_enable_syntax_highlighting(),
+            syntax_theme: default_syntax_theme(),
             colors: ThemeConfig::default(),
         }
     }
@@ -137,6 +147,8 @@ fn default_theme() -> String { "default".to_string() }
 fn default_show_icons() -> bool { false }
 fn default_split_position() -> u16 { 50 }
 fn default_show_line_numbers() -> bool { false }
+fn default_enable_syntax_highlighting() -> bool { true }
+fn default_syntax_theme() -> String { "base16-ocean.dark".to_string() }
 
 /// Behavior configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -295,6 +307,14 @@ split_position = 50
 
 # Show line numbers in fullscreen viewer by default (toggle with 'n' key)
 show_line_numbers = false
+
+# Enable syntax highlighting for code files
+enable_syntax_highlighting = true
+
+# Syntax highlighting theme
+# Available themes: "base16-ocean.dark", "base16-ocean.light", "InspiredGitHub",
+#                   "Solarized (dark)", "Solarized (light)", "Monokai Extended"
+syntax_theme = "base16-ocean.dark"
 
 # Custom theme colors
 [appearance.colors]

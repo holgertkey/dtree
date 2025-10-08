@@ -102,7 +102,9 @@ impl App {
         self.show_files = true;
         // Load file with very large width for fullscreen (terminal width unknown at this point)
         let max_lines = self.config.behavior.max_file_lines;
-        self.file_viewer.load_file_with_width(file_path, Some(10000), max_lines)?;
+        let enable_highlighting = self.config.appearance.enable_syntax_highlighting;
+        let theme = &self.config.appearance.syntax_theme.clone();
+        self.file_viewer.load_file_with_width(file_path, None, max_lines, enable_highlighting, theme)?;
         Ok(())
     }
 }
