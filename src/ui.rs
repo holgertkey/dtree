@@ -305,11 +305,28 @@ impl UI {
         // Calculate visible lines (leaving space for separator and file info)
         let lines_to_show = content_height.saturating_sub(2);
 
+        // Check if we're in fullscreen mode (area == frame.area())
+        let is_fullscreen = area == frame.area();
+        let show_numbers = is_fullscreen && file_viewer.show_line_numbers && !show_help;
+
         let mut visible_lines: Vec<Line> = content_to_display
             .iter()
+            .enumerate()
             .skip(file_viewer.scroll)
             .take(lines_to_show)
-            .map(|line| Line::from(line.as_str()))
+            .map(|(idx, line)| {
+                if show_numbers {
+                    // Add line numbers (1-indexed, starting from scroll position)
+                    let line_num = file_viewer.scroll + idx + 1;
+                    let border_color = Config::parse_color(&config.appearance.colors.border_color);
+                    Line::from(vec![
+                        Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
+                        Span::raw(line.as_str()),
+                    ])
+                } else {
+                    Line::from(line.as_str())
+                }
+            })
             .collect();
 
         // Add separator and file info at the end (only if not help)
@@ -337,7 +354,8 @@ impl UI {
             format!(" Help{} ", scroll_info)
         } else if area == frame.area() {
             // Fullscreen mode
-            format!(" File Viewer (Fullscreen - q: back to tree | Esc: exit program){} ", scroll_info)
+            let line_num_hint = if file_viewer.show_line_numbers { "n: hide lines" } else { "n: show lines" };
+            format!(" File Viewer (Fullscreen - {} | q: back | Esc: exit){} ", line_num_hint, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
@@ -411,6 +429,7 @@ pub fn get_help_content() -> Vec<String> {
         "  When viewing a file in fullscreen mode:".to_string(),
         "    q            Return to tree view (stay in program)".to_string(),
         "    Esc          Exit program completely (return to terminal)".to_string(),
+        "    n            Toggle line numbers (show/hide)".to_string(),
         "    Ctrl+j       Scroll down".to_string(),
         "    Ctrl+k       Scroll up".to_string(),
         "".to_string(),

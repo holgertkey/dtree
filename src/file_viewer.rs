@@ -13,6 +13,7 @@ pub struct FileViewer {
     pub current_path: PathBuf,
     pub current_size: u64,
     pub current_permissions: u32,
+    pub show_line_numbers: bool,
 }
 
 impl FileViewer {
@@ -23,7 +24,13 @@ impl FileViewer {
             current_path: PathBuf::new(),
             current_size: 0,
             current_permissions: 0,
+            show_line_numbers: false,
         }
+    }
+
+    /// Toggle line numbers display
+    pub fn toggle_line_numbers(&mut self) {
+        self.show_line_numbers = !self.show_line_numbers;
     }
 
     /// Load file content with specified max width and max lines

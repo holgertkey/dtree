@@ -217,6 +217,12 @@ impl EventHandler {
                     }
                 }
             }
+            KeyCode::Char('n') => {
+                // Toggle line numbers (only in fullscreen mode)
+                if *fullscreen_viewer {
+                    file_viewer.toggle_line_numbers();
+                }
+            }
             _ => {}
         }
 
