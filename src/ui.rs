@@ -276,13 +276,17 @@ impl UI {
     }
 
     /// Helper method to load file with correct width for the viewer
-    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path, max_lines: usize) -> anyhow::Result<()> {
-        // Calculate available width (accounting for borders and padding)
-        let max_width = self.terminal_width
-            .saturating_sub(self.split_position * self.terminal_width / 100)
-            .saturating_sub(4) as usize; // Account for borders and padding
-
-        file_viewer.load_file_with_width(path, Some(max_width), max_lines)
+    pub fn load_file_for_viewer(&self, file_viewer: &mut FileViewer, path: &std::path::Path, max_lines: usize, fullscreen: bool) -> anyhow::Result<()> {
+        if fullscreen {
+            // For fullscreen, use None to get maximum width (no truncation)
+            file_viewer.load_file_with_width(path, None, max_lines)
+        } else {
+            // For split view, calculate available width based on split position
+            let max_width = self.terminal_width
+                .saturating_sub(self.split_position * self.terminal_width / 100)
+                .saturating_sub(4) as usize;
+            file_viewer.load_file_with_width(path, Some(max_width), max_lines)
+        }
     }
 
     fn render_file_viewer(&mut self, frame: &mut Frame, area: Rect, file_viewer: &FileViewer, show_help: bool, config: &Config) {

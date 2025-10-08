@@ -99,7 +99,7 @@ impl EventHandler {
                     nav.move_down();
                     if *show_files {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false);
                             *show_help = false;
                         }
                     }
@@ -112,7 +112,7 @@ impl EventHandler {
                     nav.move_up();
                     if *show_files {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false);
                             *show_help = false;
                         }
                     }
@@ -125,7 +125,7 @@ impl EventHandler {
                             let _ = nav.expand_path_to_node(&path, *show_files);
                             search.focus_on_results = false;
                             if *show_files {
-                                let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines);
+                                let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false);
                                 *show_help = false;
                             }
                         }
@@ -176,7 +176,7 @@ impl EventHandler {
 
                 if *show_files {
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false);
                     }
                 }
             }
@@ -203,8 +203,8 @@ impl EventHandler {
                         *show_help = false;
 
                         if *fullscreen_viewer {
-                            // Load file for fullscreen viewing
-                            let _ = ui.load_file_for_viewer(file_viewer, &node_borrowed.path, config.behavior.max_file_lines);
+                            // Load file for fullscreen viewing with full terminal width
+                            let _ = ui.load_file_for_viewer(file_viewer, &node_borrowed.path, config.behavior.max_file_lines, true);
                         }
                     }
                 }
@@ -328,7 +328,7 @@ impl EventHandler {
 
                     if show_files {
                         let path = nav.flat_list[clicked_row].borrow().path.clone();
-                        let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines);
+                        let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false);
                         *show_help = false;
                     }
                 }
@@ -361,7 +361,7 @@ impl EventHandler {
             nav.move_up();
             if show_files && !*show_help {
                 if let Some(node) = nav.get_selected_node() {
-                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
+                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false);
                 }
             }
         }
@@ -389,7 +389,7 @@ impl EventHandler {
                 nav.move_down();
                 if show_files && !*show_help {
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines);
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false);
                     }
                 }
             }
