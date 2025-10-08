@@ -217,9 +217,25 @@ impl FileViewer {
         self.scroll = self.scroll.saturating_sub(1);
     }
 
-    /// Reset scroll position
+    /// Reset scroll position (jump to top)
     pub fn reset_scroll(&mut self) {
         self.scroll = 0;
+    }
+
+    /// Scroll up by page (visible height)
+    pub fn scroll_page_up(&mut self, visible_height: usize) {
+        self.scroll = self.scroll.saturating_sub(visible_height);
+    }
+
+    /// Scroll down by page (visible height)
+    pub fn scroll_page_down(&mut self, visible_height: usize, max_visible_lines: usize) {
+        let max_scroll = self.content.len().saturating_sub(max_visible_lines);
+        self.scroll = (self.scroll + visible_height).min(max_scroll);
+    }
+
+    /// Jump to end of file
+    pub fn scroll_to_end(&mut self, visible_height: usize) {
+        self.scroll = self.content.len().saturating_sub(visible_height);
     }
 
     /// Load custom content (e.g., help text)

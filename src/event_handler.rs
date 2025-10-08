@@ -223,6 +223,34 @@ impl EventHandler {
                     file_viewer.toggle_line_numbers();
                 }
             }
+            KeyCode::PageUp => {
+                // Scroll up by page (fullscreen mode only)
+                if *fullscreen_viewer {
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    file_viewer.scroll_page_up(visible_height);
+                }
+            }
+            KeyCode::PageDown => {
+                // Scroll down by page (fullscreen mode only)
+                if *fullscreen_viewer {
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    let max_visible_lines = visible_height.saturating_sub(2);
+                    file_viewer.scroll_page_down(visible_height, max_visible_lines);
+                }
+            }
+            KeyCode::Home => {
+                // Jump to top of file (fullscreen mode only)
+                if *fullscreen_viewer {
+                    file_viewer.reset_scroll();
+                }
+            }
+            KeyCode::End => {
+                // Jump to end of file (fullscreen mode only)
+                if *fullscreen_viewer {
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    file_viewer.scroll_to_end(visible_height);
+                }
+            }
             _ => {}
         }
 
