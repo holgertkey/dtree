@@ -77,6 +77,7 @@ impl App {
             &mut self.ui,
             self.show_files,
             &mut self.show_help,
+            self.fullscreen_viewer,
             &self.config,
         )
     }
