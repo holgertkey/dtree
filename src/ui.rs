@@ -383,7 +383,7 @@ impl UI {
 
         let title = if show_help {
             format!(" Help{} ", scroll_info)
-        } else if area == frame.area() {
+        } else if is_fullscreen {
             // Fullscreen mode
             let line_num_hint = if file_viewer.show_line_numbers { "n: hide lines" } else { "n: show lines" };
             format!(" File Viewer (Fullscreen - {} | q: back | Esc: exit){} ", line_num_hint, scroll_info)
@@ -391,9 +391,16 @@ impl UI {
             format!(" File Viewer{} ", scroll_info)
         };
 
+        // In fullscreen mode, only show top and bottom borders (no sides)
+        let borders = if is_fullscreen {
+            Borders::TOP | Borders::BOTTOM
+        } else {
+            Borders::ALL
+        };
+
         let paragraph = Paragraph::new(visible_lines)
             .block(Block::default()
-                .borders(Borders::ALL)
+                .borders(borders)
                 .title(title));
 
         frame.render_widget(paragraph, area);
