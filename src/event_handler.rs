@@ -268,7 +268,8 @@ impl EventHandler {
                 self.handle_mouse_click(mouse, nav, file_viewer, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             MouseEventKind::Drag(MouseButton::Left) => {
-                if self.dragging && ui.terminal_width > 0 {
+                // Ignore dragging in fullscreen mode
+                if !fullscreen_viewer && self.dragging && ui.terminal_width > 0 {
                     // Convert mouse position to percentage
                     let new_pos = (mouse.column as u16 * 100) / ui.terminal_width;
                     // Update split position in UI (clamped to 20-80%)
@@ -276,7 +277,9 @@ impl EventHandler {
                 }
             }
             MouseEventKind::Up(MouseButton::Left) => {
-                self.dragging = false;
+                if !fullscreen_viewer {
+                    self.dragging = false;
+                }
             }
             MouseEventKind::ScrollUp => {
                 self.handle_scroll_up(mouse, nav, file_viewer, ui, show_files, show_help, fullscreen_viewer, config)?;
@@ -300,6 +303,11 @@ impl EventHandler {
         fullscreen_viewer: bool,
         config: &Config,
     ) -> Result<()> {
+        // In fullscreen mode, ignore mouse clicks
+        if fullscreen_viewer {
+            return Ok(());
+        }
+
         // Check click in tree area
         if mouse.column >= ui.tree_area_start && mouse.column < ui.tree_area_end
             && mouse.row >= ui.tree_area_top && mouse.row < ui.tree_area_top + ui.tree_area_height {
