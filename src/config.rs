@@ -112,6 +112,10 @@ pub struct AppearanceConfig {
     #[serde(default = "default_split_position")]
     pub split_position: u16,
 
+    /// Show line numbers in fullscreen viewer by default
+    #[serde(default = "default_show_line_numbers")]
+    pub show_line_numbers: bool,
+
     /// Custom theme colors
     #[serde(default)]
     pub colors: ThemeConfig,
@@ -123,6 +127,7 @@ impl Default for AppearanceConfig {
             theme: default_theme(),
             show_icons: default_show_icons(),
             split_position: default_split_position(),
+            show_line_numbers: default_show_line_numbers(),
             colors: ThemeConfig::default(),
         }
     }
@@ -131,6 +136,7 @@ impl Default for AppearanceConfig {
 fn default_theme() -> String { "default".to_string() }
 fn default_show_icons() -> bool { false }
 fn default_split_position() -> u16 { 50 }
+fn default_show_line_numbers() -> bool { false }
 
 /// Behavior configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,6 +292,9 @@ show_icons = false
 
 # Split position for file viewer (20-80, percentage)
 split_position = 50
+
+# Show line numbers in fullscreen viewer by default (toggle with 'n' key)
+show_line_numbers = false
 
 # Custom theme colors
 [appearance.colors]

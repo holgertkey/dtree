@@ -29,13 +29,14 @@ impl App {
         let config = Config::load();
 
         let nav = Navigation::new(start_path, config.behavior.show_hidden)?;
-        let file_viewer = FileViewer::new();
+        let mut file_viewer = FileViewer::new();
         let search = Search::new();
         let mut ui = UI::new();
         let event_handler = EventHandler::new();
 
-        // Apply config to UI
+        // Apply config to UI and file viewer
         ui.split_position = config.appearance.split_position;
+        file_viewer.show_line_numbers = config.appearance.show_line_numbers;
 
         Ok(App {
             nav,
