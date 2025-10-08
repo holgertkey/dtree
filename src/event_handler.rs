@@ -371,7 +371,10 @@ impl EventHandler {
         fullscreen_viewer: bool,
         config: &Config,
     ) -> Result<()> {
-        if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
+        // In fullscreen mode, always scroll the file viewer
+        if fullscreen_viewer {
+            file_viewer.scroll_up();
+        } else if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
             && mouse.row < ui.viewer_area_top + ui.viewer_area_height {
             file_viewer.scroll_up();
@@ -397,7 +400,12 @@ impl EventHandler {
         fullscreen_viewer: bool,
         config: &Config,
     ) -> Result<()> {
-        if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
+        // In fullscreen mode, always scroll the file viewer
+        if fullscreen_viewer {
+            let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
+            let lines_to_show = content_height.saturating_sub(2);
+            file_viewer.scroll_down(lines_to_show);
+        } else if (show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
             && mouse.row < ui.viewer_area_top + ui.viewer_area_height {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
