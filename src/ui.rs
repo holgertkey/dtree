@@ -9,6 +9,7 @@ use crate::tree_node::TreeNodeRef;
 use crate::file_viewer::FileViewer;
 use crate::navigation::Navigation;
 use crate::search::Search;
+use crate::bookmarks::Bookmarks;
 use crate::config::Config;
 
 /// UI rendering module
@@ -53,6 +54,7 @@ impl UI {
         nav: &Navigation,
         file_viewer: &FileViewer,
         search: &Search,
+        bookmarks: &Bookmarks,
         config: &Config,
         show_files: bool,
         show_help: bool,
@@ -124,6 +126,11 @@ impl UI {
         // Render search bar if in input mode
         if let Some(area) = search_bar_area {
             self.render_search_bar(frame, area, search, config);
+        }
+
+        // Render bookmarks popup if in selection or creation mode
+        if bookmarks.is_selecting || bookmarks.is_in_creation_mode() {
+            self.render_bookmarks_popup(frame, bookmarks, config);
         }
     }
 
@@ -405,6 +412,110 @@ impl UI {
 
         frame.render_widget(paragraph, area);
     }
+
+    fn render_bookmarks_popup(&self, frame: &mut Frame, bookmarks: &Bookmarks, config: &Config) {
+        let border_color = Config::parse_color(&config.appearance.colors.border_color);
+        let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
+        let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
+
+        // Center popup in the screen
+        let area = frame.area();
+        let popup_width = 60.min(area.width.saturating_sub(4));
+        let popup_height = 20.min(area.height.saturating_sub(4));
+
+        let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+        let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+        let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+        // Build content based on mode
+        let (title, items) = if bookmarks.is_in_creation_mode() {
+            let title = " Bookmarks - Press a key to save current directory ";
+            let mut lines = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press any alphanumeric key (a-z, 0-9) to assign as bookmark",
+                                 Style::default().fg(highlight_color))
+                ]),
+                Line::from("Press Esc or q to cancel"),
+                Line::from(""),
+            ];
+
+            // Show existing bookmarks
+            if !bookmarks.list().is_empty() {
+                lines.push(Line::from(vec![
+                    Span::styled("Existing bookmarks:", Style::default().fg(selected_color).add_modifier(Modifier::BOLD))
+                ]));
+                lines.push(Line::from(""));
+
+                for bookmark in bookmarks.list() {
+                    let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
+                    let path_str = bookmark.path.display().to_string();
+                    lines.push(Line::from(vec![
+                        Span::styled(format!("  {} ", bookmark.key), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                        Span::styled("→ ", Style::default().fg(border_color)),
+                        Span::styled(name, Style::default().fg(highlight_color)),
+                        Span::styled(format!(" ({})", path_str), Style::default().fg(border_color)),
+                    ]));
+                }
+            } else {
+                lines.push(Line::from(vec![
+                    Span::styled("No bookmarks yet", Style::default().fg(border_color))
+                ]));
+            }
+
+            (title, lines)
+        } else {
+            // Selection mode
+            let title = " Bookmarks - Press a key to jump to bookmark ";
+            let mut lines = vec![
+                Line::from(""),
+            ];
+
+            if bookmarks.list().is_empty() {
+                lines.push(Line::from(vec![
+                    Span::styled("No bookmarks saved yet", Style::default().fg(border_color))
+                ]));
+                lines.push(Line::from(""));
+                lines.push(Line::from(vec![
+                    Span::styled("Press ", Style::default()),
+                    Span::styled("m", Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                    Span::styled(" to create a bookmark", Style::default()),
+                ]));
+            } else {
+                lines.push(Line::from(vec![
+                    Span::styled("Available bookmarks:", Style::default().fg(selected_color).add_modifier(Modifier::BOLD))
+                ]));
+                lines.push(Line::from(""));
+
+                for bookmark in bookmarks.list() {
+                    let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
+                    let path_str = bookmark.path.display().to_string();
+                    lines.push(Line::from(vec![
+                        Span::styled(format!("  {} ", bookmark.key), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                        Span::styled("→ ", Style::default().fg(border_color)),
+                        Span::styled(name, Style::default().fg(highlight_color)),
+                        Span::styled(format!(" ({})", path_str), Style::default().fg(border_color)),
+                    ]));
+                }
+
+                lines.push(Line::from(""));
+                lines.push(Line::from("Press any bookmark key to jump"));
+            }
+
+            lines.push(Line::from("Press Esc or q to cancel"));
+
+            (title, lines)
+        };
+
+        let paragraph = Paragraph::new(items)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(title)
+                .style(Style::default().fg(border_color)));
+
+        frame.render_widget(paragraph, popup_area);
+    }
 }
 
 pub fn get_help_content() -> Vec<String> {
@@ -450,6 +561,22 @@ pub fn get_help_content() -> Vec<String> {
         "  • Select a result to automatically expand and jump to it in the tree".to_string(),
         "  • Case-insensitive substring matching".to_string(),
         "  • Cyan border indicates which panel has focus".to_string(),
+        "".to_string(),
+        "BOOKMARKS".to_string(),
+        "  m              Enter bookmark creation mode".to_string(),
+        "  '              Open bookmark selection menu (tick/apostrophe)".to_string(),
+        "".to_string(),
+        "  Bookmark Creation (after pressing 'm'):".to_string(),
+        "  • Press any alphanumeric key (a-z, 0-9) to assign as bookmark".to_string(),
+        "  • Current directory will be saved with that key".to_string(),
+        "  • Press Esc or q to cancel".to_string(),
+        "".to_string(),
+        "  Bookmark Navigation (after pressing '''):".to_string(),
+        "  • List shows all saved bookmarks with their keys".to_string(),
+        "  • Press the bookmark key to jump to that directory".to_string(),
+        "  • Press Esc or q to cancel".to_string(),
+        "".to_string(),
+        "  Bookmarks are saved in: ~/.config/dtree/bookmarks.json".to_string(),
         "".to_string(),
         "FILE VIEWER MODE (press 's' to toggle)".to_string(),
         "  When enabled:".to_string(),

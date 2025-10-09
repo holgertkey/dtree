@@ -7,6 +7,7 @@ use anyhow::Result;
 use crate::navigation::Navigation;
 use crate::file_viewer::FileViewer;
 use crate::search::Search;
+use crate::bookmarks::Bookmarks;
 use crate::ui::UI;
 use crate::config::Config;
 
@@ -31,7 +32,9 @@ impl EventHandler {
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
         search: &mut Search,
+        bookmarks: &mut Bookmarks,
         show_files: &mut bool,
+        show_files_before_help: &mut bool,
         show_help: &mut bool,
         fullscreen_viewer: &mut bool,
         ui: &UI,
@@ -40,6 +43,68 @@ impl EventHandler {
         // Search mode - separate handling
         if search.mode {
             return self.handle_search_input(key, search, nav, *show_files);
+        }
+
+        // Bookmark selection mode
+        if bookmarks.is_selecting {
+            match key.code {
+                KeyCode::Esc => {
+                    bookmarks.exit_selection_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('q') => {
+                    bookmarks.exit_selection_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char(c) => {
+                    if let Some(bookmark) = bookmarks.get(c) {
+                        let path = bookmark.path.clone();
+                        bookmarks.exit_selection_mode();
+                        nav.go_to_directory(path, *show_files)?;
+                        if *show_files {
+                            if let Some(node) = nav.get_selected_node() {
+                                let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                            }
+                        }
+                    } else {
+                        bookmarks.exit_selection_mode();
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
+                _ => {
+                    bookmarks.exit_selection_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+            }
+        }
+
+        // Bookmark creation mode (waiting for key after pressing 'm')
+        if bookmarks.is_in_creation_mode() {
+            match key.code {
+                KeyCode::Esc => {
+                    bookmarks.exit_creation_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('q') => {
+                    bookmarks.exit_creation_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char(c) if c.is_alphanumeric() => {
+                    if let Some(node) = nav.get_selected_node() {
+                        let path = node.borrow().path.clone();
+                        let name = path.file_name()
+                            .and_then(|n| n.to_str())
+                            .map(|s| s.to_string());
+                        let _ = bookmarks.add(c, path, name);
+                    }
+                    bookmarks.exit_creation_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                _ => {
+                    bookmarks.exit_creation_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+            }
         }
 
         // Handle Ctrl+j/k for scrolling in file viewer or help
@@ -185,6 +250,9 @@ impl EventHandler {
                 *show_help = !*show_help;
 
                 if *show_help {
+                    // Save current show_files state before opening help
+                    *show_files_before_help = *show_files;
+
                     // Load help content into file viewer for scrolling
                     file_viewer.load_content(crate::ui::get_help_content());
                     if !*show_files {
@@ -192,6 +260,11 @@ impl EventHandler {
                         nav.reload_tree(*show_files)?;
                     }
                 } else {
+                    // Restore previous show_files state
+                    if *show_files != *show_files_before_help {
+                        *show_files = *show_files_before_help;
+                        nav.reload_tree(*show_files)?;
+                    }
                     file_viewer.reset_scroll();
                 }
             }
@@ -216,6 +289,14 @@ impl EventHandler {
                         let _ = clipboard.set_text(node.borrow().path.display().to_string());
                     }
                 }
+            }
+            KeyCode::Char('m') => {
+                // Enter bookmark creation mode
+                bookmarks.enter_creation_mode();
+            }
+            KeyCode::Char('\'') => {
+                // Enter bookmark selection mode
+                bookmarks.enter_selection_mode();
             }
             KeyCode::Char('n') => {
                 // Toggle line numbers (only in fullscreen mode)

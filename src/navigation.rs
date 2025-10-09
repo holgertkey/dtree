@@ -142,6 +142,23 @@ impl Navigation {
         Ok(())
     }
 
+    /// Navigate to arbitrary directory (for bookmarks)
+    pub fn go_to_directory(&mut self, target_path: PathBuf, show_files: bool) -> Result<()> {
+        if !target_path.is_dir() {
+            return Ok(());
+        }
+
+        let mut new_root = TreeNode::new(target_path, 0)?;
+        new_root.load_children(show_files)?;
+        new_root.is_expanded = true;
+
+        self.root = Rc::new(RefCell::new(new_root));
+        self.rebuild_flat_list();
+        self.selected = 0;
+
+        Ok(())
+    }
+
     /// Expand path to node (for search results)
     pub fn expand_path_to_node(&mut self, target_path: &PathBuf, show_files: bool) -> Result<()> {
         Self::expand_path_recursive(&self.root, target_path, show_files)?;

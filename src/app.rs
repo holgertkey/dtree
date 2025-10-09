@@ -9,6 +9,7 @@ use crate::search::Search;
 use crate::ui::UI;
 use crate::event_handler::EventHandler;
 use crate::config::Config;
+use crate::bookmarks::Bookmarks;
 
 /// Main application state
 pub struct App {
@@ -18,7 +19,9 @@ pub struct App {
     ui: UI,
     event_handler: EventHandler,
     config: Config,
+    pub bookmarks: Bookmarks,
     show_files: bool,
+    show_files_before_help: bool,
     show_help: bool,
     fullscreen_viewer: bool,
 }
@@ -33,6 +36,7 @@ impl App {
         let search = Search::new();
         let mut ui = UI::new();
         let event_handler = EventHandler::new();
+        let bookmarks = Bookmarks::new()?;
 
         // Apply config to UI and file viewer
         ui.split_position = config.appearance.split_position;
@@ -45,7 +49,9 @@ impl App {
             ui,
             event_handler,
             config,
+            bookmarks,
             show_files: false,
+            show_files_before_help: false,
             show_help: false,
             fullscreen_viewer: false,
         })
@@ -62,7 +68,9 @@ impl App {
             &mut self.nav,
             &mut self.file_viewer,
             &mut self.search,
+            &mut self.bookmarks,
             &mut self.show_files,
+            &mut self.show_files_before_help,
             &mut self.show_help,
             &mut self.fullscreen_viewer,
             &self.ui,
@@ -89,6 +97,7 @@ impl App {
             &self.nav,
             &self.file_viewer,
             &self.search,
+            &self.bookmarks,
             &self.config,
             self.show_files,
             self.show_help,
@@ -106,5 +115,110 @@ impl App {
         let theme = &self.config.appearance.syntax_theme.clone();
         self.file_viewer.load_file_with_width(file_path, None, max_lines, enable_highlighting, theme)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    #[test]
+    fn test_help_toggle_restores_show_files_state() {
+        // Test case 1: show_files was false before opening help
+        let temp_dir = std::env::temp_dir().join("dtree_test_1");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let mut app = App::new(temp_dir.clone()).unwrap();
+
+        // Initially show_files should be false
+        assert!(!app.show_files);
+        assert!(!app.show_files_before_help);
+        assert!(!app.show_help);
+
+        // Open help (press 'i')
+        let key_i = KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE);
+        let _ = app.handle_key(key_i);
+
+        // After opening help, show_files should be true, but previous state saved as false
+        assert!(app.show_files);
+        assert!(!app.show_files_before_help);
+        assert!(app.show_help);
+
+        // Close help (press 'i' again)
+        let _ = app.handle_key(key_i);
+
+        // After closing help, show_files should be restored to false
+        assert!(!app.show_files);
+        assert!(!app.show_files_before_help);
+        assert!(!app.show_help);
+
+        std::fs::remove_dir_all(&temp_dir).ok();
+    }
+
+    #[test]
+    fn test_help_toggle_preserves_show_files_when_already_true() {
+        // Test case 2: show_files was true before opening help
+        let temp_dir = std::env::temp_dir().join("dtree_test_2");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let mut app = App::new(temp_dir.clone()).unwrap();
+
+        // Enable show_files first (press 's')
+        let key_s = KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE);
+        let _ = app.handle_key(key_s);
+
+        // Now show_files should be true
+        assert!(app.show_files);
+        assert!(!app.show_help);
+
+        // Open help (press 'i')
+        let key_i = KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE);
+        let _ = app.handle_key(key_i);
+
+        // After opening help, show_files still true, previous state saved as true
+        assert!(app.show_files);
+        assert!(app.show_files_before_help);
+        assert!(app.show_help);
+
+        // Close help (press 'i' again)
+        let _ = app.handle_key(key_i);
+
+        // After closing help, show_files should still be true
+        assert!(app.show_files);
+        assert!(app.show_files_before_help);
+        assert!(!app.show_help);
+
+        std::fs::remove_dir_all(&temp_dir).ok();
+    }
+
+    #[test]
+    fn test_multiple_help_toggles() {
+        // Test case 3: Multiple open/close cycles
+        let temp_dir = std::env::temp_dir().join("dtree_test_3");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let mut app = App::new(temp_dir.clone()).unwrap();
+
+        let key_i = KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE);
+
+        // Initially false
+        assert!(!app.show_files);
+
+        // First cycle: open and close
+        let _ = app.handle_key(key_i); // open
+        assert!(app.show_help);
+        let _ = app.handle_key(key_i); // close
+        assert!(!app.show_help);
+        assert!(!app.show_files); // should be restored
+
+        // Second cycle: open and close
+        let _ = app.handle_key(key_i); // open
+        assert!(app.show_help);
+        let _ = app.handle_key(key_i); // close
+        assert!(!app.show_help);
+        assert!(!app.show_files); // should be restored again
+
+        std::fs::remove_dir_all(&temp_dir).ok();
     }
 }

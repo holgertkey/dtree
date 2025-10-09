@@ -7,6 +7,7 @@ mod search;
 mod ui;
 mod event_handler;
 mod config;
+mod bookmarks;
 
 use anyhow::Result;
 use app::App;
