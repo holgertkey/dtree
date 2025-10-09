@@ -3,6 +3,7 @@ use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use crossterm::event::KeyCode;
 
 /// Theme configuration with customizable colors
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,6 +221,14 @@ pub struct KeybindingsConfig {
     /// Keys to copy path to clipboard
     #[serde(default = "default_copy_path_keys")]
     pub copy_path: Vec<String>,
+
+    /// Keys to open file in external editor
+    #[serde(default = "default_open_editor_keys")]
+    pub open_editor: Vec<String>,
+
+    /// Keys to open in file manager
+    #[serde(default = "default_open_file_manager_keys")]
+    pub open_file_manager: Vec<String>,
 }
 
 impl Default for KeybindingsConfig {
@@ -230,6 +239,8 @@ impl Default for KeybindingsConfig {
             toggle_files: default_toggle_files_keys(),
             toggle_help: default_toggle_help_keys(),
             copy_path: default_copy_path_keys(),
+            open_editor: default_open_editor_keys(),
+            open_file_manager: default_open_file_manager_keys(),
         }
     }
 }
@@ -239,6 +250,61 @@ fn default_search_keys() -> Vec<String> { vec!["/".to_string()] }
 fn default_toggle_files_keys() -> Vec<String> { vec!["s".to_string()] }
 fn default_toggle_help_keys() -> Vec<String> { vec!["i".to_string()] }
 fn default_copy_path_keys() -> Vec<String> { vec!["c".to_string()] }
+fn default_open_editor_keys() -> Vec<String> { vec!["e".to_string()] }
+fn default_open_file_manager_keys() -> Vec<String> { vec!["o".to_string()] }
+
+impl KeybindingsConfig {
+    /// Check if a key matches any of the configured keys in the list
+    fn matches_key(&self, key: KeyCode, configured_keys: &[String]) -> bool {
+        let key_str = match key {
+            KeyCode::Char(c) => c.to_string(),
+            KeyCode::Esc => "Esc".to_string(),
+            KeyCode::Enter => "Enter".to_string(),
+            KeyCode::Backspace => "Backspace".to_string(),
+            KeyCode::Left => "Left".to_string(),
+            KeyCode::Right => "Right".to_string(),
+            KeyCode::Up => "Up".to_string(),
+            KeyCode::Down => "Down".to_string(),
+            KeyCode::Tab => "Tab".to_string(),
+            KeyCode::Delete => "Delete".to_string(),
+            KeyCode::Home => "Home".to_string(),
+            KeyCode::End => "End".to_string(),
+            KeyCode::PageUp => "PageUp".to_string(),
+            KeyCode::PageDown => "PageDown".to_string(),
+            _ => return false,
+        };
+
+        configured_keys.iter().any(|k| k.eq_ignore_ascii_case(&key_str))
+    }
+
+    pub fn is_quit(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.quit)
+    }
+
+    pub fn is_search(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.search)
+    }
+
+    pub fn is_toggle_files(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.toggle_files)
+    }
+
+    pub fn is_toggle_help(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.toggle_help)
+    }
+
+    pub fn is_copy_path(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.copy_path)
+    }
+
+    pub fn is_open_editor(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.open_editor)
+    }
+
+    pub fn is_open_file_manager(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.open_file_manager)
+    }
+}
 
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -389,6 +455,8 @@ search = ["/"]
 toggle_files = ["s"]
 toggle_help = ["i"]
 copy_path = ["c"]
+open_editor = ["e"]
+open_file_manager = ["o"]
 "#;
 
         // Create parent directory if it doesn't exist

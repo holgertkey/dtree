@@ -126,31 +126,27 @@ impl EventHandler {
             }
         }
 
-        match key.code {
-            KeyCode::Char('q') => {
-                if *fullscreen_viewer {
-                    // Exit fullscreen but stay in program
+        // Check for quit keys (q and Esc have special handling in some contexts)
+        if config.keybindings.is_quit(key.code) {
+            if *fullscreen_viewer {
+                // In fullscreen: q returns to tree, Esc exits completely
+                if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
                     *fullscreen_viewer = false;
                     return Ok(Some(PathBuf::new()));
-                } else if search.show_results {
-                    search.close_results();
-                    return Ok(Some(PathBuf::new()));
                 } else {
+                    // Esc or other quit keys exit completely
                     return Ok(None);
                 }
+            } else if search.show_results {
+                search.close_results();
+                return Ok(Some(PathBuf::new()));
+            } else {
+                return Ok(None);
             }
-            KeyCode::Esc => {
-                if *fullscreen_viewer {
-                    // Exit program completely from fullscreen mode
-                    return Ok(None);
-                } else if search.show_results {
-                    search.close_results();
-                    return Ok(Some(PathBuf::new()));
-                } else {
-                    return Ok(None);
-                }
-            }
-            KeyCode::Char('/') => {
+        }
+
+        match key.code {
+            _ if config.keybindings.is_search(key.code) => {
                 search.enter_mode();
                 return Ok(Some(PathBuf::new()));
             }
@@ -230,7 +226,7 @@ impl EventHandler {
             KeyCode::Char('u') | KeyCode::Backspace => {
                 nav.go_to_parent(*show_files)?;
             }
-            KeyCode::Char('s') => {
+            _ if config.keybindings.is_toggle_files(key.code) => {
                 *show_files = !*show_files;
                 *show_help = false;
                 nav.reload_tree(*show_files)?;
@@ -246,7 +242,7 @@ impl EventHandler {
                     }
                 }
             }
-            KeyCode::Char('i') => {
+            _ if config.keybindings.is_toggle_help(key.code) => {
                 *show_help = !*show_help;
 
                 if *show_help {
@@ -283,14 +279,14 @@ impl EventHandler {
                     }
                 }
             }
-            KeyCode::Char('c') => {
+            _ if config.keybindings.is_copy_path(key.code) => {
                 if let Some(node) = nav.get_selected_node() {
                     if let Ok(mut clipboard) = Clipboard::new() {
                         let _ = clipboard.set_text(node.borrow().path.display().to_string());
                     }
                 }
             }
-            KeyCode::Char('e') => {
+            _ if config.keybindings.is_open_editor(key.code) => {
                 // Open file in external editor
                 if let Some(node) = nav.get_selected_node() {
                     let node_borrowed = node.borrow();
@@ -301,7 +297,7 @@ impl EventHandler {
                     }
                 }
             }
-            KeyCode::Char('o') => {
+            _ if config.keybindings.is_open_file_manager(key.code) => {
                 // Open in file manager
                 if let Some(node) = nav.get_selected_node() {
                     let node_borrowed = node.borrow();
