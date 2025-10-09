@@ -315,11 +315,11 @@ impl EventHandler {
                     return Ok(Some(marker_path));
                 }
             }
-            KeyCode::Char('m') => {
+            _ if config.keybindings.is_create_bookmark(key.code) => {
                 // Enter bookmark creation mode
                 bookmarks.enter_creation_mode();
             }
-            KeyCode::Char('\'') => {
+            _ if config.keybindings.is_select_bookmark(key.code) => {
                 // Enter bookmark selection mode
                 bookmarks.enter_selection_mode();
             }

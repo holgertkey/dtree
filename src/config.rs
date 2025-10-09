@@ -229,6 +229,14 @@ pub struct KeybindingsConfig {
     /// Keys to open in file manager
     #[serde(default = "default_open_file_manager_keys")]
     pub open_file_manager: Vec<String>,
+
+    /// Keys to create bookmark
+    #[serde(default = "default_create_bookmark_keys")]
+    pub create_bookmark: Vec<String>,
+
+    /// Keys to select bookmark
+    #[serde(default = "default_select_bookmark_keys")]
+    pub select_bookmark: Vec<String>,
 }
 
 impl Default for KeybindingsConfig {
@@ -241,6 +249,8 @@ impl Default for KeybindingsConfig {
             copy_path: default_copy_path_keys(),
             open_editor: default_open_editor_keys(),
             open_file_manager: default_open_file_manager_keys(),
+            create_bookmark: default_create_bookmark_keys(),
+            select_bookmark: default_select_bookmark_keys(),
         }
     }
 }
@@ -252,6 +262,8 @@ fn default_toggle_help_keys() -> Vec<String> { vec!["i".to_string()] }
 fn default_copy_path_keys() -> Vec<String> { vec!["c".to_string()] }
 fn default_open_editor_keys() -> Vec<String> { vec!["e".to_string()] }
 fn default_open_file_manager_keys() -> Vec<String> { vec!["o".to_string()] }
+fn default_create_bookmark_keys() -> Vec<String> { vec!["m".to_string()] }
+fn default_select_bookmark_keys() -> Vec<String> { vec!["'".to_string()] }
 
 impl KeybindingsConfig {
     /// Check if a key matches any of the configured keys in the list
@@ -303,6 +315,14 @@ impl KeybindingsConfig {
 
     pub fn is_open_file_manager(&self, key: KeyCode) -> bool {
         self.matches_key(key, &self.open_file_manager)
+    }
+
+    pub fn is_create_bookmark(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.create_bookmark)
+    }
+
+    pub fn is_select_bookmark(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.select_bookmark)
     }
 }
 
@@ -457,6 +477,8 @@ toggle_help = ["i"]
 copy_path = ["c"]
 open_editor = ["e"]
 open_file_manager = ["o"]
+create_bookmark = ["m"]
+select_bookmark = ["'"]
 "#;
 
         // Create parent directory if it doesn't exist
