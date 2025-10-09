@@ -365,11 +365,21 @@ double_click_timeout_ms = 500
 
 # External editor for opening files (press 'e' to open)
 # Default: nano (if not installed, change to your preferred editor)
+# Popular options:
+#   - Terminal editors: "nano", "vim", "nvim", "emacs", "micro", "helix"
+#   - GUI editors (if terminal wrapper available): "code", "subl", "gedit"
 editor = "nano"
 
 # External file manager (press 'o' to open)
 # Default: mc (Midnight Commander)
-# Other options: "ranger", "nnn", "lf", "vifm", etc.
+# Popular terminal file managers:
+#   - "mc"      - Midnight Commander (classic two-panel interface)
+#   - "ranger"  - Vi-like file manager with image preview support
+#   - "nnn"     - Fast and minimal file manager
+#   - "lf"      - Terminal file manager inspired by ranger
+#   - "vifm"    - Vi-like file manager with two panels
+#   - "broot"   - Navigate directories with fuzzy search
+#   - "yazi"    - Modern terminal file manager
 file_manager = "mc"
 
 [keybindings]
