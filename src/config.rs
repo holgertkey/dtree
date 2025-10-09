@@ -172,6 +172,10 @@ pub struct BehaviorConfig {
     /// External editor command for opening files
     #[serde(default = "default_editor")]
     pub editor: String,
+
+    /// External file manager command
+    #[serde(default = "default_file_manager")]
+    pub file_manager: String,
 }
 
 impl Default for BehaviorConfig {
@@ -182,6 +186,7 @@ impl Default for BehaviorConfig {
             follow_symlinks: default_follow_symlinks(),
             double_click_timeout_ms: default_double_click_timeout(),
             editor: default_editor(),
+            file_manager: default_file_manager(),
         }
     }
 }
@@ -191,6 +196,7 @@ fn default_show_hidden() -> bool { false }
 fn default_follow_symlinks() -> bool { false }
 fn default_double_click_timeout() -> u64 { 500 }
 fn default_editor() -> String { "nano".to_string() }
+fn default_file_manager() -> String { "mc".to_string() }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -301,6 +307,11 @@ impl Config {
         which::which(&self.behavior.editor).is_ok()
     }
 
+    /// Check if the configured file manager exists in the system
+    pub fn file_manager_exists(&self) -> bool {
+        which::which(&self.behavior.file_manager).is_ok()
+    }
+
     /// Create a default config file with comments
     pub fn create_default_file(path: &Path) -> Result<()> {
         let default_config = r#"# dtree configuration file
@@ -355,6 +366,11 @@ double_click_timeout_ms = 500
 # External editor for opening files (press 'e' to open)
 # Default: nano (if not installed, change to your preferred editor)
 editor = "nano"
+
+# External file manager (press 'o' to open)
+# Default: mc (Midnight Commander)
+# Other options: "ranger", "nnn", "lf", "vifm", etc.
+file_manager = "mc"
 
 [keybindings]
 # Key bindings (each can have multiple keys)

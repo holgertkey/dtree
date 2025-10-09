@@ -212,7 +212,7 @@ impl UI {
         *state.offset_mut() = final_offset;
         self.tree_scroll_offset = final_offset;
 
-        let title = " Directory Tree (↑↓/jk: navigate | /: search | c: copy | e: edit | Enter: select | q: quit | i: help) ";
+        let title = " Directory Tree (↑↓/jk: navigate | /: search | c: copy | e: edit | o: file mgr | Enter: select | q: quit | i: help) ";
 
         let list = List::new(items)
             .block(Block::default()
@@ -539,6 +539,7 @@ pub fn get_help_content() -> Vec<String> {
         "  v              Open file in fullscreen viewer (only for files)".to_string(),
         "  c              Copy current path to clipboard (files and directories)".to_string(),
         "  e              Open file in external editor (configurable in config.toml)".to_string(),
+        "  o              Open in file manager (files open parent dir, dirs open themselves)".to_string(),
         "  i              Show/hide this help screen".to_string(),
         "".to_string(),
         "SEARCH".to_string(),

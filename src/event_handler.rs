@@ -301,6 +301,24 @@ impl EventHandler {
                     }
                 }
             }
+            KeyCode::Char('o') => {
+                // Open in file manager
+                if let Some(node) = nav.get_selected_node() {
+                    let node_borrowed = node.borrow();
+                    let path_to_open = if node_borrowed.is_dir {
+                        // For directories, open the directory itself
+                        node_borrowed.path.clone()
+                    } else {
+                        // For files, open the parent directory
+                        node_borrowed.path.parent()
+                            .unwrap_or(&node_borrowed.path)
+                            .to_path_buf()
+                    };
+                    // Return special marker path to signal file manager opening
+                    let marker_path = PathBuf::from(format!("FILEMGR:{}", path_to_open.display()));
+                    return Ok(Some(marker_path));
+                }
+            }
             KeyCode::Char('m') => {
                 // Enter bookmark creation mode
                 bookmarks.enter_creation_mode();

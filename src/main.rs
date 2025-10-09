@@ -70,6 +70,36 @@ fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
     Ok(())
 }
 
+/// Open a directory in the external file manager specified in config
+fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
+    let file_manager = &config.behavior.file_manager;
+
+    // Check if file manager exists
+    if !config.file_manager_exists() {
+        eprintln!("Error: File manager '{}' not found in system.", file_manager);
+        eprintln!("Edit the configuration file to choose the file manager.");
+        std::process::exit(1);
+    }
+
+    // Use shell to execute file manager with proper terminal handling
+    // Properly quote the directory path to handle spaces and special characters
+    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
+                            file_manager,
+                            dir_path.replace("'", "'\\''"));
+
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg(&shell_cmd)
+        .status()?;
+
+    if !status.success() {
+        eprintln!("Error: File manager exited with status: {}", status);
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     // Ensure config file exists (create if missing)
     let config = Config::load();
@@ -122,6 +152,10 @@ fn main() -> Result<()> {
                     // Open file in external editor
                     open_in_editor(file_path, &config)?;
                     Ok(())
+                } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
+                    // Open directory in file manager
+                    open_in_file_manager(dir_path, &config)?;
+                    Ok(())
                 } else {
                     println!("{}", path.display());
                     Ok(())
@@ -143,6 +177,10 @@ fn main() -> Result<()> {
                 if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
                     // Open file in external editor
                     open_in_editor(file_path, &config)?;
+                    Ok(())
+                } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
+                    // Open directory in file manager
+                    open_in_file_manager(dir_path, &config)?;
                     Ok(())
                 } else {
                     println!("{}", path.display());
