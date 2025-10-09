@@ -290,6 +290,17 @@ impl EventHandler {
                     }
                 }
             }
+            KeyCode::Char('e') => {
+                // Open file in external editor
+                if let Some(node) = nav.get_selected_node() {
+                    let node_borrowed = node.borrow();
+                    if !node_borrowed.is_dir {
+                        // Return special marker path to signal editor opening
+                        let marker_path = PathBuf::from(format!("EDITOR:{}", node_borrowed.path.display()));
+                        return Ok(Some(marker_path));
+                    }
+                }
+            }
             KeyCode::Char('m') => {
                 // Enter bookmark creation mode
                 bookmarks.enter_creation_mode();

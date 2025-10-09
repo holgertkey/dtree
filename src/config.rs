@@ -168,6 +168,10 @@ pub struct BehaviorConfig {
     /// Double-click timeout in milliseconds
     #[serde(default = "default_double_click_timeout")]
     pub double_click_timeout_ms: u64,
+
+    /// External editor command for opening files
+    #[serde(default = "default_editor")]
+    pub editor: String,
 }
 
 impl Default for BehaviorConfig {
@@ -177,6 +181,7 @@ impl Default for BehaviorConfig {
             show_hidden: default_show_hidden(),
             follow_symlinks: default_follow_symlinks(),
             double_click_timeout_ms: default_double_click_timeout(),
+            editor: default_editor(),
         }
     }
 }
@@ -185,6 +190,7 @@ fn default_max_file_lines() -> usize { 1000 }
 fn default_show_hidden() -> bool { false }
 fn default_follow_symlinks() -> bool { false }
 fn default_double_click_timeout() -> u64 { 500 }
+fn default_editor() -> String { "nano".to_string() }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -290,6 +296,11 @@ impl Config {
         config
     }
 
+    /// Check if the configured editor exists in the system
+    pub fn editor_exists(&self) -> bool {
+        which::which(&self.behavior.editor).is_ok()
+    }
+
     /// Create a default config file with comments
     pub fn create_default_file(path: &Path) -> Result<()> {
         let default_config = r#"# dtree configuration file
@@ -340,6 +351,10 @@ follow_symlinks = false
 
 # Double-click timeout in milliseconds
 double_click_timeout_ms = 500
+
+# External editor for opening files (press 'e' to open)
+# Default: nano (if not installed, change to your preferred editor)
+editor = "nano"
 
 [keybindings]
 # Key bindings (each can have multiple keys)

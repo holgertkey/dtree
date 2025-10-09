@@ -14,6 +14,7 @@ use app::App;
 use terminal::{setup_terminal, cleanup_terminal, run_app};
 use clap::Parser;
 use std::path::PathBuf;
+use std::process::Command;
 use config::Config;
 
 #[derive(Parser)]
@@ -39,9 +40,39 @@ struct Args {
     version: bool,
 }
 
+/// Open a file in the external editor specified in config
+fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
+    let editor = &config.behavior.editor;
+
+    // Check if editor exists
+    if !config.editor_exists() {
+        eprintln!("Error: Editor '{}' not found in system.", editor);
+        eprintln!("Edit the configuration file to choose the editor.");
+        std::process::exit(1);
+    }
+
+    // Use shell to execute editor with proper terminal handling
+    // Properly quote the file path to handle spaces and special characters
+    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
+                            editor,
+                            file_path.replace("'", "'\\''"));
+
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg(&shell_cmd)
+        .status()?;
+
+    if !status.success() {
+        eprintln!("Error: Editor exited with status: {}", status);
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     // Ensure config file exists (create if missing)
-    let _ = Config::load();
+    let config = Config::load();
 
     let args = Args::parse();
 
@@ -86,8 +117,15 @@ fn main() -> Result<()> {
 
         match result? {
             Some(path) => {
-                println!("{}", path.display());
-                Ok(())
+                let path_str = path.to_string_lossy();
+                if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
+                    // Open file in external editor
+                    open_in_editor(file_path, &config)?;
+                    Ok(())
+                } else {
+                    println!("{}", path.display());
+                    Ok(())
+                }
             }
             None => Ok(()),
         }
@@ -101,8 +139,15 @@ fn main() -> Result<()> {
 
         match result? {
             Some(path) => {
-                println!("{}", path.display());
-                Ok(())
+                let path_str = path.to_string_lossy();
+                if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
+                    // Open file in external editor
+                    open_in_editor(file_path, &config)?;
+                    Ok(())
+                } else {
+                    println!("{}", path.display());
+                    Ok(())
+                }
             }
             None => Ok(()),
         }
