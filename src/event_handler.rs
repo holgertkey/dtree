@@ -45,34 +45,43 @@ impl EventHandler {
             return self.handle_search_input(key, search, nav, *show_files);
         }
 
-        // Bookmark selection mode
+        // Bookmark selection mode (text input for bookmark name)
         if bookmarks.is_selecting {
             match key.code {
                 KeyCode::Esc => {
                     bookmarks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('q') => {
-                    bookmarks.exit_selection_mode();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char(c) => {
-                    if let Some(bookmark) = bookmarks.get(&c.to_string()) {
-                        let path = bookmark.path.clone();
-                        bookmarks.exit_selection_mode();
-                        nav.go_to_directory(path, *show_files)?;
-                        if *show_files {
-                            if let Some(node) = nav.get_selected_node() {
-                                let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                KeyCode::Enter => {
+                    let bookmark_name = bookmarks.get_input().to_string();
+                    if !bookmark_name.is_empty() {
+                        if let Some(bookmark) = bookmarks.get(&bookmark_name) {
+                            let path = bookmark.path.clone();
+                            bookmarks.exit_selection_mode();
+                            nav.go_to_directory(path, *show_files)?;
+                            if *show_files {
+                                if let Some(node) = nav.get_selected_node() {
+                                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                }
                             }
+                        } else {
+                            // Bookmark not found - just exit
+                            bookmarks.exit_selection_mode();
                         }
                     } else {
                         bookmarks.exit_selection_mode();
                     }
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char(c) => {
+                    bookmarks.add_char(c);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Backspace => {
+                    bookmarks.backspace();
+                    return Ok(Some(PathBuf::new()));
+                }
                 _ => {
-                    bookmarks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
             }

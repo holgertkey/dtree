@@ -470,9 +470,19 @@ impl UI {
 
             (title, lines)
         } else {
-            // Selection mode
-            let title = " Bookmarks - Press a key to jump to bookmark ";
+            // Selection mode - text input for bookmark name
+            let title = " Select Bookmark - Enter name and press Enter ";
             let mut lines = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Bookmark name: ", Style::default().fg(highlight_color)),
+                    Span::styled(bookmarks.get_input(), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                    Span::styled("█", Style::default().fg(selected_color)),  // cursor
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press Enter to jump, Esc to cancel", Style::default().fg(border_color))
+                ]),
                 Line::from(""),
             ];
 
@@ -502,12 +512,7 @@ impl UI {
                         Span::styled(format!(" ({})", path_str), Style::default().fg(border_color)),
                     ]));
                 }
-
-                lines.push(Line::from(""));
-                lines.push(Line::from("Press any bookmark key to jump"));
             }
-
-            lines.push(Line::from("Press Esc or q to cancel"));
 
             (title, lines)
         };
@@ -580,8 +585,9 @@ pub fn get_help_content() -> Vec<String> {
         "".to_string(),
         "  Bookmark Navigation (after pressing '''):".to_string(),
         "    • List shows all saved bookmarks with their names".to_string(),
-        "    • Press the bookmark key to jump to that directory".to_string(),
-        "    • Press Esc or q to cancel".to_string(),
+        "    • Enter bookmark name (multi-character names supported)".to_string(),
+        "    • Press Enter to jump, Esc to cancel".to_string(),
+        "    • Examples: work, project-123, my_home".to_string(),
         "".to_string(),
         "  Command-line mode (outside dtree):".to_string(),
         "    dt myproject        Jump to bookmark 'myproject' (if exists)".to_string(),

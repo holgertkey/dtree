@@ -201,11 +201,13 @@ impl Bookmarks {
     /// Enter bookmark selection mode
     pub fn enter_selection_mode(&mut self) {
         self.is_selecting = true;
+        self.input_buffer.clear();
     }
 
     /// Exit bookmark selection mode
     pub fn exit_selection_mode(&mut self) {
         self.is_selecting = false;
+        self.input_buffer.clear();
     }
 
     /// Enter bookmark creation mode (after pressing 'm')
