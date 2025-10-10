@@ -53,7 +53,8 @@ pub struct Bookmarks {
     bookmarks: HashMap<String, Bookmark>,
     file_path: PathBuf,
     pub is_selecting: bool,
-    pub pending_key: Option<String>,
+    pub is_creating: bool,
+    pub input_buffer: String,
 }
 
 impl Bookmarks {
@@ -72,7 +73,8 @@ impl Bookmarks {
             bookmarks: HashMap::new(),
             file_path,
             is_selecting: false,
-            pending_key: None,
+            is_creating: false,
+            input_buffer: String::new(),
         };
 
         // Try to load, but don't fail if JSON is corrupted
@@ -199,28 +201,38 @@ impl Bookmarks {
     /// Enter bookmark selection mode
     pub fn enter_selection_mode(&mut self) {
         self.is_selecting = true;
-        self.pending_key = None;
     }
 
     /// Exit bookmark selection mode
     pub fn exit_selection_mode(&mut self) {
         self.is_selecting = false;
-        self.pending_key = None;
     }
 
     /// Enter bookmark creation mode (after pressing 'm')
     pub fn enter_creation_mode(&mut self) {
-        self.pending_key = Some("m".to_string());
+        self.is_creating = true;
+        self.input_buffer.clear();
     }
 
     /// Exit bookmark creation mode
     pub fn exit_creation_mode(&mut self) {
-        self.pending_key = None;
+        self.is_creating = false;
+        self.input_buffer.clear();
     }
 
-    /// Check if in creation mode
-    pub fn is_in_creation_mode(&self) -> bool {
-        self.pending_key.is_some()
+    /// Add character to input buffer
+    pub fn add_char(&mut self, c: char) {
+        self.input_buffer.push(c);
+    }
+
+    /// Remove last character from input buffer
+    pub fn backspace(&mut self) {
+        self.input_buffer.pop();
+    }
+
+    /// Get current input buffer
+    pub fn get_input(&self) -> &str {
+        &self.input_buffer
     }
 }
 
@@ -237,7 +249,8 @@ mod tests {
             bookmarks: HashMap::new(),
             file_path,
             is_selecting: false,
-            pending_key: None,
+            is_creating: false,
+            input_buffer: String::new(),
         }
     }
 
@@ -279,7 +292,8 @@ mod tests {
             bookmarks: HashMap::new(),
             file_path: file_path.clone(),
             is_selecting: false,
-            pending_key: None,
+            is_creating: false,
+            input_buffer: String::new(),
         };
 
         let result = bookmarks.load();
@@ -310,7 +324,8 @@ mod tests {
             bookmarks: HashMap::new(),
             file_path,
             is_selecting: false,
-            pending_key: None,
+            is_creating: false,
+            input_buffer: String::new(),
         };
 
         // Should load without error
@@ -372,13 +387,13 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
-        assert!(!bookmarks.is_in_creation_mode());
+        assert!(!bookmarks.is_creating);
 
         bookmarks.enter_creation_mode();
-        assert!(bookmarks.is_in_creation_mode());
+        assert!(bookmarks.is_creating);
 
         bookmarks.exit_creation_mode();
-        assert!(!bookmarks.is_in_creation_mode());
+        assert!(!bookmarks.is_creating);
     }
 
     #[test]

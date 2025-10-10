@@ -78,30 +78,36 @@ impl EventHandler {
             }
         }
 
-        // Bookmark creation mode (waiting for key after pressing 'm')
-        if bookmarks.is_in_creation_mode() {
+        // Bookmark creation mode (text input for bookmark name)
+        if bookmarks.is_creating {
             match key.code {
                 KeyCode::Esc => {
                     bookmarks.exit_creation_mode();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('q') => {
-                    bookmarks.exit_creation_mode();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char(c) if c.is_alphanumeric() => {
-                    if let Some(node) = nav.get_selected_node() {
-                        let path = node.borrow().path.clone();
-                        let name = path.file_name()
-                            .and_then(|n| n.to_str())
-                            .map(|s| s.to_string());
-                        let _ = bookmarks.add(c.to_string(), path, name);
+                KeyCode::Enter => {
+                    let bookmark_name = bookmarks.get_input().to_string();
+                    if !bookmark_name.is_empty() {
+                        if let Some(node) = nav.get_selected_node() {
+                            let path = node.borrow().path.clone();
+                            let dir_name = path.file_name()
+                                .and_then(|n| n.to_str())
+                                .map(|s| s.to_string());
+                            let _ = bookmarks.add(bookmark_name, path, dir_name);
+                        }
                     }
                     bookmarks.exit_creation_mode();
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char(c) => {
+                    bookmarks.add_char(c);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Backspace => {
+                    bookmarks.backspace();
+                    return Ok(Some(PathBuf::new()));
+                }
                 _ => {
-                    bookmarks.exit_creation_mode();
                     return Ok(Some(PathBuf::new()));
                 }
             }

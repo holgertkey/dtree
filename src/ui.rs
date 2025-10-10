@@ -129,7 +129,7 @@ impl UI {
         }
 
         // Render bookmarks popup if in selection or creation mode
-        if bookmarks.is_selecting || bookmarks.is_in_creation_mode() {
+        if bookmarks.is_selecting || bookmarks.is_creating {
             self.render_bookmarks_popup(frame, bookmarks, config);
         }
     }
@@ -429,15 +429,19 @@ impl UI {
         let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
 
         // Build content based on mode
-        let (title, items) = if bookmarks.is_in_creation_mode() {
-            let title = " Bookmarks - Press a key to save current directory ";
+        let (title, items) = if bookmarks.is_creating {
+            let title = " Create Bookmark - Enter name and press Enter ";
             let mut lines = vec![
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("Press any alphanumeric key (a-z, 0-9) to assign as bookmark",
-                                 Style::default().fg(highlight_color))
+                    Span::styled("Bookmark name: ", Style::default().fg(highlight_color)),
+                    Span::styled(bookmarks.get_input(), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                    Span::styled("█", Style::default().fg(selected_color)),  // cursor
                 ]),
-                Line::from("Press Esc or q to cancel"),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press Enter to save, Esc to cancel", Style::default().fg(border_color))
+                ]),
                 Line::from(""),
             ];
 
@@ -570,9 +574,9 @@ pub fn get_help_content() -> Vec<String> {
         "    '            Open bookmark selection menu (tick/apostrophe)".to_string(),
         "".to_string(),
         "  Bookmark Creation (after pressing 'm'):".to_string(),
-        "    • Press any alphanumeric key or multi-character name to assign".to_string(),
-        "    • Current directory will be saved with that name".to_string(),
-        "    • Press Esc or q to cancel".to_string(),
+        "    • Enter bookmark name (multi-character names supported)".to_string(),
+        "    • Press Enter to save, Esc to cancel".to_string(),
+        "    • Examples: work, project-123, my_home".to_string(),
         "".to_string(),
         "  Bookmark Navigation (after pressing '''):".to_string(),
         "    • List shows all saved bookmarks with their names".to_string(),
