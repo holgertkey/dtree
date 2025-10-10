@@ -175,7 +175,7 @@ fn main() -> Result<()> {
 
         if args.args.is_empty() {
             // Default: list bookmarks
-            println!("\nBookmarks:");
+            println!("Bookmarks:");
             if bookmarks.list().is_empty() {
                 println!("  No bookmarks saved yet.");
                 println!("\nUsage:");
@@ -230,7 +230,7 @@ fn main() -> Result<()> {
                 println!("✓ Bookmark '{}' removed", name);
             }
             "list" => {
-                println!("\nBookmarks:");
+                println!("Bookmarks:");
                 if bookmarks.list().is_empty() {
                     println!("  No bookmarks saved yet.");
                 } else {
