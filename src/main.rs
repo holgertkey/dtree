@@ -16,6 +16,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::process::Command;
 use config::Config;
+use bookmarks::Bookmarks;
 
 #[derive(Parser)]
 #[command(name = "dtree")]
@@ -23,9 +24,9 @@ use config::Config;
 #[command(disable_help_flag = true)]
 #[command(disable_version_flag = true)]
 struct Args {
-    /// Starting directory path (defaults to current directory)
-    #[arg(value_name = "PATH")]
-    path: Option<PathBuf>,
+    /// Starting directory path or bookmark name (defaults to current directory)
+    #[arg(value_name = "PATH_OR_BOOKMARK")]
+    path: Option<String>,
 
     /// Print help information
     #[arg(short = 'h', long = "help")]
@@ -38,6 +39,14 @@ struct Args {
     /// Print version information
     #[arg(long = "version")]
     version: bool,
+
+    /// Bookmark management mode (use: -bm, -bm add <name> [path], -bm remove <name>, -bm list)
+    #[arg(long = "bm")]
+    bookmark_mode: bool,
+
+    /// Additional arguments for bookmark commands
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    bookmark_args: Vec<String>,
 }
 
 /// Open a file in the external editor specified in config
@@ -100,19 +109,62 @@ fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
     Ok(())
 }
 
+/// Resolve path or bookmark name to a PathBuf
+fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBuf> {
+    // 1. If starts with . or / or contains / → treat as path
+    if input.starts_with('.') || input.starts_with('/') || input.contains('/') {
+        let path = PathBuf::from(input);
+        if !path.exists() {
+            anyhow::bail!("Directory not found: {}", input);
+        }
+        return Ok(path.canonicalize()?);
+    }
+
+    // 2. Check if it's a bookmark
+    if let Some(bookmark) = bookmarks.get(input) {
+        if bookmark.path.exists() {
+            return Ok(bookmark.path.clone());
+        } else {
+            anyhow::bail!(
+                "Bookmark '{}' points to non-existent directory: {}\n\
+                Use 'dt -bm list' to see all bookmarks",
+                input, bookmark.path.display()
+            );
+        }
+    }
+
+    // 3. Try as path
+    let path = PathBuf::from(input);
+    if path.exists() {
+        return Ok(path.canonicalize()?);
+    }
+
+    // 4. Neither bookmark nor path found
+    anyhow::bail!(
+        "Neither bookmark '{}' nor directory '{}' found.\n\
+        Use 'dt -bm list' to see all bookmarks",
+        input, input
+    );
+}
+
 fn main() -> Result<()> {
+    // Preprocess arguments: convert -bm to --bm for clap compatibility
+    let args: Vec<String> = std::env::args()
+        .map(|arg| if arg == "-bm" { "--bm".to_string() } else { arg })
+        .collect();
+
     // Ensure config file exists (create if missing)
     let config = Config::load();
 
-    let args = Args::parse();
+    let args = Args::parse_from(args);
 
-    // Если запрошена версия, выводим её
+    // Print version
     if args.version {
         println!("dtree {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
-    // If help requested, print full help
+    // Print help
     if args.help {
         let help_lines = ui::get_help_content();
         for line in help_lines {
@@ -121,8 +173,94 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let start_path = if let Some(path) = args.path {
-        path.canonicalize().unwrap_or_else(|_| path)
+    // Handle bookmark management mode
+    if args.bookmark_mode {
+        let mut bookmarks = Bookmarks::new()?;
+
+        if args.bookmark_args.is_empty() {
+            // Default: list bookmarks
+            println!("\nBookmarks:");
+            if bookmarks.list().is_empty() {
+                println!("  No bookmarks saved yet.");
+                println!("\nUsage:");
+                println!("  dt -bm add <name> [path]    Add a bookmark");
+                println!("  dt -bm remove <name>        Remove a bookmark");
+                println!("  dt -bm list                 List all bookmarks");
+            } else {
+                for bookmark in bookmarks.list() {
+                    let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
+                    println!("  {} → {} ({})", bookmark.key, name, bookmark.path.display());
+                }
+            }
+            return Ok(());
+        }
+
+        let subcommand = &args.bookmark_args[0];
+        match subcommand.as_str() {
+            "add" => {
+                if args.bookmark_args.len() < 2 {
+                    eprintln!("Error: Missing bookmark name");
+                    eprintln!("Usage: dt -bm add <name> [path]");
+                    std::process::exit(1);
+                }
+                let name = &args.bookmark_args[1];
+                let path = if args.bookmark_args.len() >= 3 {
+                    PathBuf::from(&args.bookmark_args[2])
+                } else {
+                    std::env::current_dir()?
+                };
+
+                if !path.exists() {
+                    eprintln!("Error: Directory does not exist: {}", path.display());
+                    std::process::exit(1);
+                }
+
+                let path = path.canonicalize()?;
+                let dir_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|s| s.to_string());
+
+                bookmarks.add(name.clone(), path.clone(), dir_name)?;
+                println!("✓ Bookmark '{}' added: {}", name, path.display());
+            }
+            "remove" => {
+                if args.bookmark_args.len() < 2 {
+                    eprintln!("Error: Missing bookmark name");
+                    eprintln!("Usage: dt -bm remove <name>");
+                    std::process::exit(1);
+                }
+                let name = &args.bookmark_args[1];
+                bookmarks.remove(name)?;
+                println!("✓ Bookmark '{}' removed", name);
+            }
+            "list" => {
+                println!("\nBookmarks:");
+                if bookmarks.list().is_empty() {
+                    println!("  No bookmarks saved yet.");
+                } else {
+                    for bookmark in bookmarks.list() {
+                        let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
+                        println!("  {} → {} ({})", bookmark.key, name, bookmark.path.display());
+                    }
+                }
+            }
+            _ => {
+                eprintln!("Error: Unknown bookmark command '{}'", subcommand);
+                eprintln!("\nAvailable commands:");
+                eprintln!("  dt -bm              List all bookmarks");
+                eprintln!("  dt -bm add <name> [path]");
+                eprintln!("  dt -bm remove <name>");
+                eprintln!("  dt -bm list");
+                std::process::exit(1);
+            }
+        }
+        return Ok(());
+    }
+
+    // Resolve path or bookmark
+    let start_path = if let Some(input) = args.path {
+        let bookmarks = Bookmarks::new()?;
+        resolve_path_or_bookmark(&input, &bookmarks)?
     } else {
         std::env::current_dir()?
     };

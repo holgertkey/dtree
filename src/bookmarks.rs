@@ -7,18 +7,53 @@ use std::path::PathBuf;
 /// A single bookmark entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bookmark {
-    pub key: char,
+    pub key: String,
     pub path: PathBuf,
     pub name: Option<String>,
+}
+
+impl Bookmark {
+    /// Validate bookmark name according to filesystem naming rules
+    /// Allows alphanumeric, hyphens, underscores, dots (max 255 chars)
+    /// Forbids path separators and null bytes
+    pub fn validate_name(name: &str) -> Result<()> {
+        if name.is_empty() {
+            anyhow::bail!("Bookmark name cannot be empty");
+        }
+
+        if name.len() > 255 {
+            anyhow::bail!("Bookmark name too long (max 255 characters)");
+        }
+
+        // Check for forbidden characters (path separators, null byte, control chars)
+        if name.contains('/') || name.contains('\\') || name.contains('\0') {
+            anyhow::bail!("Bookmark name cannot contain path separators (/, \\) or null bytes");
+        }
+
+        // Forbid control characters
+        if name.chars().any(|c| c.is_control()) {
+            anyhow::bail!("Bookmark name cannot contain control characters");
+        }
+
+        // Forbid reserved names on Windows (optional, but safer for cross-platform)
+        let reserved = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+                        "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
+                        "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+        if reserved.contains(&name.to_uppercase().as_str()) {
+            anyhow::bail!("Bookmark name '{}' is reserved", name);
+        }
+
+        Ok(())
+    }
 }
 
 /// Manages persistent bookmarks
 #[derive(Debug, Default)]
 pub struct Bookmarks {
-    bookmarks: HashMap<char, Bookmark>,
+    bookmarks: HashMap<String, Bookmark>,
     file_path: PathBuf,
     pub is_selecting: bool,
-    pub pending_key: Option<char>,
+    pub pending_key: Option<String>,
 }
 
 impl Bookmarks {
@@ -77,32 +112,60 @@ impl Bookmarks {
             return Ok(());
         }
 
-        // Try to parse JSON, if fails - backup the corrupted file and start fresh
+        // Try to parse as new format (String keys)
         match serde_json::from_str::<Vec<Bookmark>>(&content) {
             Ok(bookmarks_vec) => {
                 self.bookmarks.clear();
                 for bookmark in bookmarks_vec {
-                    self.bookmarks.insert(bookmark.key, bookmark);
+                    self.bookmarks.insert(bookmark.key.clone(), bookmark);
                 }
                 Ok(())
             }
             Err(e) => {
-                // Backup corrupted file
-                let backup_path = self.file_path.with_extension("json.backup");
-                let _ = fs::copy(&self.file_path, &backup_path);
+                // Try to migrate from old format (char keys) to new format (String keys)
+                #[derive(Debug, Clone, Deserialize)]
+                struct OldBookmark {
+                    pub key: char,
+                    pub path: PathBuf,
+                    pub name: Option<String>,
+                }
 
-                // Create new empty bookmarks file
-                self.bookmarks.clear();
-                self.save()?;
+                match serde_json::from_str::<Vec<OldBookmark>>(&content) {
+                    Ok(old_bookmarks_vec) => {
+                        // Migration successful - convert char keys to String
+                        self.bookmarks.clear();
+                        for old_bookmark in old_bookmarks_vec {
+                            let new_bookmark = Bookmark {
+                                key: old_bookmark.key.to_string(),
+                                path: old_bookmark.path,
+                                name: old_bookmark.name,
+                            };
+                            self.bookmarks.insert(new_bookmark.key.clone(), new_bookmark);
+                        }
+                        // Save in new format
+                        self.save()?;
+                        eprintln!("\n✓ Successfully migrated bookmarks to new format\n");
+                        Ok(())
+                    }
+                    Err(_) => {
+                        // Neither format works - backup corrupted file
+                        let backup_path = self.file_path.with_extension("json.backup");
+                        let _ = fs::copy(&self.file_path, &backup_path);
 
-                // Return error with helpful message
-                Err(anyhow::anyhow!(
-                    "Failed to parse bookmarks JSON: {}.\n\
-                    The corrupted file has been backed up to: {}\n\
-                    A new empty bookmarks file has been created.",
-                    e,
-                    backup_path.display()
-                ))
+                        // Create new empty bookmarks file
+                        self.bookmarks.clear();
+                        self.save()?;
+
+                        // Return error with helpful message
+                        Err(anyhow::anyhow!(
+                            "Failed to parse bookmarks JSON: {}.\n\
+                            The corrupted file has been backed up to: {}\n\
+                            A new empty bookmarks file has been created.",
+                            e,
+                            backup_path.display()
+                        ))
+                    }
+                }
             }
         }
     }
@@ -120,9 +183,12 @@ impl Bookmarks {
     }
 
     /// Add or update a bookmark
-    pub fn add(&mut self, key: char, path: PathBuf, name: Option<String>) -> Result<()> {
+    pub fn add(&mut self, key: String, path: PathBuf, name: Option<String>) -> Result<()> {
+        // Validate bookmark name
+        Bookmark::validate_name(&key)?;
+
         let bookmark = Bookmark {
-            key,
+            key: key.clone(),
             path,
             name,
         };
@@ -133,13 +199,15 @@ impl Bookmarks {
     }
 
     /// Get a bookmark by key
-    pub fn get(&self, key: char) -> Option<&Bookmark> {
-        self.bookmarks.get(&key)
+    pub fn get(&self, key: &str) -> Option<&Bookmark> {
+        self.bookmarks.get(key)
     }
 
     /// Remove a bookmark
-    pub fn remove(&mut self, key: char) -> Result<()> {
-        self.bookmarks.remove(&key);
+    pub fn remove(&mut self, key: &str) -> Result<()> {
+        if self.bookmarks.remove(key).is_none() {
+            anyhow::bail!("Bookmark '{}' not found", key);
+        }
         self.save()?;
         Ok(())
     }
@@ -147,13 +215,13 @@ impl Bookmarks {
     /// Get all bookmarks as a sorted vector
     pub fn list(&self) -> Vec<&Bookmark> {
         let mut bookmarks: Vec<&Bookmark> = self.bookmarks.values().collect();
-        bookmarks.sort_by_key(|b| b.key);
+        bookmarks.sort_by_key(|b| b.key.clone());
         bookmarks
     }
 
     /// Check if a key is already used
-    pub fn has_key(&self, key: char) -> bool {
-        self.bookmarks.contains_key(&key)
+    pub fn has_key(&self, key: &str) -> bool {
+        self.bookmarks.contains_key(key)
     }
 
     /// Enter bookmark selection mode
@@ -170,7 +238,7 @@ impl Bookmarks {
 
     /// Enter bookmark creation mode (after pressing 'm')
     pub fn enter_creation_mode(&mut self) {
-        self.pending_key = Some('m');
+        self.pending_key = Some("m".to_string());
     }
 
     /// Exit bookmark creation mode
@@ -207,8 +275,8 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add some bookmarks
-        bookmarks.add('a', PathBuf::from("/tmp/test1"), Some("Test 1".to_string())).unwrap();
-        bookmarks.add('b', PathBuf::from("/tmp/test2"), Some("Test 2".to_string())).unwrap();
+        bookmarks.add("a".to_string(), PathBuf::from("/tmp/test1"), Some("Test 1".to_string())).unwrap();
+        bookmarks.add("b".to_string(), PathBuf::from("/tmp/test2"), Some("Test 2".to_string())).unwrap();
 
         // Save
         bookmarks.save().unwrap();
@@ -219,8 +287,8 @@ mod tests {
 
         // Verify
         assert_eq!(bookmarks2.list().len(), 2);
-        assert_eq!(bookmarks2.get('a').unwrap().path, PathBuf::from("/tmp/test1"));
-        assert_eq!(bookmarks2.get('b').unwrap().path, PathBuf::from("/tmp/test2"));
+        assert_eq!(bookmarks2.get("a").unwrap().path, PathBuf::from("/tmp/test1"));
+        assert_eq!(bookmarks2.get("b").unwrap().path, PathBuf::from("/tmp/test2"));
     }
 
     #[test]
@@ -284,14 +352,14 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add bookmark
-        bookmarks.add('x', PathBuf::from("/tmp/testx"), Some("TestX".to_string())).unwrap();
+        bookmarks.add("x".to_string(), PathBuf::from("/tmp/testx"), Some("TestX".to_string())).unwrap();
         assert_eq!(bookmarks.list().len(), 1);
-        assert!(bookmarks.has_key('x'));
+        assert!(bookmarks.has_key("x"));
 
         // Remove bookmark
-        bookmarks.remove('x').unwrap();
+        bookmarks.remove("x").unwrap();
         assert_eq!(bookmarks.list().len(), 0);
-        assert!(!bookmarks.has_key('x'));
+        assert!(!bookmarks.has_key("x"));
     }
 
     #[test]
@@ -300,17 +368,17 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add bookmarks in random order
-        bookmarks.add('z', PathBuf::from("/tmp/z"), None).unwrap();
-        bookmarks.add('a', PathBuf::from("/tmp/a"), None).unwrap();
-        bookmarks.add('m', PathBuf::from("/tmp/m"), None).unwrap();
+        bookmarks.add("z".to_string(), PathBuf::from("/tmp/z"), None).unwrap();
+        bookmarks.add("a".to_string(), PathBuf::from("/tmp/a"), None).unwrap();
+        bookmarks.add("m".to_string(), PathBuf::from("/tmp/m"), None).unwrap();
 
         let list = bookmarks.list();
         assert_eq!(list.len(), 3);
 
         // Should be sorted by key
-        assert_eq!(list[0].key, 'a');
-        assert_eq!(list[1].key, 'm');
-        assert_eq!(list[2].key, 'z');
+        assert_eq!(list[0].key, "a");
+        assert_eq!(list[1].key, "m");
+        assert_eq!(list[2].key, "z");
     }
 
     #[test]
@@ -347,17 +415,108 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add bookmark
-        bookmarks.add('t', PathBuf::from("/tmp/first"), Some("First".to_string())).unwrap();
-        assert_eq!(bookmarks.get('t').unwrap().path, PathBuf::from("/tmp/first"));
+        bookmarks.add("t".to_string(), PathBuf::from("/tmp/first"), Some("First".to_string())).unwrap();
+        assert_eq!(bookmarks.get("t").unwrap().path, PathBuf::from("/tmp/first"));
 
         // Overwrite with same key
-        bookmarks.add('t', PathBuf::from("/tmp/second"), Some("Second".to_string())).unwrap();
+        bookmarks.add("t".to_string(), PathBuf::from("/tmp/second"), Some("Second".to_string())).unwrap();
 
         // Should have updated path
-        assert_eq!(bookmarks.get('t').unwrap().path, PathBuf::from("/tmp/second"));
-        assert_eq!(bookmarks.get('t').unwrap().name, Some("Second".to_string()));
+        assert_eq!(bookmarks.get("t").unwrap().path, PathBuf::from("/tmp/second"));
+        assert_eq!(bookmarks.get("t").unwrap().name, Some("Second".to_string()));
 
         // Should still have only one bookmark
         assert_eq!(bookmarks.list().len(), 1);
+    }
+
+    #[test]
+    fn test_multi_character_bookmark_names() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut bookmarks = create_test_bookmarks(&temp_dir);
+
+        // Add multi-character bookmarks
+        bookmarks.add("work".to_string(), PathBuf::from("/tmp/work"), Some("Work".to_string())).unwrap();
+        bookmarks.add("project-123".to_string(), PathBuf::from("/tmp/proj"), Some("Project".to_string())).unwrap();
+        bookmarks.add("my_home".to_string(), PathBuf::from("/home/user"), Some("Home".to_string())).unwrap();
+
+        assert_eq!(bookmarks.list().len(), 3);
+        assert_eq!(bookmarks.get("work").unwrap().path, PathBuf::from("/tmp/work"));
+        assert_eq!(bookmarks.get("project-123").unwrap().path, PathBuf::from("/tmp/proj"));
+        assert_eq!(bookmarks.get("my_home").unwrap().path, PathBuf::from("/home/user"));
+    }
+
+    #[test]
+    fn test_bookmark_name_validation() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut bookmarks = create_test_bookmarks(&temp_dir);
+
+        // Empty name should fail
+        let result = bookmarks.add("".to_string(), PathBuf::from("/tmp/test"), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cannot be empty"));
+
+        // Name with path separator should fail
+        let result = bookmarks.add("work/project".to_string(), PathBuf::from("/tmp/test"), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("path separators"));
+
+        // Name with null byte should fail
+        let result = bookmarks.add("work\0test".to_string(), PathBuf::from("/tmp/test"), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("path separators"));
+
+        // Reserved Windows name should fail (cross-platform safety)
+        let result = bookmarks.add("CON".to_string(), PathBuf::from("/tmp/test"), None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("reserved"));
+
+        // Valid names should succeed
+        assert!(bookmarks.add("work".to_string(), PathBuf::from("/tmp/work"), None).is_ok());
+        assert!(bookmarks.add("project-123".to_string(), PathBuf::from("/tmp/proj"), None).is_ok());
+        assert!(bookmarks.add("my_home.backup".to_string(), PathBuf::from("/tmp/home"), None).is_ok());
+    }
+
+    #[test]
+    fn test_bookmark_remove_error() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut bookmarks = create_test_bookmarks(&temp_dir);
+
+        // Removing non-existent bookmark should fail
+        let result = bookmarks.remove("nonexistent");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[test]
+    fn test_migration_from_char_keys() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("bookmarks.json");
+
+        // Write old format JSON (char keys)
+        let old_json = r#"[
+  {"key": "a", "path": "/tmp/test1", "name": "Test 1"},
+  {"key": "b", "path": "/tmp/test2", "name": "Test 2"}
+]"#;
+        std::fs::write(&file_path, old_json).unwrap();
+
+        // Load bookmarks (should auto-migrate)
+        let mut bookmarks = Bookmarks {
+            bookmarks: HashMap::new(),
+            file_path: file_path.clone(),
+            is_selecting: false,
+            pending_key: None,
+        };
+
+        bookmarks.load().unwrap();
+
+        // Should have migrated successfully
+        assert_eq!(bookmarks.list().len(), 2);
+        assert_eq!(bookmarks.get("a").unwrap().path, PathBuf::from("/tmp/test1"));
+        assert_eq!(bookmarks.get("b").unwrap().path, PathBuf::from("/tmp/test2"));
+
+        // File should be saved in new format
+        let content = std::fs::read_to_string(&file_path).unwrap();
+        // New format has String keys (not single chars)
+        assert!(content.contains("\"key\":\"a\"") || content.contains("\"key\": \"a\""));
     }
 }

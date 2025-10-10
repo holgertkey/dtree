@@ -57,7 +57,7 @@ impl EventHandler {
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char(c) => {
-                    if let Some(bookmark) = bookmarks.get(c) {
+                    if let Some(bookmark) = bookmarks.get(&c.to_string()) {
                         let path = bookmark.path.clone();
                         bookmarks.exit_selection_mode();
                         nav.go_to_directory(path, *show_files)?;
@@ -95,7 +95,7 @@ impl EventHandler {
                         let name = path.file_name()
                             .and_then(|n| n.to_str())
                             .map(|s| s.to_string());
-                        let _ = bookmarks.add(c, path, name);
+                        let _ = bookmarks.add(c.to_string(), path, name);
                     }
                     bookmarks.exit_creation_mode();
                     return Ok(Some(PathBuf::new()));
