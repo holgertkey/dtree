@@ -253,76 +253,77 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Resolve path or bookmark
-    let start_path = if !args.args.is_empty() {
+    // If path or bookmark argument provided, resolve and output without entering TUI
+    if !args.args.is_empty() {
         let input = &args.args[0];
+
+        // Special case: -v flag with path/bookmark
+        if args.view {
+            let bookmarks = Bookmarks::new()?;
+            let start_path = resolve_path_or_bookmark(input, &bookmarks)?;
+
+            if !start_path.is_file() {
+                eprintln!("Error: --view requires a file path, got: {}", start_path.display());
+                std::process::exit(1);
+            }
+
+            // Start app in fullscreen viewer mode
+            let mut terminal = setup_terminal()?;
+            let parent_dir = start_path.parent().unwrap_or(&start_path).to_path_buf();
+            let mut app = App::new(parent_dir)?;
+
+            // Set fullscreen mode and load the file
+            app.set_fullscreen_viewer(&start_path)?;
+
+            let result = run_app(&mut terminal, &mut app);
+            cleanup_terminal()?;
+
+            match result? {
+                Some(path) => {
+                    let path_str = path.to_string_lossy();
+                    if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
+                        open_in_editor(file_path, &config)?;
+                    } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
+                        open_in_file_manager(dir_path, &config)?;
+                    } else {
+                        println!("{}", path.display());
+                    }
+                }
+                None => {}
+            }
+            return Ok(());
+        }
+
+        // Normal case: resolve path/bookmark and output directly (no TUI)
         let bookmarks = Bookmarks::new()?;
-        resolve_path_or_bookmark(input, &bookmarks)?
-    } else {
-        std::env::current_dir()?
-    };
+        let resolved_path = resolve_path_or_bookmark(input, &bookmarks)?;
 
-    // If view mode requested, check that the path is a file
-    if args.view {
-        if !start_path.is_file() {
-            eprintln!("Error: --view requires a file path, got: {}", start_path.display());
-            std::process::exit(1);
-        }
-
-        // Start app in fullscreen viewer mode
-        let mut terminal = setup_terminal()?;
-        let parent_dir = start_path.parent().unwrap_or(&start_path).to_path_buf();
-        let mut app = App::new(parent_dir)?;
-
-        // Set fullscreen mode and load the file
-        app.set_fullscreen_viewer(&start_path)?;
-
-        let result = run_app(&mut terminal, &mut app);
-        cleanup_terminal()?;
-
-        match result? {
-            Some(path) => {
-                let path_str = path.to_string_lossy();
-                if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-                    // Open file in external editor
-                    open_in_editor(file_path, &config)?;
-                    Ok(())
-                } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-                    // Open directory in file manager
-                    open_in_file_manager(dir_path, &config)?;
-                    Ok(())
-                } else {
-                    println!("{}", path.display());
-                    Ok(())
-                }
-            }
-            None => Ok(()),
-        }
-    } else {
-        // Normal tree navigation mode
-        let mut terminal = setup_terminal()?;
-        let mut app = App::new(start_path)?;
-        let result = run_app(&mut terminal, &mut app);
-
-        cleanup_terminal()?;
-
-        match result? {
-            Some(path) => {
-                let path_str = path.to_string_lossy();
-                if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-                    // Open file in external editor
-                    open_in_editor(file_path, &config)?;
-                    Ok(())
-                } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-                    // Open directory in file manager
-                    open_in_file_manager(dir_path, &config)?;
-                    Ok(())
-                } else {
-                    println!("{}", path.display());
-                    Ok(())
-                }
-            }
-            None => Ok(()),
-        }
+        // Output path for bash wrapper to cd into
+        println!("{}", resolved_path.display());
+        return Ok(());
     }
+
+    // No arguments: launch interactive TUI from current directory
+    let start_path = std::env::current_dir()?;
+    let mut terminal = setup_terminal()?;
+    let mut app = App::new(start_path)?;
+    let result = run_app(&mut terminal, &mut app);
+
+    cleanup_terminal()?;
+
+    match result? {
+        Some(path) => {
+            let path_str = path.to_string_lossy();
+            if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
+                open_in_editor(file_path, &config)?;
+            } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
+                open_in_file_manager(dir_path, &config)?;
+            } else {
+                println!("{}", path.display());
+            }
+        }
+        None => {}
+    }
+
+    Ok(())
 }
