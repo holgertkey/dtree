@@ -24,10 +24,6 @@ use bookmarks::Bookmarks;
 #[command(disable_help_flag = true)]
 #[command(disable_version_flag = true)]
 struct Args {
-    /// Starting directory path or bookmark name (defaults to current directory)
-    #[arg(value_name = "PATH_OR_BOOKMARK")]
-    path: Option<String>,
-
     /// Print help information
     #[arg(short = 'h', long = "help")]
     help: bool,
@@ -44,9 +40,9 @@ struct Args {
     #[arg(long = "bm")]
     bookmark_mode: bool,
 
-    /// Additional arguments for bookmark commands
+    /// All positional arguments (path or bookmark commands)
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    bookmark_args: Vec<String>,
+    args: Vec<String>,
 }
 
 /// Open a file in the external editor specified in config
@@ -177,7 +173,7 @@ fn main() -> Result<()> {
     if args.bookmark_mode {
         let mut bookmarks = Bookmarks::new()?;
 
-        if args.bookmark_args.is_empty() {
+        if args.args.is_empty() {
             // Default: list bookmarks
             println!("\nBookmarks:");
             if bookmarks.list().is_empty() {
@@ -195,17 +191,17 @@ fn main() -> Result<()> {
             return Ok(());
         }
 
-        let subcommand = &args.bookmark_args[0];
+        let subcommand = &args.args[0];
         match subcommand.as_str() {
             "add" => {
-                if args.bookmark_args.len() < 2 {
+                if args.args.len() < 2 {
                     eprintln!("Error: Missing bookmark name");
                     eprintln!("Usage: dt -bm add <name> [path]");
                     std::process::exit(1);
                 }
-                let name = &args.bookmark_args[1];
-                let path = if args.bookmark_args.len() >= 3 {
-                    PathBuf::from(&args.bookmark_args[2])
+                let name = &args.args[1];
+                let path = if args.args.len() >= 3 {
+                    PathBuf::from(&args.args[2])
                 } else {
                     std::env::current_dir()?
                 };
@@ -224,12 +220,12 @@ fn main() -> Result<()> {
                 println!("✓ Bookmark '{}' added: {}", name, path.display());
             }
             "remove" => {
-                if args.bookmark_args.len() < 2 {
+                if args.args.len() < 2 {
                     eprintln!("Error: Missing bookmark name");
                     eprintln!("Usage: dt -bm remove <name>");
                     std::process::exit(1);
                 }
-                let name = &args.bookmark_args[1];
+                let name = &args.args[1];
                 bookmarks.remove(name)?;
                 println!("✓ Bookmark '{}' removed", name);
             }
@@ -258,9 +254,10 @@ fn main() -> Result<()> {
     }
 
     // Resolve path or bookmark
-    let start_path = if let Some(input) = args.path {
+    let start_path = if !args.args.is_empty() {
+        let input = &args.args[0];
         let bookmarks = Bookmarks::new()?;
-        resolve_path_or_bookmark(&input, &bookmarks)?
+        resolve_path_or_bookmark(input, &bookmarks)?
     } else {
         std::env::current_dir()?
     };
