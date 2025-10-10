@@ -112,7 +112,7 @@ impl Bookmarks {
             return Ok(());
         }
 
-        // Try to parse as new format (String keys)
+        // Parse JSON
         match serde_json::from_str::<Vec<Bookmark>>(&content) {
             Ok(bookmarks_vec) => {
                 self.bookmarks.clear();
@@ -122,50 +122,22 @@ impl Bookmarks {
                 Ok(())
             }
             Err(e) => {
-                // Try to migrate from old format (char keys) to new format (String keys)
-                #[derive(Debug, Clone, Deserialize)]
-                struct OldBookmark {
-                    pub key: char,
-                    pub path: PathBuf,
-                    pub name: Option<String>,
-                }
+                // Backup corrupted file
+                let backup_path = self.file_path.with_extension("json.backup");
+                let _ = fs::copy(&self.file_path, &backup_path);
 
-                match serde_json::from_str::<Vec<OldBookmark>>(&content) {
-                    Ok(old_bookmarks_vec) => {
-                        // Migration successful - convert char keys to String
-                        self.bookmarks.clear();
-                        for old_bookmark in old_bookmarks_vec {
-                            let new_bookmark = Bookmark {
-                                key: old_bookmark.key.to_string(),
-                                path: old_bookmark.path,
-                                name: old_bookmark.name,
-                            };
-                            self.bookmarks.insert(new_bookmark.key.clone(), new_bookmark);
-                        }
-                        // Save in new format
-                        self.save()?;
-                        eprintln!("\n✓ Successfully migrated bookmarks to new format\n");
-                        Ok(())
-                    }
-                    Err(_) => {
-                        // Neither format works - backup corrupted file
-                        let backup_path = self.file_path.with_extension("json.backup");
-                        let _ = fs::copy(&self.file_path, &backup_path);
+                // Create new empty bookmarks file
+                self.bookmarks.clear();
+                self.save()?;
 
-                        // Create new empty bookmarks file
-                        self.bookmarks.clear();
-                        self.save()?;
-
-                        // Return error with helpful message
-                        Err(anyhow::anyhow!(
-                            "Failed to parse bookmarks JSON: {}.\n\
-                            The corrupted file has been backed up to: {}\n\
-                            A new empty bookmarks file has been created.",
-                            e,
-                            backup_path.display()
-                        ))
-                    }
-                }
+                // Return error with helpful message
+                Err(anyhow::anyhow!(
+                    "Failed to parse bookmarks JSON: {}.\n\
+                    The corrupted file has been backed up to: {}\n\
+                    A new empty bookmarks file has been created.",
+                    e,
+                    backup_path.display()
+                ))
             }
         }
     }
@@ -487,36 +459,4 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("not found"));
     }
 
-    #[test]
-    fn test_migration_from_char_keys() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("bookmarks.json");
-
-        // Write old format JSON (char keys)
-        let old_json = r#"[
-  {"key": "a", "path": "/tmp/test1", "name": "Test 1"},
-  {"key": "b", "path": "/tmp/test2", "name": "Test 2"}
-]"#;
-        std::fs::write(&file_path, old_json).unwrap();
-
-        // Load bookmarks (should auto-migrate)
-        let mut bookmarks = Bookmarks {
-            bookmarks: HashMap::new(),
-            file_path: file_path.clone(),
-            is_selecting: false,
-            pending_key: None,
-        };
-
-        bookmarks.load().unwrap();
-
-        // Should have migrated successfully
-        assert_eq!(bookmarks.list().len(), 2);
-        assert_eq!(bookmarks.get("a").unwrap().path, PathBuf::from("/tmp/test1"));
-        assert_eq!(bookmarks.get("b").unwrap().path, PathBuf::from("/tmp/test2"));
-
-        // File should be saved in new format
-        let content = std::fs::read_to_string(&file_path).unwrap();
-        // New format has String keys (not single chars)
-        assert!(content.contains("\"key\":\"a\"") || content.contains("\"key\": \"a\""));
-    }
 }
