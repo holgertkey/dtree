@@ -212,7 +212,7 @@ impl UI {
         *state.offset_mut() = final_offset;
         self.tree_scroll_offset = final_offset;
 
-        let title = " Directory Tree (↑↓/jk: navigate | /: search | c: copy | e: edit | o: file mgr | Enter: select | q: quit | i: help) ";
+        let title = " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | /: search | i: help) ";
 
         let list = List::new(items)
             .block(Block::default()
@@ -542,8 +542,9 @@ pub fn get_help_content() -> Vec<String> {
         "  ← / h          Collapse directory (hide subdirectories)".to_string(),
         "  u              Go to parent directory (change root)".to_string(),
         "  Backspace      Go to parent directory (change root)".to_string(),
-        "  Enter          Select directory and exit (cd to selected)".to_string(),
-        "  q / Esc        Quit without selection".to_string(),
+        "  Enter          Go into directory (change root to selected directory)".to_string(),
+        "  q              Exit and cd to selected directory".to_string(),
+        "  Esc            Quit without directory change".to_string(),
         "  s              Toggle file viewer mode (show/hide files)".to_string(),
         "  v              Open file in fullscreen viewer (only for files)".to_string(),
         "  c              Copy current path to clipboard (files and directories)".to_string(),
@@ -556,7 +557,6 @@ pub fn get_help_content() -> Vec<String> {
         "  Type query     Type your search query (case-insensitive)".to_string(),
         "  Enter          Execute search and show results panel".to_string(),
         "  Esc            Cancel search (in search mode) or close results panel".to_string(),
-        "  q              Close search results panel (when panel is open)".to_string(),
         "".to_string(),
         "  In Search Results Panel:".to_string(),
         "  Tab            Switch focus between tree and search results".to_string(),

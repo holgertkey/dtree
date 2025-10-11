@@ -141,21 +141,33 @@ impl EventHandler {
             }
         }
 
-        // Check for quit keys (q and Esc have special handling in some contexts)
-        if config.keybindings.is_quit(key.code) {
+        // Handle Esc key - always exits without directory change
+        if matches!(key.code, KeyCode::Esc) {
             if *fullscreen_viewer {
-                // In fullscreen: q returns to tree, Esc exits completely
-                if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
-                    *fullscreen_viewer = false;
-                    return Ok(Some(PathBuf::new()));
-                } else {
-                    // Esc or other quit keys exit completely
-                    return Ok(None);
-                }
+                // In fullscreen: Esc exits completely
+                return Ok(None);
             } else if search.show_results {
                 search.close_results();
                 return Ok(Some(PathBuf::new()));
             } else {
+                return Ok(None);
+            }
+        }
+
+        // Handle q key - exits with directory change (except in fullscreen)
+        if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
+            if *fullscreen_viewer {
+                // In fullscreen: q returns to tree view
+                *fullscreen_viewer = false;
+                return Ok(Some(PathBuf::new()));
+            } else {
+                // Normal mode: q exits with cd to selected directory
+                if let Some(node) = nav.get_selected_node() {
+                    let node_borrowed = node.borrow();
+                    if node_borrowed.is_dir {
+                        return Ok(Some(node_borrowed.path.clone()));
+                    }
+                }
                 return Ok(None);
             }
         }
@@ -195,35 +207,43 @@ impl EventHandler {
                     }
                 }
             }
-            KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
-                if key.code == KeyCode::Enter {
-                    if search.focus_on_results && search.show_results {
-                        if let Some(path) = search.get_selected_result() {
-                            let _ = nav.expand_path_to_node(&path, *show_files);
-                            search.focus_on_results = false;
-                            if *show_files {
-                                let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false, config);
-                                *show_help = false;
-                            }
+            KeyCode::Enter => {
+                if search.focus_on_results && search.show_results {
+                    // In search mode: jump to search result
+                    if let Some(path) = search.get_selected_result() {
+                        let _ = nav.expand_path_to_node(&path, *show_files);
+                        search.focus_on_results = false;
+                        if *show_files {
+                            let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false, config);
+                            *show_help = false;
                         }
-                        return Ok(Some(PathBuf::new()));
-                    } else {
-                        if let Some(node) = nav.get_selected_node() {
-                            let node_borrowed = node.borrow();
-                            if node_borrowed.is_dir {
-                                return Ok(Some(node_borrowed.path.clone()));
+                    }
+                    return Ok(Some(PathBuf::new()));
+                } else {
+                    // Normal mode: Enter on directory -> go inside (change root)
+                    if let Some(node) = nav.get_selected_node() {
+                        let node_borrowed = node.borrow();
+                        if node_borrowed.is_dir {
+                            let path = node_borrowed.path.clone();
+                            drop(node_borrowed);
+                            nav.go_to_directory(path, *show_files)?;
+                            if *show_files {
+                                if let Some(node) = nav.get_selected_node() {
+                                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                }
                             }
                         }
                     }
-                } else {
-                    if !search.focus_on_results {
-                        if let Some(node) = nav.get_selected_node() {
-                            let node_borrowed = node.borrow();
-                            if node_borrowed.is_dir {
-                                let path = node_borrowed.path.clone();
-                                drop(node_borrowed);
-                                nav.toggle_node(&path, *show_files)?;
-                            }
+                }
+            }
+            KeyCode::Char('l') | KeyCode::Right => {
+                if !search.focus_on_results {
+                    if let Some(node) = nav.get_selected_node() {
+                        let node_borrowed = node.borrow();
+                        if node_borrowed.is_dir {
+                            let path = node_borrowed.path.clone();
+                            drop(node_borrowed);
+                            nav.toggle_node(&path, *show_files)?;
                         }
                     }
                 }
