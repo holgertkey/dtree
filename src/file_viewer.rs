@@ -107,8 +107,10 @@ impl FileViewer {
 
             match line {
                 Ok(content) => {
+                    // Replace tabs with spaces (4 spaces per tab)
+                    let content_no_tabs = content.replace('\t', "    ");
                     // Truncate line to prevent Unicode artifacts
-                    let truncated = Self::truncate_line(&content, max_width);
+                    let truncated = Self::truncate_line(&content_no_tabs, max_width);
                     self.content.push(truncated);
                     line_count += 1;
                 }
