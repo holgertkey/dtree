@@ -63,29 +63,36 @@ impl Navigation {
     }
 
     /// Toggle node expansion at path
-    pub fn toggle_node(&mut self, path: &Path, show_files: bool) -> Result<()> {
-        Self::toggle_node_recursive(&self.root, path, show_files)?;
+    /// Returns Some(error_message) if node has error after toggle, None otherwise
+    pub fn toggle_node(&mut self, path: &Path, show_files: bool) -> Result<Option<String>> {
+        let error_msg = Self::toggle_node_recursive(&self.root, path, show_files)?;
         self.rebuild_flat_list();
-        Ok(())
+        Ok(error_msg)
     }
 
-    fn toggle_node_recursive(node: &TreeNodeRef, target_path: &Path, show_files: bool) -> Result<bool> {
+    fn toggle_node_recursive(node: &TreeNodeRef, target_path: &Path, show_files: bool) -> Result<Option<String>> {
         let mut node_borrowed = node.borrow_mut();
         if node_borrowed.path == target_path {
             node_borrowed.toggle_expand(show_files)?;
-            return Ok(true);
+            // Check if node has error after toggle
+            let error_msg = if node_borrowed.has_error {
+                node_borrowed.error_message.clone()
+            } else {
+                None
+            };
+            return Ok(error_msg);
         }
 
         let children = node_borrowed.children.clone();
         drop(node_borrowed);
 
         for child in &children {
-            if Self::toggle_node_recursive(child, target_path, show_files)? {
-                return Ok(true);
+            if let Some(error_msg) = Self::toggle_node_recursive(child, target_path, show_files)? {
+                return Ok(Some(error_msg));
             }
         }
 
-        Ok(false)
+        Ok(None)
     }
 
     /// Reload tree with new show_files setting

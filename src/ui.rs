@@ -155,14 +155,8 @@ impl UI {
                 "  "
             };
 
-            // Add error message to name if present
-            let name_with_error = if let Some(ref error_msg) = node_borrowed.error_message {
-                format!("{} [{}]", node_borrowed.name, error_msg)
-            } else {
-                node_borrowed.name.clone()
-            };
-
-            let text = format!("{}{}{}", indent, icon, name_with_error);
+            // Just show the name - detailed error info will be in file viewer
+            let text = format!("{}{}{}", indent, icon, node_borrowed.name);
 
             // Color coding: errors in configured color, directories and files use theme colors
             let style = if node_borrowed.has_error {

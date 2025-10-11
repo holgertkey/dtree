@@ -84,7 +84,7 @@ impl App {
             &mut self.nav,
             &mut self.file_viewer,
             &mut self.ui,
-            self.show_files,
+            &mut self.show_files,
             &mut self.show_help,
             self.fullscreen_viewer,
             &self.config,
