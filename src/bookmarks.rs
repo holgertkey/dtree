@@ -262,7 +262,13 @@ impl Bookmarks {
         // Update filtered list if in filter mode
         if self.filter_mode {
             self.update_filtered_list();
-            self.selected_index = 0; // Reset selection to top
+            // Clamp selection to valid range
+            let list_len = self.get_filtered_bookmarks().len();
+            if list_len == 0 {
+                self.selected_index = 0;
+            } else if self.selected_index >= list_len {
+                self.selected_index = list_len - 1;
+            }
         }
     }
 
@@ -272,7 +278,13 @@ impl Bookmarks {
         // Update filtered list if in filter mode
         if self.filter_mode {
             self.update_filtered_list();
-            self.selected_index = 0; // Reset selection to top
+            // Clamp selection to valid range
+            let list_len = self.get_filtered_bookmarks().len();
+            if list_len == 0 {
+                self.selected_index = 0;
+            } else if self.selected_index >= list_len {
+                self.selected_index = list_len - 1;
+            }
         }
     }
 
@@ -284,15 +296,14 @@ impl Bookmarks {
     /// Toggle between navigation mode and filter mode
     pub fn toggle_filter_mode(&mut self) {
         self.filter_mode = !self.filter_mode;
-        if self.filter_mode {
-            // Entering filter mode - clear input
-            self.input_buffer.clear();
-        } else {
-            // Exiting filter mode - restore full list
-            self.input_buffer.clear();
-            self.update_filtered_list();
+        // When switching modes, keep the current filter and list
+        // Just change whether user can type (filter mode) or navigate (navigation mode)
+
+        // Clamp selected_index to valid range after toggle
+        let list_len = self.get_filtered_bookmarks().len();
+        if list_len > 0 && self.selected_index >= list_len {
+            self.selected_index = list_len - 1;
         }
-        self.selected_index = 0;
     }
 
     /// Update filtered list based on input buffer
