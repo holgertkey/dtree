@@ -58,6 +58,7 @@ pub struct Bookmarks {
     pub selected_index: usize,       // Current selection in list
     pub filter_mode: bool,            // True = filter/search mode, False = navigation mode
     filtered_keys: Vec<String>,       // Cached filtered bookmark keys
+    pub scroll_offset: usize,         // Scroll offset for bookmark list in creation mode
 }
 
 impl Bookmarks {
@@ -81,6 +82,7 @@ impl Bookmarks {
             selected_index: 0,
             filter_mode: false,
             filtered_keys: Vec::new(),
+            scroll_offset: 0,
         };
 
         // Try to load, but don't fail if JSON is corrupted
@@ -230,12 +232,28 @@ impl Bookmarks {
         self.input_buffer.clear();
         self.selected_index = 0;
         self.filter_mode = false;
+        self.scroll_offset = 0;
     }
 
     /// Exit bookmark creation mode
     pub fn exit_creation_mode(&mut self) {
         self.is_creating = false;
         self.input_buffer.clear();
+        self.scroll_offset = 0;
+    }
+
+    /// Scroll bookmark list up in creation mode
+    pub fn scroll_up(&mut self) {
+        self.scroll_offset = self.scroll_offset.saturating_sub(1);
+    }
+
+    /// Scroll bookmark list down in creation mode
+    pub fn scroll_down(&mut self, max_visible: usize) {
+        let total_bookmarks = self.list().len();
+        let max_offset = total_bookmarks.saturating_sub(max_visible);
+        if self.scroll_offset < max_offset {
+            self.scroll_offset += 1;
+        }
     }
 
     /// Add character to input buffer
@@ -352,6 +370,7 @@ mod tests {
             selected_index: 0,
             filter_mode: false,
             filtered_keys: Vec::new(),
+            scroll_offset: 0,
         }
     }
 
@@ -398,6 +417,7 @@ mod tests {
             selected_index: 0,
             filter_mode: false,
             filtered_keys: Vec::new(),
+            scroll_offset: 0,
         };
 
         let result = bookmarks.load();
@@ -433,6 +453,7 @@ mod tests {
             selected_index: 0,
             filter_mode: false,
             filtered_keys: Vec::new(),
+            scroll_offset: 0,
         };
 
         // Should load without error

@@ -413,9 +413,22 @@ impl UI {
         let file_color = Config::parse_color(&config.appearance.colors.file_color);
 
         if bookmarks.is_creating {
-            // Creation mode - simple input bar
+            // Creation mode - input bar + bookmark list
+            // Split area: top for input (3 lines), bottom for list
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(3),
+                    Constraint::Min(3),
+                ])
+                .split(area);
+
+            let input_area = chunks[0];
+            let list_area = chunks[1];
+
+            // Render input bar
             let input_text = format!("Bookmark name: {}█", bookmarks.get_input());
-            let title = " Create Bookmark (Enter: save | Esc: cancel) ";
+            let title = " Create Bookmark (Enter: save | Esc: cancel | Ctrl+j/k: scroll list) ";
 
             let paragraph = Paragraph::new(input_text)
                 .block(Block::default()
@@ -424,7 +437,33 @@ impl UI {
                     .border_style(Style::default().fg(border_color)))
                 .style(Style::default().fg(selected_color).add_modifier(Modifier::BOLD));
 
-            frame.render_widget(paragraph, area);
+            frame.render_widget(paragraph, input_area);
+
+            // Render bookmark list
+            let all_bookmarks = bookmarks.list();
+            if !all_bookmarks.is_empty() {
+                let items: Vec<ListItem> = all_bookmarks.iter().skip(bookmarks.scroll_offset).map(|bookmark| {
+                    let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
+                    let path_str = bookmark.path.display().to_string();
+
+                    let text = format!("{:<12} → {:<20} ({})", bookmark.key, name, path_str);
+                    ListItem::new(text).style(Style::default().fg(file_color))
+                }).collect();
+
+                let count_text = if all_bookmarks.len() > 0 {
+                    format!(" Existing Bookmarks ({}) ", all_bookmarks.len())
+                } else {
+                    " Existing Bookmarks ".to_string()
+                };
+
+                let list = List::new(items)
+                    .block(Block::default()
+                        .borders(Borders::ALL)
+                        .title(count_text)
+                        .border_style(Style::default().fg(border_color)));
+
+                frame.render_widget(list, list_area);
+            }
         } else {
             // Selection mode - list with navigation
             let filtered = bookmarks.get_filtered_bookmarks();

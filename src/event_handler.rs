@@ -128,6 +128,24 @@ impl EventHandler {
 
         // Bookmark creation mode (text input for bookmark name)
         if bookmarks.is_creating {
+            // Handle Ctrl+j/k for scrolling bookmark list
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                match key.code {
+                    KeyCode::Char('j') => {
+                        // Calculate max visible lines (area height - input bar - borders)
+                        // Bottom panel is 30% of screen, input bar is 3 lines
+                        let max_visible = 10; // Conservative estimate
+                        bookmarks.scroll_down(max_visible);
+                        return Ok(Some(PathBuf::new()));
+                    }
+                    KeyCode::Char('k') => {
+                        bookmarks.scroll_up();
+                        return Ok(Some(PathBuf::new()));
+                    }
+                    _ => {}
+                }
+            }
+
             match key.code {
                 KeyCode::Esc => {
                     bookmarks.exit_creation_mode();
