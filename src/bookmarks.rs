@@ -55,6 +55,9 @@ pub struct Bookmarks {
     pub is_selecting: bool,
     pub is_creating: bool,
     pub input_buffer: String,
+    pub selected_index: usize,       // Current selection in list
+    pub filter_mode: bool,            // True = filter/search mode, False = navigation mode
+    filtered_keys: Vec<String>,       // Cached filtered bookmark keys
 }
 
 impl Bookmarks {
@@ -75,6 +78,9 @@ impl Bookmarks {
             is_selecting: false,
             is_creating: false,
             input_buffer: String::new(),
+            selected_index: 0,
+            filter_mode: false,
+            filtered_keys: Vec::new(),
         };
 
         // Try to load, but don't fail if JSON is corrupted
@@ -201,19 +207,29 @@ impl Bookmarks {
     /// Enter bookmark selection mode
     pub fn enter_selection_mode(&mut self) {
         self.is_selecting = true;
+        self.is_creating = false;
         self.input_buffer.clear();
+        self.selected_index = 0;
+        self.filter_mode = false;
+        self.update_filtered_list();
     }
 
     /// Exit bookmark selection mode
     pub fn exit_selection_mode(&mut self) {
         self.is_selecting = false;
         self.input_buffer.clear();
+        self.selected_index = 0;
+        self.filter_mode = false;
+        self.filtered_keys.clear();
     }
 
     /// Enter bookmark creation mode (after pressing 'm')
     pub fn enter_creation_mode(&mut self) {
         self.is_creating = true;
+        self.is_selecting = false;
         self.input_buffer.clear();
+        self.selected_index = 0;
+        self.filter_mode = false;
     }
 
     /// Exit bookmark creation mode
@@ -225,16 +241,96 @@ impl Bookmarks {
     /// Add character to input buffer
     pub fn add_char(&mut self, c: char) {
         self.input_buffer.push(c);
+        // Update filtered list if in filter mode
+        if self.filter_mode {
+            self.update_filtered_list();
+            self.selected_index = 0; // Reset selection to top
+        }
     }
 
     /// Remove last character from input buffer
     pub fn backspace(&mut self) {
         self.input_buffer.pop();
+        // Update filtered list if in filter mode
+        if self.filter_mode {
+            self.update_filtered_list();
+            self.selected_index = 0; // Reset selection to top
+        }
     }
 
     /// Get current input buffer
     pub fn get_input(&self) -> &str {
         &self.input_buffer
+    }
+
+    /// Toggle between navigation mode and filter mode
+    pub fn toggle_filter_mode(&mut self) {
+        self.filter_mode = !self.filter_mode;
+        if self.filter_mode {
+            // Entering filter mode - clear input
+            self.input_buffer.clear();
+        } else {
+            // Exiting filter mode - restore full list
+            self.input_buffer.clear();
+            self.update_filtered_list();
+        }
+        self.selected_index = 0;
+    }
+
+    /// Update filtered list based on input buffer
+    fn update_filtered_list(&mut self) {
+        let query = self.input_buffer.to_lowercase();
+
+        if query.is_empty() {
+            // No filter - show all bookmarks
+            self.filtered_keys = self.list().iter().map(|b| b.key.clone()).collect();
+        } else {
+            // Filter bookmarks by key or name
+            self.filtered_keys = self.list()
+                .iter()
+                .filter(|b| {
+                    let key_match = b.key.to_lowercase().contains(&query);
+                    let name_match = b.name.as_ref()
+                        .map(|n| n.to_lowercase().contains(&query))
+                        .unwrap_or(false);
+                    key_match || name_match
+                })
+                .map(|b| b.key.clone())
+                .collect();
+        }
+    }
+
+    /// Get filtered bookmarks for display
+    pub fn get_filtered_bookmarks(&self) -> Vec<&Bookmark> {
+        if self.filtered_keys.is_empty() {
+            Vec::new()
+        } else {
+            self.filtered_keys
+                .iter()
+                .filter_map(|key| self.bookmarks.get(key))
+                .collect()
+        }
+    }
+
+    /// Move selection up in bookmark list
+    pub fn move_up(&mut self) {
+        if self.selected_index > 0 {
+            self.selected_index -= 1;
+        }
+    }
+
+    /// Move selection down in bookmark list
+    pub fn move_down(&mut self) {
+        let list_len = self.get_filtered_bookmarks().len();
+        if list_len > 0 && self.selected_index < list_len - 1 {
+            self.selected_index += 1;
+        }
+    }
+
+    /// Get currently selected bookmark
+    pub fn get_selected_bookmark(&self) -> Option<&Bookmark> {
+        let filtered = self.get_filtered_bookmarks();
+        filtered.get(self.selected_index).copied()
     }
 }
 
@@ -253,6 +349,9 @@ mod tests {
             is_selecting: false,
             is_creating: false,
             input_buffer: String::new(),
+            selected_index: 0,
+            filter_mode: false,
+            filtered_keys: Vec::new(),
         }
     }
 
@@ -296,6 +395,9 @@ mod tests {
             is_selecting: false,
             is_creating: false,
             input_buffer: String::new(),
+            selected_index: 0,
+            filter_mode: false,
+            filtered_keys: Vec::new(),
         };
 
         let result = bookmarks.load();
@@ -328,6 +430,9 @@ mod tests {
             is_selecting: false,
             is_creating: false,
             input_buffer: String::new(),
+            selected_index: 0,
+            filter_mode: false,
+            filtered_keys: Vec::new(),
         };
 
         // Should load without error

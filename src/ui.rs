@@ -1,6 +1,6 @@
 use ratatui::{
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    style::{Modifier, Style},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Clear},
+    style::{Modifier, Style, Color},
     layout::{Layout, Constraint, Direction, Rect},
     text::{Line, Span},
     Frame,
@@ -411,49 +411,72 @@ impl UI {
         let border_color = Config::parse_color(&config.appearance.colors.border_color);
         let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
         let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
+        let file_color = Config::parse_color(&config.appearance.colors.file_color);
 
-        // Center popup in the screen
+        // Center popup in the screen with adaptive size
         let area = frame.area();
-        let popup_width = 60.min(area.width.saturating_sub(4));
-        let popup_height = 20.min(area.height.saturating_sub(4));
+
+        // Adaptive popup size based on content
+        let popup_width = 70.min(area.width.saturating_sub(4));
+        let bookmark_count = if bookmarks.is_creating {
+            bookmarks.list().len()
+        } else {
+            bookmarks.get_filtered_bookmarks().len()
+        };
+        // Min 10 lines, max 25 lines, +7 for header/footer
+        let content_height = bookmark_count.clamp(3, 20);
+        let popup_height = (content_height + 7).min(area.height.saturating_sub(4) as usize) as u16;
 
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
-
         let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
 
-        // Build content based on mode
-        let (title, items) = if bookmarks.is_creating {
-            let title = " Create Bookmark - Enter name and press Enter ";
+        // Render dimmed background
+        frame.render_widget(Clear, popup_area);
+
+        if bookmarks.is_creating {
+            // Creation mode - use Paragraph with text input
+            let title = " Create Bookmark ";
             let mut lines = vec![
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("Bookmark name: ", Style::default().fg(highlight_color)),
+                    Span::styled("Name: ", Style::default().fg(highlight_color)),
                     Span::styled(bookmarks.get_input(), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
-                    Span::styled("█", Style::default().fg(selected_color)),  // cursor
+                    Span::styled("█", Style::default().fg(selected_color)),
                 ]),
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("Press Enter to save, Esc to cancel", Style::default().fg(border_color))
+                    Span::styled("Enter", Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                    Span::styled(": save  ", Style::default().fg(border_color)),
+                    Span::styled("Esc", Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                    Span::styled(": cancel", Style::default().fg(border_color)),
                 ]),
                 Line::from(""),
             ];
 
-            // Show existing bookmarks
+            // Show existing bookmarks (read-only list)
             if !bookmarks.list().is_empty() {
                 lines.push(Line::from(vec![
-                    Span::styled("Existing bookmarks:", Style::default().fg(selected_color).add_modifier(Modifier::BOLD))
+                    Span::styled("Existing bookmarks:", Style::default().fg(highlight_color).add_modifier(Modifier::BOLD))
                 ]));
                 lines.push(Line::from(""));
 
                 for bookmark in bookmarks.list() {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
                     let path_str = bookmark.path.display().to_string();
+                    // Truncate path if too long
+                    let max_path_len = (popup_width as usize).saturating_sub(20);
+                    let truncated_path = if path_str.len() > max_path_len {
+                        format!("...{}", &path_str[path_str.len().saturating_sub(max_path_len)..])
+                    } else {
+                        path_str
+                    };
+
                     lines.push(Line::from(vec![
-                        Span::styled(format!("  {} ", bookmark.key), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                        Span::styled(format!("  {:<12} ", bookmark.key), Style::default().fg(selected_color)),
                         Span::styled("→ ", Style::default().fg(border_color)),
-                        Span::styled(name, Style::default().fg(highlight_color)),
-                        Span::styled(format!(" ({})", path_str), Style::default().fg(border_color)),
+                        Span::styled(format!("{:<20} ", name), Style::default().fg(file_color)),
+                        Span::styled(format!("({})", truncated_path), Style::default().fg(border_color)),
                     ]));
                 }
             } else {
@@ -462,62 +485,96 @@ impl UI {
                 ]));
             }
 
-            (title, lines)
+            let paragraph = Paragraph::new(lines)
+                .block(Block::default()
+                    .borders(Borders::ALL)
+                    .title(title)
+                    .border_style(Style::default().fg(border_color))
+                    .style(Style::default().bg(Color::Black)));
+
+            frame.render_widget(paragraph, popup_area);
         } else {
-            // Selection mode - text input for bookmark name
-            let title = " Select Bookmark - Enter name and press Enter ";
-            let mut lines = vec![
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("Bookmark name: ", Style::default().fg(highlight_color)),
-                    Span::styled(bookmarks.get_input(), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
-                    Span::styled("█", Style::default().fg(selected_color)),  // cursor
-                ]),
-                Line::from(""),
-                Line::from(vec![
-                    Span::styled("Press Enter to jump, Esc to cancel", Style::default().fg(border_color))
-                ]),
-                Line::from(""),
-            ];
+            // Selection mode - use List with navigation
+            let filtered = bookmarks.get_filtered_bookmarks();
 
-            if bookmarks.list().is_empty() {
-                lines.push(Line::from(vec![
-                    Span::styled("No bookmarks saved yet", Style::default().fg(border_color))
-                ]));
-                lines.push(Line::from(""));
-                lines.push(Line::from(vec![
-                    Span::styled("Press ", Style::default()),
-                    Span::styled("m", Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
-                    Span::styled(" to create a bookmark", Style::default()),
-                ]));
+            if filtered.is_empty() {
+                // No bookmarks - show message
+                let title = " Select Bookmark ";
+                let lines = vec![
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("No bookmarks saved yet", Style::default().fg(border_color))
+                    ]),
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("Press ", Style::default().fg(border_color)),
+                        Span::styled("m", Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                        Span::styled(" to create a bookmark", Style::default().fg(border_color)),
+                    ]),
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("Esc", Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
+                        Span::styled(": close", Style::default().fg(border_color)),
+                    ]),
+                ];
+
+                let paragraph = Paragraph::new(lines)
+                    .block(Block::default()
+                        .borders(Borders::ALL)
+                        .title(title)
+                        .border_style(Style::default().fg(border_color))
+                        .style(Style::default().bg(Color::Black)));
+
+                frame.render_widget(paragraph, popup_area);
             } else {
-                lines.push(Line::from(vec![
-                    Span::styled("Available bookmarks:", Style::default().fg(selected_color).add_modifier(Modifier::BOLD))
-                ]));
-                lines.push(Line::from(""));
-
-                for bookmark in bookmarks.list() {
+                // Has bookmarks - show list with navigation
+                let items: Vec<ListItem> = filtered.iter().map(|bookmark| {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
                     let path_str = bookmark.path.display().to_string();
-                    lines.push(Line::from(vec![
-                        Span::styled(format!("  {} ", bookmark.key), Style::default().fg(selected_color).add_modifier(Modifier::BOLD)),
-                        Span::styled("→ ", Style::default().fg(border_color)),
-                        Span::styled(name, Style::default().fg(highlight_color)),
-                        Span::styled(format!(" ({})", path_str), Style::default().fg(border_color)),
-                    ]));
-                }
+                    // Truncate path if too long
+                    let max_path_len = (popup_width as usize).saturating_sub(25);
+                    let truncated_path = if path_str.len() > max_path_len {
+                        format!("...{}", &path_str[path_str.len().saturating_sub(max_path_len)..])
+                    } else {
+                        path_str
+                    };
+
+                    let text = format!("{:<12} → {:<20} ({})", bookmark.key, name, truncated_path);
+                    ListItem::new(text).style(Style::default().fg(file_color))
+                }).collect();
+
+                let mut state = ListState::default();
+                state.select(Some(bookmarks.selected_index));
+
+                let mode_hint = if bookmarks.filter_mode {
+                    format!("Filter: {}", bookmarks.get_input())
+                } else {
+                    "Navigation".to_string()
+                };
+
+                let hint = if bookmarks.filter_mode {
+                    format!(" {} | Tab: nav mode | Enter: select | Esc: cancel ", mode_hint)
+                } else {
+                    format!(" {} | ↑↓/jk: move | Tab: filter | Enter: select | Esc: cancel ", mode_hint)
+                };
+
+                let title = format!(" Select Bookmark ({}/{}) ", bookmarks.selected_index + 1, filtered.len());
+
+                let list = List::new(items)
+                    .block(Block::default()
+                        .borders(Borders::ALL)
+                        .title(title)
+                        .title_bottom(hint)
+                        .border_style(Style::default().fg(selected_color))
+                        .style(Style::default().bg(Color::Black)))
+                    .highlight_style(Style::default()
+                        .fg(highlight_color)
+                        .add_modifier(Modifier::BOLD))
+                    .highlight_symbol(">> ");
+
+                frame.render_stateful_widget(list, popup_area, &mut state);
             }
-
-            (title, lines)
-        };
-
-        let paragraph = Paragraph::new(items)
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .title(title)
-                .style(Style::default().fg(border_color)));
-
-        frame.render_widget(paragraph, popup_area);
+        }
     }
 }
 

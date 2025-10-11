@@ -45,64 +45,78 @@ impl EventHandler {
             return self.handle_search_input(key, search, nav, *show_files);
         }
 
-        // Bookmark selection mode (text input for bookmark name)
+        // Bookmark selection mode (navigation + filter)
         if bookmarks.is_selecting {
             match key.code {
                 KeyCode::Esc => {
                     bookmarks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Tab => {
+                    // Toggle between navigation and filter mode
+                    bookmarks.toggle_filter_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::Enter => {
-                    let bookmark_name = bookmarks.get_input().to_string();
-                    if !bookmark_name.is_empty() {
-                        if let Some(bookmark) = bookmarks.get(&bookmark_name) {
-                            let path = bookmark.path.clone();
-                            let dir_name = bookmark.name.clone().unwrap_or_else(|| bookmark_name.clone());
-                            bookmarks.exit_selection_mode();
+                    // Select currently highlighted bookmark (not by name)
+                    if let Some(bookmark) = bookmarks.get_selected_bookmark() {
+                        let path = bookmark.path.clone();
+                        let bookmark_key = bookmark.key.clone();
+                        let dir_name = bookmark.name.clone().unwrap_or_else(|| bookmark_key.clone());
+                        bookmarks.exit_selection_mode();
 
-                            // Try to navigate and check for errors
-                            if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                                // Error occurred - enable file viewer if not already enabled
-                                if !*show_files {
-                                    *show_files = true;
-                                    nav.reload_tree(*show_files)?;
-                                }
+                        // Try to navigate and check for errors
+                        if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
+                            // Error occurred - enable file viewer if not already enabled
+                            if !*show_files {
+                                *show_files = true;
+                                nav.reload_tree(*show_files)?;
+                            }
 
-                                // Display error details in file viewer
-                                let error_content = vec![
-                                    format!("Error accessing bookmark '{}' ({})", bookmark_name, dir_name),
-                                    String::new(),
-                                    error_msg,
-                                    String::new(),
-                                    "This directory cannot be accessed. Possible reasons:".to_string(),
-                                    "- Insufficient permissions".to_string(),
-                                    "- Directory was removed or renamed".to_string(),
-                                    "- Filesystem error".to_string(),
-                                ];
-                                file_viewer.load_content(error_content);
-                                *show_help = false;
-                            } else {
-                                // Success - load file preview if needed
-                                if *show_files {
-                                    if let Some(node) = nav.get_selected_node() {
-                                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
-                                    }
+                            // Display error details in file viewer
+                            let error_content = vec![
+                                format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
+                                String::new(),
+                                error_msg,
+                                String::new(),
+                                "This directory cannot be accessed. Possible reasons:".to_string(),
+                                "- Insufficient permissions".to_string(),
+                                "- Directory was removed or renamed".to_string(),
+                                "- Filesystem error".to_string(),
+                            ];
+                            file_viewer.load_content(error_content);
+                            *show_help = false;
+                        } else {
+                            // Success - load file preview if needed
+                            if *show_files {
+                                if let Some(node) = nav.get_selected_node() {
+                                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
                                 }
                             }
-                        } else {
-                            // Bookmark not found - just exit
-                            bookmarks.exit_selection_mode();
                         }
                     } else {
+                        // No bookmark selected (empty list) - just exit
                         bookmarks.exit_selection_mode();
                     }
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char(c) => {
+                KeyCode::Char('j') | KeyCode::Down if !bookmarks.filter_mode => {
+                    // Navigation mode - move down
+                    bookmarks.move_down();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('k') | KeyCode::Up if !bookmarks.filter_mode => {
+                    // Navigation mode - move up
+                    bookmarks.move_up();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char(c) if bookmarks.filter_mode => {
+                    // Filter mode - add character and update filter
                     bookmarks.add_char(c);
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Backspace => {
+                KeyCode::Backspace if bookmarks.filter_mode => {
+                    // Filter mode - remove character and update filter
                     bookmarks.backspace();
                     return Ok(Some(PathBuf::new()));
                 }
