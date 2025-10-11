@@ -150,20 +150,34 @@ impl Navigation {
     }
 
     /// Navigate to arbitrary directory (for bookmarks)
-    pub fn go_to_directory(&mut self, target_path: PathBuf, show_files: bool) -> Result<()> {
+    /// Returns Some(error_message) if directory cannot be accessed, None otherwise
+    pub fn go_to_directory(&mut self, target_path: PathBuf, show_files: bool) -> Result<Option<String>> {
         if !target_path.is_dir() {
-            return Ok(());
+            return Ok(None);
         }
+
+        // Save current state in case we need to restore it
+        let old_root = Rc::clone(&self.root);
+        let old_selected = self.selected;
 
         let mut new_root = TreeNode::new(target_path, 0)?;
         new_root.load_children(show_files)?;
         new_root.is_expanded = true;
 
+        // Check if the new root has an error
+        if new_root.has_error {
+            // Restore previous state - don't change directory
+            self.root = old_root;
+            self.selected = old_selected;
+            return Ok(new_root.error_message);
+        }
+
+        // Success - update to new root
         self.root = Rc::new(RefCell::new(new_root));
         self.rebuild_flat_list();
         self.selected = 0;
 
-        Ok(())
+        Ok(None)
     }
 
     /// Expand path to node (for search results)

@@ -57,11 +57,36 @@ impl EventHandler {
                     if !bookmark_name.is_empty() {
                         if let Some(bookmark) = bookmarks.get(&bookmark_name) {
                             let path = bookmark.path.clone();
+                            let dir_name = bookmark.name.clone().unwrap_or_else(|| bookmark_name.clone());
                             bookmarks.exit_selection_mode();
-                            nav.go_to_directory(path, *show_files)?;
-                            if *show_files {
-                                if let Some(node) = nav.get_selected_node() {
-                                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+
+                            // Try to navigate and check for errors
+                            if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
+                                // Error occurred - enable file viewer if not already enabled
+                                if !*show_files {
+                                    *show_files = true;
+                                    nav.reload_tree(*show_files)?;
+                                }
+
+                                // Display error details in file viewer
+                                let error_content = vec![
+                                    format!("Error accessing bookmark '{}' ({})", bookmark_name, dir_name),
+                                    String::new(),
+                                    error_msg,
+                                    String::new(),
+                                    "This directory cannot be accessed. Possible reasons:".to_string(),
+                                    "- Insufficient permissions".to_string(),
+                                    "- Directory was removed or renamed".to_string(),
+                                    "- Filesystem error".to_string(),
+                                ];
+                                file_viewer.load_content(error_content);
+                                *show_help = false;
+                            } else {
+                                // Success - load file preview if needed
+                                if *show_files {
+                                    if let Some(node) = nav.get_selected_node() {
+                                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                    }
                                 }
                             }
                         } else {
@@ -225,11 +250,36 @@ impl EventHandler {
                         let node_borrowed = node.borrow();
                         if node_borrowed.is_dir {
                             let path = node_borrowed.path.clone();
+                            let dir_name = node_borrowed.name.clone();
                             drop(node_borrowed);
-                            nav.go_to_directory(path, *show_files)?;
-                            if *show_files {
-                                if let Some(node) = nav.get_selected_node() {
-                                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+
+                            // Try to navigate and check for errors
+                            if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
+                                // Error occurred - enable file viewer if not already enabled
+                                if !*show_files {
+                                    *show_files = true;
+                                    nav.reload_tree(*show_files)?;
+                                }
+
+                                // Display error details in file viewer
+                                let error_content = vec![
+                                    format!("Error accessing directory: {}", dir_name),
+                                    String::new(),
+                                    error_msg,
+                                    String::new(),
+                                    "This directory cannot be accessed. Possible reasons:".to_string(),
+                                    "- Insufficient permissions".to_string(),
+                                    "- Directory was removed or renamed".to_string(),
+                                    "- Filesystem error".to_string(),
+                                ];
+                                file_viewer.load_content(error_content);
+                                *show_help = false;
+                            } else {
+                                // Success - load file preview if needed
+                                if *show_files {
+                                    if let Some(node) = nav.get_selected_node() {
+                                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                    }
                                 }
                             }
                         }
