@@ -160,10 +160,23 @@ impl EventHandler {
                     let bookmark_name = bookmarks.get_input().to_string();
                     if !bookmark_name.is_empty() {
                         if let Some(node) = nav.get_selected_node() {
-                            let path = node.borrow().path.clone();
+                            let node_borrowed = node.borrow();
+                            // Bookmarks must be directories only
+                            let path = if node_borrowed.is_dir {
+                                // Directory - use it directly
+                                node_borrowed.path.clone()
+                            } else {
+                                // File - use parent directory
+                                node_borrowed.path.parent()
+                                    .map(|p| p.to_path_buf())
+                                    .unwrap_or_else(|| node_borrowed.path.clone())
+                            };
+
                             let dir_name = path.file_name()
                                 .and_then(|n| n.to_str())
                                 .map(|s| s.to_string());
+
+                            drop(node_borrowed);
                             let _ = bookmarks.add(bookmark_name, path, dir_name);
                         }
                     }

@@ -207,11 +207,23 @@ fn main() -> Result<()> {
                 };
 
                 if !path.exists() {
-                    eprintln!("Error: Directory does not exist: {}", path.display());
+                    eprintln!("Error: Path does not exist: {}", path.display());
                     std::process::exit(1);
                 }
 
-                let path = path.canonicalize()?;
+                let mut path = path.canonicalize()?;
+
+                // Bookmarks must be directories only
+                if path.is_file() {
+                    if let Some(parent) = path.parent() {
+                        path = parent.to_path_buf();
+                        eprintln!("Note: File provided, using parent directory instead");
+                    } else {
+                        eprintln!("Error: Cannot determine parent directory");
+                        std::process::exit(1);
+                    }
+                }
+
                 let dir_name = path.file_name()
                     .and_then(|n| n.to_str())
                     .map(|s| s.to_string());
