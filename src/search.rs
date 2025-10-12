@@ -101,7 +101,7 @@ impl Search {
         self.spawn_deep_search(root, query_lower, show_files);
 
         self.show_results = true;
-        self.focus_on_results = !self.results.is_empty();
+        self.focus_on_results = true; // Always focus on results after search
         self.mode = false;
         self.is_searching = true;
     }
