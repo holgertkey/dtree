@@ -59,6 +59,7 @@ pub struct Bookmarks {
     pub filter_mode: bool,            // True = filter/search mode, False = navigation mode
     filtered_keys: Vec<String>,       // Cached filtered bookmark keys
     pub scroll_offset: usize,         // Scroll offset for bookmark list in creation mode
+    pub pending_deletion_index: Option<usize>, // Index of bookmark marked for deletion
 }
 
 impl Bookmarks {
@@ -83,6 +84,7 @@ impl Bookmarks {
             filter_mode: false,
             filtered_keys: Vec::new(),
             scroll_offset: 0,
+            pending_deletion_index: None,
         };
 
         // Try to load, but don't fail if JSON is corrupted
@@ -213,6 +215,7 @@ impl Bookmarks {
         self.input_buffer.clear();
         self.selected_index = 0;
         self.filter_mode = false;
+        self.pending_deletion_index = None;
         self.update_filtered_list();
     }
 
@@ -223,6 +226,7 @@ impl Bookmarks {
         self.selected_index = 0;
         self.filter_mode = false;
         self.filtered_keys.clear();
+        self.pending_deletion_index = None;
     }
 
     /// Enter bookmark creation mode (after pressing 'm')
@@ -346,6 +350,8 @@ impl Bookmarks {
         if self.selected_index > 0 {
             self.selected_index -= 1;
         }
+        // Clear pending deletion when navigating
+        self.pending_deletion_index = None;
     }
 
     /// Move selection down in bookmark list
@@ -354,12 +360,51 @@ impl Bookmarks {
         if list_len > 0 && self.selected_index < list_len - 1 {
             self.selected_index += 1;
         }
+        // Clear pending deletion when navigating
+        self.pending_deletion_index = None;
     }
 
     /// Get currently selected bookmark
     pub fn get_selected_bookmark(&self) -> Option<&Bookmark> {
         let filtered = self.get_filtered_bookmarks();
         filtered.get(self.selected_index).copied()
+    }
+
+    /// Handle deletion key press - marks for deletion or confirms deletion
+    /// Returns true if bookmark was deleted, false if just marked
+    pub fn handle_deletion_key(&mut self) -> Result<bool> {
+        if let Some(pending_idx) = self.pending_deletion_index {
+            if pending_idx == self.selected_index {
+                // Second press on same bookmark - confirm deletion
+                if let Some(bookmark) = self.get_selected_bookmark() {
+                    let key = bookmark.key.clone();
+                    self.remove(&key)?;
+
+                    // Update filtered list after deletion
+                    self.update_filtered_list();
+
+                    // Adjust selected_index if needed
+                    let list_len = self.get_filtered_bookmarks().len();
+                    if list_len == 0 {
+                        self.selected_index = 0;
+                    } else if self.selected_index >= list_len {
+                        self.selected_index = list_len - 1;
+                    }
+
+                    self.pending_deletion_index = None;
+                    return Ok(true);
+                }
+            }
+        }
+
+        // First press or different bookmark - mark for deletion
+        self.pending_deletion_index = Some(self.selected_index);
+        Ok(false)
+    }
+
+    /// Check if current selection is marked for deletion
+    pub fn is_marked_for_deletion(&self) -> bool {
+        self.pending_deletion_index == Some(self.selected_index)
     }
 }
 
@@ -382,6 +427,7 @@ mod tests {
             filter_mode: false,
             filtered_keys: Vec::new(),
             scroll_offset: 0,
+            pending_deletion_index: None,
         }
     }
 
@@ -429,6 +475,7 @@ mod tests {
             filter_mode: false,
             filtered_keys: Vec::new(),
             scroll_offset: 0,
+            pending_deletion_index: None,
         };
 
         let result = bookmarks.load();
@@ -465,6 +512,7 @@ mod tests {
             filter_mode: false,
             filtered_keys: Vec::new(),
             scroll_offset: 0,
+            pending_deletion_index: None,
         };
 
         // Should load without error

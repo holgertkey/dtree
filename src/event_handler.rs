@@ -110,6 +110,11 @@ impl EventHandler {
                     bookmarks.move_up();
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char('d') if !bookmarks.filter_mode => {
+                    // Delete bookmark - first press marks, second press confirms
+                    let _ = bookmarks.handle_deletion_key();
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::Char(c) if bookmarks.filter_mode => {
                     // Filter mode - add character and update filter
                     bookmarks.add_char(c);

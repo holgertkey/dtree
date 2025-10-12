@@ -485,12 +485,24 @@ impl UI {
                 frame.render_widget(paragraph, area);
             } else {
                 // Has bookmarks - show list with navigation
-                let items: Vec<ListItem> = filtered.iter().map(|bookmark| {
+                let error_color = Config::parse_color(&config.appearance.colors.error_color);
+                let items: Vec<ListItem> = filtered.iter().enumerate().map(|(idx, bookmark)| {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
                     let path_str = bookmark.path.display().to_string();
 
-                    let text = format!("{:<12} → {:<20} ({})", bookmark.key, name, path_str);
-                    ListItem::new(text).style(Style::default().fg(file_color))
+                    // Check if this bookmark is marked for deletion
+                    let is_marked = bookmarks.pending_deletion_index == Some(idx);
+                    let prefix = if is_marked { "[DEL] " } else { "" };
+                    let text = format!("{}{:<12} → {:<20} ({})", prefix, bookmark.key, name, path_str);
+
+                    // Use error color for marked bookmarks
+                    let style = if is_marked {
+                        Style::default().fg(error_color)
+                    } else {
+                        Style::default().fg(file_color)
+                    };
+
+                    ListItem::new(text).style(style)
                 }).collect();
 
                 let mut state = ListState::default();
@@ -502,10 +514,16 @@ impl UI {
                     format!("{}/{}", bookmarks.selected_index + 1, filtered.len())
                 };
 
+                let deletion_hint = if bookmarks.is_marked_for_deletion() {
+                    " | d: confirm delete"
+                } else {
+                    " | d: delete"
+                };
+
                 let hint = if bookmarks.filter_mode {
                     format!(" {} | Tab: nav | Enter: select | Esc: cancel ", mode_hint)
                 } else {
-                    format!(" Bookmarks: {} | ↑↓/jk: move | Tab: filter | Enter: select | Esc: cancel ", mode_hint)
+                    format!(" Bookmarks: {} | ↑↓/jk: move{} | Tab: filter | Enter: select | Esc: cancel ", mode_hint, deletion_hint)
                 };
 
                 let list = List::new(items)
