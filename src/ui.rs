@@ -413,33 +413,20 @@ impl UI {
         let file_color = Config::parse_color(&config.appearance.colors.file_color);
 
         if bookmarks.is_creating {
-            // Creation mode - input bar + bookmark list
-            // Split area: top for input (3 lines), bottom for list
+            // Creation mode - bookmark list + input bar
+            // Split area: top for list, bottom for input (3 lines)
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(3),
                     Constraint::Min(3),
+                    Constraint::Length(3),
                 ])
                 .split(area);
 
-            let input_area = chunks[0];
-            let list_area = chunks[1];
+            let list_area = chunks[0];
+            let input_area = chunks[1];
 
-            // Render input bar
-            let input_text = format!("Bookmark name: {}█", bookmarks.get_input());
-            let title = " Create Bookmark (Enter: save | Esc: cancel | Ctrl+j/k: scroll list) ";
-
-            let paragraph = Paragraph::new(input_text)
-                .block(Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(Style::default().fg(border_color)))
-                .style(Style::default().fg(selected_color).add_modifier(Modifier::BOLD));
-
-            frame.render_widget(paragraph, input_area);
-
-            // Render bookmark list
+            // Render bookmark list first
             let all_bookmarks = bookmarks.list();
             if !all_bookmarks.is_empty() {
                 let items: Vec<ListItem> = all_bookmarks.iter().skip(bookmarks.scroll_offset).map(|bookmark| {
@@ -459,11 +446,22 @@ impl UI {
                 let list = List::new(items)
                     .block(Block::default()
                         .borders(Borders::ALL)
-                        .title(count_text)
-                        .border_style(Style::default().fg(border_color)));
+                        .title(count_text));
 
                 frame.render_widget(list, list_area);
             }
+
+            // Render input bar at the bottom
+            let input_text = format!("Bookmark name: {}█", bookmarks.get_input());
+            let title = " Create Bookmark (Enter: save | Esc: cancel | Ctrl+j/k: scroll list) ";
+
+            let paragraph = Paragraph::new(input_text)
+                .block(Block::default()
+                    .borders(Borders::ALL)
+                    .title(title))
+                .style(Style::default().fg(selected_color).add_modifier(Modifier::BOLD));
+
+            frame.render_widget(paragraph, input_area);
         } else {
             // Selection mode - list with navigation
             let filtered = bookmarks.get_filtered_bookmarks();
