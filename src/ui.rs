@@ -22,8 +22,13 @@ pub struct UI {
     pub viewer_area_top: u16,
     pub viewer_area_height: u16,
     pub terminal_width: u16,
+    pub terminal_height: u16,
     pub split_position: u16,
     pub tree_scroll_offset: usize,
+    // Bottom panel (search/bookmarks) properties
+    pub bottom_panel_split_position: u16, // Percentage from top (default 70)
+    pub bottom_panel_top: u16,
+    pub bottom_panel_height: u16,
 }
 
 impl UI {
@@ -37,14 +42,23 @@ impl UI {
             viewer_area_top: 0,
             viewer_area_height: 0,
             terminal_width: 0,
+            terminal_height: 0,
             split_position: 50,
             tree_scroll_offset: 0,
+            bottom_panel_split_position: 70,
+            bottom_panel_top: 0,
+            bottom_panel_height: 0,
         }
     }
 
-    /// Adjust split position (20-80% range)
+    /// Adjust horizontal split position (20-80% range)
     pub fn adjust_split(&mut self, position: u16) {
         self.split_position = position.clamp(20, 80);
+    }
+
+    /// Adjust vertical split position for bottom panel (30-90% range)
+    pub fn adjust_bottom_split(&mut self, position: u16) {
+        self.bottom_panel_split_position = position.clamp(30, 90);
     }
 
     /// Main render function
@@ -61,6 +75,7 @@ impl UI {
         fullscreen_viewer: bool,
     ) {
         self.terminal_width = frame.area().width;
+        self.terminal_height = frame.area().height;
         let main_area = frame.area();
 
         // If in fullscreen viewer mode, render only the file viewer
@@ -83,17 +98,25 @@ impl UI {
             (main_area, None)
         };
 
-        // If showing search results or bookmarks, split vertically
+        // If showing search results or bookmarks, split vertically with dynamic position
         let (tree_area, bottom_panel_area) = if search.show_results || bookmarks.is_selecting || bookmarks.is_creating {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Percentage(70),
-                    Constraint::Percentage(30),
+                    Constraint::Percentage(self.bottom_panel_split_position),
+                    Constraint::Percentage(100 - self.bottom_panel_split_position),
                 ])
                 .split(content_area);
+
+            // Save bottom panel coordinates for mouse handling
+            self.bottom_panel_top = chunks[1].y;
+            self.bottom_panel_height = chunks[1].height;
+
             (chunks[0], Some(chunks[1]))
         } else {
+            // Reset bottom panel coordinates when not visible
+            self.bottom_panel_top = 0;
+            self.bottom_panel_height = 0;
             (content_area, None)
         };
 

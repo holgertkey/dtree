@@ -14,6 +14,7 @@ use crate::config::Config;
 /// Event handler for keyboard and mouse input
 pub struct EventHandler {
     pub dragging: bool,
+    pub dragging_vertical: bool, // For bottom panel resize
     pub last_click_time: Option<(Instant, usize)>,
 }
 
@@ -21,6 +22,7 @@ impl EventHandler {
     pub fn new() -> Self {
         Self {
             dragging: false,
+            dragging_vertical: false,
             last_click_time: None,
         }
     }
@@ -572,16 +574,22 @@ impl EventHandler {
             }
             MouseEventKind::Drag(MouseButton::Left) => {
                 // Ignore dragging in fullscreen mode
-                if !fullscreen_viewer && self.dragging && ui.terminal_width > 0 {
-                    // Convert mouse position to percentage
-                    let new_pos = (mouse.column as u16 * 100) / ui.terminal_width;
-                    // Update split position in UI (clamped to 20-80%)
-                    ui.adjust_split(new_pos);
+                if !fullscreen_viewer {
+                    if self.dragging && ui.terminal_width > 0 {
+                        // Horizontal drag - adjust split position
+                        let new_pos = (mouse.column as u16 * 100) / ui.terminal_width;
+                        ui.adjust_split(new_pos);
+                    } else if self.dragging_vertical && ui.terminal_height > 0 {
+                        // Vertical drag - adjust bottom panel split position
+                        let new_pos = (mouse.row as u16 * 100) / ui.terminal_height;
+                        ui.adjust_bottom_split(new_pos);
+                    }
                 }
             }
             MouseEventKind::Up(MouseButton::Left) => {
                 if !fullscreen_viewer {
                     self.dragging = false;
+                    self.dragging_vertical = false;
                 }
             }
             MouseEventKind::ScrollUp => {
@@ -671,12 +679,21 @@ impl EventHandler {
                 }
             }
         } else if *show_files {
-            // Check click on divider
+            // Check click on horizontal divider (between tree and file viewer)
             let divider_col = (ui.terminal_width * ui.split_position) / 100;
             if mouse.column.abs_diff(divider_col) <= 2 {
                 self.dragging = true;
             }
         }
+
+        // Check click on vertical divider (top border of bottom panel)
+        if ui.bottom_panel_height > 0 {
+            // Check if click is on the top border of bottom panel (±1 row tolerance)
+            if mouse.row.abs_diff(ui.bottom_panel_top) <= 1 {
+                self.dragging_vertical = true;
+            }
+        }
+
         Ok(())
     }
 
