@@ -240,21 +240,35 @@ impl UI {
         let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
         let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
 
-        let items: Vec<ListItem> = search.results.iter().map(|path| {
-            let display_path = path.strip_prefix(root_parent)
-                .unwrap_or(path)
+        let dir_color = Config::parse_color(&config.appearance.colors.directory_color);
+
+        let items: Vec<ListItem> = search.results.iter().map(|result| {
+            let display_path = result.path.strip_prefix(root_parent)
+                .unwrap_or(&result.path)
                 .display()
                 .to_string();
 
-            let style = Style::default().fg(file_color);
+            // Use different colors for dirs vs files
+            let style = if result.is_dir {
+                Style::default().fg(dir_color)
+            } else {
+                Style::default().fg(file_color)
+            };
+
             ListItem::new(display_path).style(style)
         }).collect();
 
         let mut state = ListState::default();
         state.select(Some(search.selected));
 
-        let title = format!(" Search Results: {} found (Enter to select, q to close) ",
-            search.results.len());
+        // Show search status in title
+        let title = if search.is_searching {
+            format!(" Search: {} found | Scanning... {} dirs | Esc: cancel ",
+                search.results.len(), search.scanned_count)
+        } else {
+            format!(" Search Results: {} found | Enter: select | Tab: focus | Esc: close ",
+                search.results.len())
+        };
 
         let border_style = if search.focus_on_results {
             Style::default().fg(selected_color)

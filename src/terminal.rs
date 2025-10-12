@@ -34,22 +34,30 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
     loop {
         terminal.draw(|f| app.render(f))?;
 
-        match event::read()? {
-            Event::Key(key) => {
-                match app.handle_key(key)? {
-                    Some(path) if !path.as_os_str().is_empty() => {
-                        return Ok(Some(path));
+        // Poll for events with 100ms timeout to allow background search to update
+        if event::poll(std::time::Duration::from_millis(100))? {
+            match event::read()? {
+                Event::Key(key) => {
+                    match app.handle_key(key)? {
+                        Some(path) if !path.as_os_str().is_empty() => {
+                            return Ok(Some(path));
+                        }
+                        None => {
+                            return Ok(None);
+                        }
+                        _ => {}
                     }
-                    None => {
-                        return Ok(None);
-                    }
-                    _ => {}
                 }
+                Event::Mouse(mouse) => {
+                    let _ = app.handle_mouse(mouse);
+                }
+                _ => {}
             }
-            Event::Mouse(mouse) => {
-                let _ = app.handle_mouse(mouse);
+        } else {
+            // No event - poll search results if search is active
+            if app.poll_search() {
+                // Search has updates - redraw will happen on next loop
             }
-            _ => {}
         }
     }
 }

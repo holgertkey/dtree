@@ -221,7 +221,12 @@ impl EventHandler {
             if *fullscreen_viewer {
                 // In fullscreen: Esc exits completely
                 return Ok(None);
+            } else if search.is_active() {
+                // If search is running, cancel it but keep results
+                search.cancel_search();
+                return Ok(Some(PathBuf::new()));
             } else if search.show_results {
+                // If showing results, close them
                 search.close_results();
                 return Ok(Some(PathBuf::new()));
             } else {

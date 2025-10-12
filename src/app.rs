@@ -105,6 +105,12 @@ impl App {
         );
     }
 
+    /// Poll search results from background thread
+    /// Returns true if there were updates and UI needs to be redrawn
+    pub fn poll_search(&mut self) -> bool {
+        self.search.poll_results()
+    }
+
     /// Set fullscreen viewer mode and load the specified file
     pub fn set_fullscreen_viewer(&mut self, file_path: &std::path::Path) -> Result<()> {
         self.fullscreen_viewer = true;
