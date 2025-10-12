@@ -6,8 +6,8 @@ use crate::tree_node::TreeNodeRef;
 /// Messages from search thread to main thread
 #[derive(Debug, Clone)]
 pub enum SearchMessage {
-    /// Found a matching path (path, is_dir)
-    Result(PathBuf, bool),
+    /// Found a matching path (path, is_dir, score, match_indices)
+    Result(PathBuf, bool, Option<i64>, Option<Vec<usize>>),
     /// Progress update: number of directories scanned
     Progress(usize),
     /// Search completed
@@ -19,12 +19,15 @@ pub enum SearchMessage {
 pub struct SearchResult {
     pub path: PathBuf,
     pub is_dir: bool,
+    pub score: Option<i64>,        // Fuzzy match score (None for exact match)
+    pub match_indices: Option<Vec<usize>>, // Character positions that matched (for highlighting)
 }
 
 /// Search functionality for finding files and directories
 pub struct Search {
     pub mode: bool,
     pub query: String,
+    pub fuzzy_mode: bool,  // True if query starts with '/'
     pub results: Vec<SearchResult>,
     pub selected: usize,
     pub show_results: bool,
@@ -43,6 +46,7 @@ impl Search {
         Self {
             mode: false,
             query: String::new(),
+            fuzzy_mode: false,
             results: Vec::new(),
             selected: 0,
             show_results: false,
@@ -59,22 +63,42 @@ impl Search {
     pub fn enter_mode(&mut self) {
         self.mode = true;
         self.query.clear();
+        self.fuzzy_mode = false;
     }
 
     /// Exit search mode
     pub fn exit_mode(&mut self) {
         self.mode = false;
         self.query.clear();
+        self.fuzzy_mode = false;
     }
 
     /// Add character to query
     pub fn add_char(&mut self, c: char) {
         self.query.push(c);
+        self.update_fuzzy_mode();
     }
 
     /// Remove last character from query
     pub fn backspace(&mut self) {
         self.query.pop();
+        self.update_fuzzy_mode();
+    }
+
+    /// Update fuzzy mode based on query
+    fn update_fuzzy_mode(&mut self) {
+        self.fuzzy_mode = self.query.starts_with('/');
+    }
+
+    /// Get actual search query (without leading '/' if in fuzzy mode)
+    fn get_search_query(&self) -> &str {
+        if self.fuzzy_mode && self.query.len() > 1 {
+            &self.query[1..]
+        } else if self.fuzzy_mode {
+            "" // Only '/' entered, empty query
+        } else {
+            &self.query
+        }
     }
 
     /// Execute two-phase search: quick + deep background scan
@@ -86,19 +110,23 @@ impl Search {
         self.selected = 0;
         self.scanned_count = 0;
 
-        if self.query.is_empty() {
+        let search_query = self.get_search_query();
+
+        // Don't search if query is empty (e.g., user entered just '/')
+        if search_query.is_empty() {
             self.show_results = false;
             self.is_searching = false;
             return;
         }
 
-        let query_lower = self.query.to_lowercase();
+        let query_lower = search_query.to_lowercase();
+        let is_fuzzy = self.fuzzy_mode;
 
         // Phase 1: Quick search through already loaded nodes
-        self.search_loaded_nodes(root, &query_lower, show_files);
+        self.search_loaded_nodes(root, &query_lower, show_files, is_fuzzy);
 
         // Phase 2: Deep search in background thread
-        self.spawn_deep_search(root, query_lower, show_files);
+        self.spawn_deep_search(root, query_lower, show_files, is_fuzzy);
 
         self.show_results = true;
         self.focus_on_results = true; // Always focus on results after search
@@ -107,17 +135,36 @@ impl Search {
     }
 
     /// Phase 1: Quick search through already loaded (visible) nodes
-    fn search_loaded_nodes(&mut self, node: &TreeNodeRef, query: &str, show_files: bool) {
+    fn search_loaded_nodes(&mut self, node: &TreeNodeRef, query: &str, show_files: bool, fuzzy: bool) {
+        use fuzzy_matcher::FuzzyMatcher;
+        use fuzzy_matcher::skim::SkimMatcherV2;
+
         let node_borrowed = node.borrow();
         let name_lower = node_borrowed.name.to_lowercase();
 
         // Check current node
         if show_files || node_borrowed.is_dir {
-            if name_lower.contains(query) {
-                self.results.push(SearchResult {
-                    path: node_borrowed.path.clone(),
-                    is_dir: node_borrowed.is_dir,
-                });
+            if fuzzy {
+                // Fuzzy matching
+                let matcher = SkimMatcherV2::default();
+                if let Some((score, indices)) = matcher.fuzzy_indices(&name_lower, query) {
+                    self.results.push(SearchResult {
+                        path: node_borrowed.path.clone(),
+                        is_dir: node_borrowed.is_dir,
+                        score: Some(score),
+                        match_indices: Some(indices),
+                    });
+                }
+            } else {
+                // Exact substring matching
+                if name_lower.contains(query) {
+                    self.results.push(SearchResult {
+                        path: node_borrowed.path.clone(),
+                        is_dir: node_borrowed.is_dir,
+                        score: None,
+                        match_indices: None,
+                    });
+                }
             }
         }
 
@@ -127,13 +174,13 @@ impl Search {
             drop(node_borrowed);
 
             for child in &children {
-                self.search_loaded_nodes(child, query, show_files);
+                self.search_loaded_nodes(child, query, show_files, fuzzy);
             }
         }
     }
 
     /// Phase 2: Spawn background thread for deep search
-    fn spawn_deep_search(&mut self, root: &TreeNodeRef, query: String, show_files: bool) {
+    fn spawn_deep_search(&mut self, root: &TreeNodeRef, query: String, show_files: bool, fuzzy: bool) {
         let (result_tx, result_rx) = unbounded();
         let (cancel_tx, cancel_rx) = bounded(1);
 
@@ -142,7 +189,7 @@ impl Search {
 
         // Spawn search thread
         let handle = thread::spawn(move || {
-            Self::deep_search_recursive(&root_path, &query, &result_tx, &cancel_rx, show_files, &mut 0);
+            Self::deep_search_recursive(&root_path, &query, &result_tx, &cancel_rx, show_files, fuzzy, &mut 0);
             let _ = result_tx.send(SearchMessage::Done);
         });
 
@@ -158,8 +205,12 @@ impl Search {
         result_tx: &Sender<SearchMessage>,
         cancel_rx: &Receiver<()>,
         show_files: bool,
+        fuzzy: bool,
         scanned: &mut usize,
     ) {
+        use fuzzy_matcher::FuzzyMatcher;
+        use fuzzy_matcher::skim::SkimMatcherV2;
+
         // Check for cancellation
         if cancel_rx.try_recv().is_ok() {
             return;
@@ -174,8 +225,29 @@ impl Search {
 
         // Check if name matches query
         if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if name.to_lowercase().contains(query) {
-                let _ = result_tx.send(SearchMessage::Result(path.clone(), is_dir));
+            let name_lower = name.to_lowercase();
+
+            if fuzzy {
+                // Fuzzy matching
+                let matcher = SkimMatcherV2::default();
+                if let Some((score, indices)) = matcher.fuzzy_indices(&name_lower, query) {
+                    let _ = result_tx.send(SearchMessage::Result(
+                        path.clone(),
+                        is_dir,
+                        Some(score),
+                        Some(indices),
+                    ));
+                }
+            } else {
+                // Exact substring matching
+                if name_lower.contains(query) {
+                    let _ = result_tx.send(SearchMessage::Result(
+                        path.clone(),
+                        is_dir,
+                        None,
+                        None,
+                    ));
+                }
             }
         }
 
@@ -197,7 +269,7 @@ impl Search {
                     }
 
                     let child_path = entry.path();
-                    Self::deep_search_recursive(&child_path, query, result_tx, cancel_rx, show_files, scanned);
+                    Self::deep_search_recursive(&child_path, query, result_tx, cancel_rx, show_files, fuzzy, scanned);
                 }
             }
         }
@@ -212,10 +284,15 @@ impl Search {
             // Process all available messages
             while let Ok(msg) = rx.try_recv() {
                 match msg {
-                    SearchMessage::Result(path, is_dir) => {
+                    SearchMessage::Result(path, is_dir, score, match_indices) => {
                         // Check if we already have this result (from quick search)
                         if !self.results.iter().any(|r| r.path == path) {
-                            self.results.push(SearchResult { path, is_dir });
+                            self.results.push(SearchResult {
+                                path,
+                                is_dir,
+                                score,
+                                match_indices,
+                            });
                             has_updates = true;
                         }
                     }
@@ -237,6 +314,18 @@ impl Search {
             self.search_thread = None;
             self.cancel_sender = None;
             self.result_receiver = None;
+
+            // Sort results by score in fuzzy mode (highest score first)
+            if self.fuzzy_mode {
+                self.results.sort_by(|a, b| {
+                    match (a.score, b.score) {
+                        (Some(score_a), Some(score_b)) => score_b.cmp(&score_a), // Descending order
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        (None, None) => std::cmp::Ordering::Equal,
+                    }
+                });
+            }
         }
 
         has_updates

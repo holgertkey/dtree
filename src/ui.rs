@@ -242,14 +242,21 @@ impl UI {
     }
 
     fn render_search_bar(&self, frame: &mut Frame, area: Rect, search: &Search, config: &Config) {
-        let search_text = format!("Search: {}", search.query);
+        let mode_indicator = if search.fuzzy_mode { " (fuzzy)" } else { "" };
+        let search_text = format!("Search{}: {}", mode_indicator, search.query);
 
         let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
+
+        let title_hint = if search.fuzzy_mode {
+            " Enter to search | Esc: cancel | Fuzzy mode: /query "
+        } else {
+            " Enter to search | Esc: cancel | Fuzzy: /query "
+        };
 
         let paragraph = Paragraph::new(search_text)
             .block(Block::default()
                 .borders(Borders::ALL)
-                .title(" Enter to search, Esc to cancel "))
+                .title(title_hint))
             .style(Style::default().fg(selected_color));
 
         frame.render_widget(paragraph, area);
@@ -271,14 +278,53 @@ impl UI {
                 .display()
                 .to_string();
 
-            // Use different colors for dirs vs files
-            let style = if result.is_dir {
-                Style::default().fg(dir_color)
-            } else {
-                Style::default().fg(file_color)
-            };
+            let base_color = if result.is_dir { dir_color } else { file_color };
 
-            ListItem::new(display_path).style(style)
+            // In fuzzy mode with match indices, highlight matching characters
+            if search.fuzzy_mode && result.match_indices.is_some() {
+                let mut spans = Vec::new();
+                let chars: Vec<char> = display_path.chars().collect();
+                let indices = result.match_indices.as_ref().unwrap();
+                let mut last_idx = 0;
+
+                for &match_idx in indices {
+                    // Add text before the match
+                    if match_idx > last_idx {
+                        let text: String = chars[last_idx..match_idx].iter().collect();
+                        spans.push(Span::styled(text, Style::default().fg(base_color)));
+                    }
+
+                    // Add highlighted character
+                    if match_idx < chars.len() {
+                        let text: String = chars[match_idx..match_idx+1].iter().collect();
+                        spans.push(Span::styled(text, Style::default().fg(highlight_color).add_modifier(Modifier::BOLD)));
+                    }
+
+                    last_idx = match_idx + 1;
+                }
+
+                // Add remaining text after last match
+                if last_idx < chars.len() {
+                    let text: String = chars[last_idx..].iter().collect();
+                    spans.push(Span::styled(text, Style::default().fg(base_color)));
+                }
+
+                // Add score at the end
+                if let Some(score) = result.score {
+                    spans.push(Span::styled(format!(" [{}]", score), Style::default().fg(base_color)));
+                }
+
+                ListItem::new(Line::from(spans))
+            } else {
+                // Normal mode or no match indices - just display path with optional score
+                let display_text = if search.fuzzy_mode && result.score.is_some() {
+                    format!("{} [{}]", display_path, result.score.unwrap())
+                } else {
+                    display_path
+                };
+
+                ListItem::new(display_text).style(Style::default().fg(base_color))
+            }
         }).collect();
 
         let mut state = ListState::default();
