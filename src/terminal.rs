@@ -55,8 +55,11 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
             }
         } else {
             // No event - poll search results if search is active
-            if app.poll_search() {
-                // Search has updates - redraw will happen on next loop
+            let search_updated = app.poll_search();
+            let sizes_updated = app.poll_sizes();
+
+            if search_updated || sizes_updated {
+                // Updates available - redraw will happen on next loop
             }
         }
     }

@@ -11,6 +11,7 @@ use crate::navigation::Navigation;
 use crate::search::Search;
 use crate::bookmarks::Bookmarks;
 use crate::config::Config;
+use crate::dir_size::DirSizeCache;
 
 /// UI rendering module
 pub struct UI {
@@ -73,6 +74,8 @@ impl UI {
         show_files: bool,
         show_help: bool,
         fullscreen_viewer: bool,
+        show_sizes: bool,
+        dir_size_cache: &DirSizeCache,
     ) {
         self.terminal_width = frame.area().width;
         self.terminal_height = frame.area().height;
@@ -133,12 +136,12 @@ impl UI {
             self.tree_area_start = chunks[0].x;
             self.tree_area_end = chunks[0].x + chunks[0].width;
 
-            self.render_tree(frame, chunks[0], nav, config);
+            self.render_tree(frame, chunks[0], nav, config, show_sizes, dir_size_cache);
             self.render_file_viewer(frame, chunks[1], file_viewer, show_help, config);
         } else {
             self.tree_area_start = tree_area.x;
             self.tree_area_end = tree_area.x + tree_area.width;
-            self.render_tree(frame, tree_area, nav, config);
+            self.render_tree(frame, tree_area, nav, config, show_sizes, dir_size_cache);
         }
 
         // Render bottom panel - bookmarks take priority over search results
@@ -156,7 +159,7 @@ impl UI {
         }
     }
 
-    fn render_tree(&mut self, frame: &mut Frame, area: Rect, nav: &Navigation, config: &Config) {
+    fn render_tree(&mut self, frame: &mut Frame, area: Rect, nav: &Navigation, config: &Config, show_sizes: bool, dir_size_cache: &DirSizeCache) {
         self.tree_area_top = area.y;
         self.tree_area_height = area.height;
 
@@ -177,8 +180,19 @@ impl UI {
                 "  "
             };
 
-            // Just show the name - detailed error info will be in file viewer
-            let text = format!("{}{}{}", indent, icon, node_borrowed.name);
+            // Build text with optional size column (after directory name)
+            let text = if show_sizes && node_borrowed.is_dir {
+                let size_str = if let Some(size) = dir_size_cache.get(&node_borrowed.path) {
+                    format!(" [{:>7}]", DirSizeCache::format_size(size))
+                } else if dir_size_cache.is_calculating(&node_borrowed.path) {
+                    " [ calc.]".to_string()
+                } else {
+                    "".to_string()
+                };
+                format!("{}{}{}{}", indent, icon, node_borrowed.name, size_str)
+            } else {
+                format!("{}{}{}", indent, icon, node_borrowed.name)
+            };
 
             // Color coding: errors in configured color, directories and files use theme colors
             let style = if node_borrowed.has_error {
@@ -228,7 +242,11 @@ impl UI {
         *state.offset_mut() = final_offset;
         self.tree_scroll_offset = final_offset;
 
-        let title = " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | /: search | i: help) ";
+        let title = if show_sizes {
+            " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: hide sizes | /: search | i: help) "
+        } else {
+            " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: show sizes | /: search | i: help) "
+        };
 
         let list = List::new(items)
             .block(Block::default()
@@ -648,7 +666,17 @@ pub fn get_help_content() -> Vec<String> {
         "  c              Copy current path to clipboard (files and directories)".to_string(),
         "  e              Open file in external editor (configurable in config.toml)".to_string(),
         "  o              Open in file manager (files open parent dir, dirs open themselves)".to_string(),
+        "  z              Toggle directory size display (shows calculated sizes)".to_string(),
         "  i              Show/hide this help screen".to_string(),
+        "".to_string(),
+        "DIRECTORY SIZE DISPLAY (press 'z' to toggle)".to_string(),
+        "  When enabled:".to_string(),
+        "    • Shows total size for each directory next to its name".to_string(),
+        "    • Sizes are calculated asynchronously in the background".to_string(),
+        "    • Shows 'calc.' while calculation is in progress".to_string(),
+        "    • Format: K (kilobytes), M (megabytes), G (gigabytes), T (terabytes)".to_string(),
+        "    • Sizes include all files and subdirectories recursively".to_string(),
+        "    • Results are cached until you toggle off or navigate away".to_string(),
         "".to_string(),
         "SEARCH".to_string(),
         "  /              Enter search mode".to_string(),

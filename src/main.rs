@@ -8,6 +8,7 @@ mod ui;
 mod event_handler;
 mod config;
 mod bookmarks;
+mod dir_size;
 
 use anyhow::Result;
 use app::App;

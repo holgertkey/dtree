@@ -10,6 +10,7 @@ use crate::search::Search;
 use crate::bookmarks::Bookmarks;
 use crate::ui::UI;
 use crate::config::Config;
+use crate::dir_size::DirSizeCache;
 
 /// Event handler for keyboard and mouse input
 pub struct EventHandler {
@@ -43,6 +44,8 @@ impl EventHandler {
         show_files_before_help: &mut bool,
         show_help: &mut bool,
         fullscreen_viewer: &mut bool,
+        show_sizes: &mut bool,
+        dir_size_cache: &mut DirSizeCache,
         ui: &UI,
         config: &Config,
     ) -> Result<Option<PathBuf>> {
@@ -501,6 +504,22 @@ impl EventHandler {
                 // Toggle line numbers (only in fullscreen mode)
                 if *fullscreen_viewer {
                     file_viewer.toggle_line_numbers();
+                }
+            }
+            KeyCode::Char('z') => {
+                // Toggle directory size display
+                *show_sizes = !*show_sizes;
+                if *show_sizes {
+                    // Start calculating sizes for visible directories
+                    for node_ref in &nav.flat_list {
+                        let node = node_ref.borrow();
+                        if node.is_dir {
+                            dir_size_cache.calculate_async(node.path.clone());
+                        }
+                    }
+                } else {
+                    // Clear cache when disabling
+                    dir_size_cache.clear();
                 }
             }
             KeyCode::PageUp => {

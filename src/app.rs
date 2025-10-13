@@ -10,6 +10,7 @@ use crate::ui::UI;
 use crate::event_handler::EventHandler;
 use crate::config::Config;
 use crate::bookmarks::Bookmarks;
+use crate::dir_size::DirSizeCache;
 
 /// Main application state
 pub struct App {
@@ -24,6 +25,8 @@ pub struct App {
     show_files_before_help: bool,
     show_help: bool,
     fullscreen_viewer: bool,
+    show_sizes: bool,
+    dir_size_cache: DirSizeCache,
 }
 
 impl App {
@@ -54,6 +57,8 @@ impl App {
             show_files_before_help: false,
             show_help: false,
             fullscreen_viewer: false,
+            show_sizes: false,
+            dir_size_cache: DirSizeCache::new(),
         })
     }
 
@@ -73,6 +78,8 @@ impl App {
             &mut self.show_files_before_help,
             &mut self.show_help,
             &mut self.fullscreen_viewer,
+            &mut self.show_sizes,
+            &mut self.dir_size_cache,
             &self.ui,
             &self.config,
         )
@@ -104,6 +111,8 @@ impl App {
             self.show_files,
             self.show_help,
             self.fullscreen_viewer,
+            self.show_sizes,
+            &self.dir_size_cache,
         );
     }
 
@@ -111,6 +120,12 @@ impl App {
     /// Returns true if there were updates and UI needs to be redrawn
     pub fn poll_search(&mut self) -> bool {
         self.search.poll_results()
+    }
+
+    /// Poll directory size calculation results from background thread
+    /// Returns true if there were updates and UI needs to be redrawn
+    pub fn poll_sizes(&mut self) -> bool {
+        self.dir_size_cache.poll_results()
     }
 
     /// Set fullscreen viewer mode and load the specified file
