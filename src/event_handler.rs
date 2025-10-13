@@ -16,6 +16,7 @@ pub struct EventHandler {
     pub dragging: bool,
     pub dragging_vertical: bool, // For bottom panel resize
     pub last_click_time: Option<(Instant, usize)>,
+    pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
 }
 
 impl EventHandler {
@@ -24,6 +25,7 @@ impl EventHandler {
             dragging: false,
             dragging_vertical: false,
             last_click_time: None,
+            last_bookmark_click_time: None,
         }
     }
 
@@ -633,7 +635,58 @@ impl EventHandler {
                 if !filtered.is_empty() {
                     let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
                     if clicked_row < filtered.len() {
-                        bookmarks.selected_index = clicked_row;
+                        let now = Instant::now();
+                        let is_double_click = if let Some((last_time, last_idx)) = self.last_bookmark_click_time {
+                            clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(config.behavior.double_click_timeout_ms)
+                        } else {
+                            false
+                        };
+
+                        if is_double_click {
+                            // Double-click: navigate to bookmark
+                            bookmarks.selected_index = clicked_row;
+                            if let Some(bookmark) = bookmarks.get_selected_bookmark() {
+                                let path = bookmark.path.clone();
+                                let bookmark_key = bookmark.key.clone();
+                                let dir_name = bookmark.name.clone().unwrap_or_else(|| bookmark_key.clone());
+                                bookmarks.exit_selection_mode();
+
+                                // Try to navigate and check for errors
+                                if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
+                                    // Error occurred - enable file viewer if not already enabled
+                                    if !*show_files {
+                                        *show_files = true;
+                                        let _ = nav.reload_tree(*show_files);
+                                    }
+
+                                    // Display error details in file viewer
+                                    let error_content = vec![
+                                        format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
+                                        String::new(),
+                                        error_msg,
+                                        String::new(),
+                                        "This directory cannot be accessed. Possible reasons:".to_string(),
+                                        "- Insufficient permissions".to_string(),
+                                        "- Directory was removed or renamed".to_string(),
+                                        "- Filesystem error".to_string(),
+                                    ];
+                                    file_viewer.load_content(error_content);
+                                    *show_help = false;
+                                } else {
+                                    // Success - load file preview if needed
+                                    if *show_files {
+                                        if let Some(node) = nav.get_selected_node() {
+                                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                        }
+                                    }
+                                }
+                            }
+                            self.last_bookmark_click_time = None;
+                        } else {
+                            // Single click: just select the bookmark
+                            bookmarks.selected_index = clicked_row;
+                            self.last_bookmark_click_time = Some((now, clicked_row));
+                        }
                     }
                 }
                 return Ok(());
