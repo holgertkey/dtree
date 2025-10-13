@@ -243,11 +243,16 @@ impl EventHandler {
                 *fullscreen_viewer = false;
                 return Ok(Some(PathBuf::new()));
             } else {
-                // Normal mode: q exits with cd to selected directory
+                // Normal mode: q exits with cd to selected directory (or parent if file)
                 if let Some(node) = nav.get_selected_node() {
                     let node_borrowed = node.borrow();
                     if node_borrowed.is_dir {
                         return Ok(Some(node_borrowed.path.clone()));
+                    } else {
+                        // If cursor is on a file, return parent directory
+                        if let Some(parent) = node_borrowed.path.parent() {
+                            return Ok(Some(parent.to_path_buf()));
+                        }
                     }
                 }
                 return Ok(None);
