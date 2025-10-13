@@ -138,14 +138,14 @@ impl EventHandler {
             // Handle Ctrl+j/k for scrolling bookmark list
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
-                    KeyCode::Char('j') => {
+                    KeyCode::Char('j') | KeyCode::Char('J') | KeyCode::Down => {
                         // Calculate max visible lines (area height - input bar - borders)
                         // Bottom panel is 30% of screen, input bar is 3 lines
                         let max_visible = 10; // Conservative estimate
                         bookmarks.scroll_down(max_visible);
                         return Ok(Some(PathBuf::new()));
                     }
-                    KeyCode::Char('k') => {
+                    KeyCode::Char('k') | KeyCode::Char('K') | KeyCode::Up => {
                         bookmarks.scroll_up();
                         return Ok(Some(PathBuf::new()));
                     }

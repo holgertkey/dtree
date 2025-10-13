@@ -536,7 +536,7 @@ impl UI {
 
             // Render input bar at the bottom
             let input_text = format!("Bookmark name: {}█", bookmarks.get_input());
-            let title = " Create Bookmark (Enter: save | Esc: cancel | Ctrl+j/k: scroll list) ";
+            let title = " Create Bookmark (Enter: save | Esc: cancel | Ctrl+j/k/↑↓: scroll list) ";
 
             let paragraph = Paragraph::new(input_text)
                 .block(Block::default()
@@ -690,7 +690,7 @@ pub fn get_help_content() -> Vec<String> {
         "    • Bottom panel shows: input bar + list of existing bookmarks".to_string(),
         "    • Type bookmark name (multi-character names supported)".to_string(),
         "    • Examples: work, project-123, my_home".to_string(),
-        "    • Ctrl+j/k scrolls through existing bookmarks list".to_string(),
+        "    • Ctrl+j/k (or Ctrl+↑↓) scrolls through existing bookmarks list".to_string(),
         "    • Enter to save, Esc to cancel".to_string(),
         "    • NOTE: Bookmarks save directories only (if cursor on file, saves parent dir)".to_string(),
         "".to_string(),
