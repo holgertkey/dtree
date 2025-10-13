@@ -567,6 +567,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
         show_help: &mut bool,
@@ -575,7 +576,7 @@ impl EventHandler {
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse, nav, file_viewer, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_mouse_click(mouse, nav, file_viewer, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             MouseEventKind::Drag(MouseButton::Left) => {
                 // Ignore dragging in fullscreen mode
@@ -598,10 +599,10 @@ impl EventHandler {
                 }
             }
             MouseEventKind::ScrollUp => {
-                self.handle_scroll_up(mouse, nav, file_viewer, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_scroll_up(mouse, nav, file_viewer, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_scroll_down(mouse, nav, file_viewer, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_scroll_down(mouse, nav, file_viewer, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             _ => {}
         }
@@ -613,6 +614,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
         show_help: &mut bool,
@@ -622,6 +624,20 @@ impl EventHandler {
         // In fullscreen mode, ignore mouse clicks
         if fullscreen_viewer {
             return Ok(());
+        }
+
+        // Check click in bookmarks panel (selection mode only, not creation mode)
+        if bookmarks.is_selecting && ui.bottom_panel_height > 0 {
+            if mouse.row >= ui.bottom_panel_top + 1 && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
+                let filtered = bookmarks.get_filtered_bookmarks();
+                if !filtered.is_empty() {
+                    let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
+                    if clicked_row < filtered.len() {
+                        bookmarks.selected_index = clicked_row;
+                    }
+                }
+                return Ok(());
+            }
         }
 
         // Check click in tree area
@@ -707,12 +723,26 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
         show_help: &mut bool,
         fullscreen_viewer: bool,
         config: &Config,
     ) -> Result<()> {
+        // Check if mouse is over bottom panel (bookmarks/search)
+        if ui.bottom_panel_height > 0 && mouse.row >= ui.bottom_panel_top {
+            // Bookmarks panel - scroll bookmarks list
+            if bookmarks.is_selecting || bookmarks.is_creating {
+                if bookmarks.is_selecting {
+                    bookmarks.move_up();
+                } else if bookmarks.is_creating {
+                    bookmarks.scroll_up();
+                }
+                return Ok(());
+            }
+        }
+
         // In fullscreen mode, always scroll the file viewer
         if fullscreen_viewer {
             file_viewer.scroll_up();
@@ -736,12 +766,27 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
         show_help: &mut bool,
         fullscreen_viewer: bool,
         config: &Config,
     ) -> Result<()> {
+        // Check if mouse is over bottom panel (bookmarks/search)
+        if ui.bottom_panel_height > 0 && mouse.row >= ui.bottom_panel_top {
+            // Bookmarks panel - scroll bookmarks list
+            if bookmarks.is_selecting || bookmarks.is_creating {
+                if bookmarks.is_selecting {
+                    bookmarks.move_down();
+                } else if bookmarks.is_creating {
+                    let max_visible = 10; // Conservative estimate
+                    bookmarks.scroll_down(max_visible);
+                }
+                return Ok(());
+            }
+        }
+
         // In fullscreen mode, always scroll the file viewer
         if fullscreen_viewer {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
