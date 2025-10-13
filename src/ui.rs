@@ -182,8 +182,8 @@ impl UI {
 
             // Build text with optional size column (after directory name)
             let text = if show_sizes && node_borrowed.is_dir {
-                let size_str = if let Some(size) = dir_size_cache.get(&node_borrowed.path) {
-                    format!(" [{:>7}]", DirSizeCache::format_size(size))
+                let size_str = if let Some((size, is_partial)) = dir_size_cache.get(&node_borrowed.path) {
+                    format!(" [{:>7}]", DirSizeCache::format_size(size, is_partial))
                 } else if dir_size_cache.is_calculating(&node_borrowed.path) {
                     " [ calc.]".to_string()
                 } else {
@@ -677,6 +677,12 @@ pub fn get_help_content() -> Vec<String> {
         "    • Format: K (kilobytes), M (megabytes), G (gigabytes), T (terabytes)".to_string(),
         "    • Sizes include all files and subdirectories recursively".to_string(),
         "    • Results are cached until you toggle off or navigate away".to_string(),
+        "".to_string(),
+        "  Safety limits (to prevent hanging on large directories):".to_string(),
+        "    • Maximum calculation time: 5 seconds per directory".to_string(),
+        "    • Maximum files processed: 10,000 files per directory".to_string(),
+        "    • Prefix '>' indicates partial result (e.g., >5.2G)".to_string(),
+        "    • Partial results mean the actual size may be larger".to_string(),
         "".to_string(),
         "SEARCH".to_string(),
         "  /              Enter search mode".to_string(),

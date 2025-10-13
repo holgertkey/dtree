@@ -2,13 +2,20 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 use crossbeam_channel::{unbounded, Receiver, Sender};
+
+/// Maximum calculation time per directory (5 seconds)
+const CALCULATION_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Maximum number of files to process per directory (to prevent hanging)
+const MAX_FILES_TO_PROCESS: usize = 10000;
 
 /// Message types for communication between main thread and size calculation thread
 #[derive(Debug)]
 pub enum SizeMessage {
-    /// Result found (path, size in bytes)
-    Result(PathBuf, u64),
+    /// Result found (path, size in bytes, is_partial)
+    Result(PathBuf, u64, bool),
     /// Calculation done for a path
     Done(PathBuf),
 }
@@ -20,10 +27,16 @@ enum TaskMessage {
     Shutdown,
 }
 
+/// Result of size calculation
+struct CalculationResult {
+    size: u64,
+    is_partial: bool, // true if calculation was interrupted
+}
+
 /// Cache for directory sizes with async calculation support
 pub struct DirSizeCache {
-    /// Cache mapping path to size in bytes
-    cache: HashMap<PathBuf, u64>,
+    /// Cache mapping path to (size, is_partial)
+    cache: HashMap<PathBuf, (u64, bool)>,
     /// Paths currently being calculated
     calculating: Arc<Mutex<Vec<PathBuf>>>,
     /// Channel for receiving calculation results
@@ -67,7 +80,7 @@ impl DirSizeCache {
     }
 
     /// Get cached size for a path
-    pub fn get(&self, path: &Path) -> Option<u64> {
+    pub fn get(&self, path: &Path) -> Option<(u64, bool)> {
         self.cache.get(path).copied()
     }
 
@@ -110,8 +123,8 @@ impl DirSizeCache {
             // Process all available messages
             while let Ok(msg) = receiver.try_recv() {
                 match msg {
-                    SizeMessage::Result(path, size) => {
-                        self.cache.insert(path, size);
+                    SizeMessage::Result(path, size, is_partial) => {
+                        self.cache.insert(path, (size, is_partial));
                         updated = true;
                     }
                     SizeMessage::Done(path) => {
@@ -152,22 +165,24 @@ impl DirSizeCache {
     }
 
     /// Format size in human-readable format
-    pub fn format_size(size: u64) -> String {
+    pub fn format_size(size: u64, is_partial: bool) -> String {
         const KB: u64 = 1024;
         const MB: u64 = KB * 1024;
         const GB: u64 = MB * 1024;
         const TB: u64 = GB * 1024;
 
+        let prefix = if is_partial { ">" } else { "" };
+
         if size >= TB {
-            format!("{:.1}T", size as f64 / TB as f64)
+            format!("{}{:.1}T", prefix, size as f64 / TB as f64)
         } else if size >= GB {
-            format!("{:.1}G", size as f64 / GB as f64)
+            format!("{}{:.1}G", prefix, size as f64 / GB as f64)
         } else if size >= MB {
-            format!("{:.1}M", size as f64 / MB as f64)
+            format!("{}{:.1}M", prefix, size as f64 / MB as f64)
         } else if size >= KB {
-            format!("{:.1}K", size as f64 / KB as f64)
+            format!("{}{:.1}K", prefix, size as f64 / KB as f64)
         } else {
-            format!("{}B", size)
+            format!("{}{}B", prefix, size)
         }
     }
 }
@@ -187,11 +202,22 @@ fn worker_loop(
     loop {
         match task_rx.recv() {
             Ok(TaskMessage::Calculate(path)) => {
-                // Calculate size
-                let size = calculate_dir_size(&path);
+                // Calculate size with timeout and file limit
+                let start_time = Instant::now();
+                let mut file_count = 0;
+
+                let result = calculate_dir_size_limited(
+                    &path,
+                    start_time,
+                    &mut file_count,
+                );
 
                 // Send results
-                let _ = result_tx.send(SizeMessage::Result(path.clone(), size));
+                let _ = result_tx.send(SizeMessage::Result(
+                    path.clone(),
+                    result.size,
+                    result.is_partial,
+                ));
                 let _ = result_tx.send(SizeMessage::Done(path));
             }
             Ok(TaskMessage::Shutdown) | Err(_) => {
@@ -205,22 +231,79 @@ fn worker_loop(
     }
 }
 
-/// Calculate total size of a directory recursively
-fn calculate_dir_size(path: &Path) -> u64 {
+/// Calculate total size of a directory recursively with limits
+fn calculate_dir_size_limited(
+    path: &Path,
+    start_time: Instant,
+    file_count: &mut usize,
+) -> CalculationResult {
     let mut total_size = 0u64;
+    let mut is_partial = false;
+
+    // Check timeout
+    if start_time.elapsed() > CALCULATION_TIMEOUT {
+        return CalculationResult {
+            size: total_size,
+            is_partial: true,
+        };
+    }
+
+    // Check file limit
+    if *file_count >= MAX_FILES_TO_PROCESS {
+        return CalculationResult {
+            size: total_size,
+            is_partial: true,
+        };
+    }
 
     if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
+            // Periodic checks
+            if *file_count % 100 == 0 {
+                // Check timeout every 100 files
+                if start_time.elapsed() > CALCULATION_TIMEOUT {
+                    return CalculationResult {
+                        size: total_size,
+                        is_partial: true,
+                    };
+                }
+            }
+
             if let Ok(metadata) = entry.metadata() {
                 if metadata.is_file() {
                     total_size += metadata.len();
+                    *file_count += 1;
+
+                    // Check file limit
+                    if *file_count >= MAX_FILES_TO_PROCESS {
+                        return CalculationResult {
+                            size: total_size,
+                            is_partial: true,
+                        };
+                    }
                 } else if metadata.is_dir() {
                     // Recursively calculate subdirectory size
-                    total_size += calculate_dir_size(&entry.path());
+                    let subdir_result = calculate_dir_size_limited(
+                        &entry.path(),
+                        start_time,
+                        file_count,
+                    );
+
+                    total_size += subdir_result.size;
+
+                    // If subdirectory was partial, mark this as partial too
+                    if subdir_result.is_partial {
+                        is_partial = true;
+                        // Don't continue if we hit a limit
+                        break;
+                    }
                 }
             }
         }
     }
 
-    total_size
+    CalculationResult {
+        size: total_size,
+        is_partial,
+    }
 }
