@@ -469,7 +469,7 @@ impl UI {
         } else if is_fullscreen {
             // Fullscreen mode
             let line_num_hint = if file_viewer.show_line_numbers { "n: hide lines" } else { "n: show lines" };
-            format!(" File Viewer (Fullscreen - {} | q: back | Esc: exit){} ", line_num_hint, scroll_info)
+            format!(" File Viewer (Fullscreen - {} | Ctrl+j/k: scroll | q: back | Esc: exit){} ", line_num_hint, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
