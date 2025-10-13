@@ -9,6 +9,7 @@ mod event_handler;
 mod config;
 mod bookmarks;
 mod dir_size;
+mod file_icons;
 
 use anyhow::Result;
 use app::App;

@@ -12,6 +12,7 @@ use crate::search::Search;
 use crate::bookmarks::Bookmarks;
 use crate::config::Config;
 use crate::dir_size::DirSizeCache;
+use crate::file_icons;
 
 /// UI rendering module
 pub struct UI {
@@ -167,17 +168,30 @@ impl UI {
             let node_borrowed = node.borrow();
             let indent = "  ".repeat(node_borrowed.depth);
 
-            // Icon with error indicator
+            // Icon with error indicator or file type icon
             let icon = if node_borrowed.has_error {
-                if node_borrowed.is_dir {
-                    if node_borrowed.is_expanded { "⚠ " } else { "⚠ " }
+                // Error indicator always shows, regardless of icon settings
+                "⚠ ".to_string()
+            } else if config.appearance.show_icons {
+                // Use file type icons from nerd-fonts
+                let file_icon = file_icons::get_icon(&node_borrowed.path, node_borrowed.is_dir, true);
+                // Fallback to arrows if icon is empty or whitespace-only
+                if file_icon.trim().is_empty() {
+                    if node_borrowed.is_dir {
+                        if node_borrowed.is_expanded { "▼ ".to_string() } else { "▶ ".to_string() }
+                    } else {
+                        "  ".to_string()
+                    }
                 } else {
-                    "⚠ "
+                    format!("{} ", file_icon)
                 }
-            } else if node_borrowed.is_dir {
-                if node_borrowed.is_expanded { "▼ " } else { "▶ " }
             } else {
-                "  "
+                // Default arrows/markers (original behavior)
+                if node_borrowed.is_dir {
+                    if node_borrowed.is_expanded { "▼ ".to_string() } else { "▶ ".to_string() }
+                } else {
+                    "  ".to_string()
+                }
             };
 
             // Build text with optional size column (after directory/file name)
@@ -894,6 +908,22 @@ pub fn get_help_content() -> Vec<String> {
         "    • Appearance (colors, split position, icons)".to_string(),
         "    • Behavior (max file lines, show hidden files, double-click timeout)".to_string(),
         "    • Keybindings (customize keyboard shortcuts)".to_string(),
+        "".to_string(),
+        "FILE TYPE ICONS".to_string(),
+        "  File type icons can be enabled in config.toml:".to_string(),
+        "    [appearance]".to_string(),
+        "    show_icons = true".to_string(),
+        "".to_string(),
+        "  Requirements:".to_string(),
+        "    • Nerd Fonts installed (https://www.nerdfonts.com/)".to_string(),
+        "    • Terminal with proper glyph support".to_string(),
+        "".to_string(),
+        "  Features:".to_string(),
+        "    • Different icons for programming languages (Rust, Python, JS, etc.)".to_string(),
+        "    • Special icons for configuration files (Cargo.toml, package.json, etc.)".to_string(),
+        "    • Directory-specific icons (.git, node_modules, src, etc.)".to_string(),
+        "    • Document and media file icons".to_string(),
+        "    • Fallback to emoji icons if nerd fonts not available".to_string(),
         "".to_string(),
         "  To reset to defaults: delete the config file, it will be recreated on next run.".to_string(),
         "".to_string(),
