@@ -136,12 +136,12 @@ impl UI {
             self.tree_area_start = chunks[0].x;
             self.tree_area_end = chunks[0].x + chunks[0].width;
 
-            self.render_tree(frame, chunks[0], nav, config, show_sizes, dir_size_cache);
+            self.render_tree(frame, chunks[0], nav, config, show_sizes, show_files, dir_size_cache);
             self.render_file_viewer(frame, chunks[1], file_viewer, show_help, config);
         } else {
             self.tree_area_start = tree_area.x;
             self.tree_area_end = tree_area.x + tree_area.width;
-            self.render_tree(frame, tree_area, nav, config, show_sizes, dir_size_cache);
+            self.render_tree(frame, tree_area, nav, config, show_sizes, show_files, dir_size_cache);
         }
 
         // Render bottom panel - bookmarks take priority over search results
@@ -159,7 +159,7 @@ impl UI {
         }
     }
 
-    fn render_tree(&mut self, frame: &mut Frame, area: Rect, nav: &Navigation, config: &Config, show_sizes: bool, dir_size_cache: &DirSizeCache) {
+    fn render_tree(&mut self, frame: &mut Frame, area: Rect, nav: &Navigation, config: &Config, show_sizes: bool, show_files: bool, dir_size_cache: &DirSizeCache) {
         self.tree_area_top = area.y;
         self.tree_area_height = area.height;
 
@@ -180,12 +180,24 @@ impl UI {
                 "  "
             };
 
-            // Build text with optional size column (after directory name)
-            let text = if show_sizes && node_borrowed.is_dir {
-                let size_str = if let Some((size, is_partial)) = dir_size_cache.get(&node_borrowed.path) {
-                    format!(" [{:>7}]", DirSizeCache::format_size(size, is_partial))
-                } else if dir_size_cache.is_calculating(&node_borrowed.path) {
-                    " [ calc.]".to_string()
+            // Build text with optional size column (after directory/file name)
+            let text = if show_sizes {
+                let size_str = if node_borrowed.is_dir {
+                    // Directory size (from cache) - always show if show_sizes is enabled
+                    if let Some((size, is_partial)) = dir_size_cache.get(&node_borrowed.path) {
+                        format!(" [{:>7}]", DirSizeCache::format_size(size, is_partial))
+                    } else if dir_size_cache.is_calculating(&node_borrowed.path) {
+                        " [ calc.]".to_string()
+                    } else {
+                        "".to_string()
+                    }
+                } else if show_files {
+                    // File size (from metadata) - only show if in file viewer mode (s)
+                    if let Ok(metadata) = std::fs::metadata(&node_borrowed.path) {
+                        format!(" [{:>7}]", DirSizeCache::format_size(metadata.len(), false))
+                    } else {
+                        "".to_string()
+                    }
                 } else {
                     "".to_string()
                 };
@@ -672,10 +684,12 @@ pub fn get_help_content() -> Vec<String> {
         "DIRECTORY SIZE DISPLAY (press 'z' to toggle)".to_string(),
         "  When enabled:".to_string(),
         "    • Shows total size for each directory next to its name".to_string(),
-        "    • Sizes are calculated asynchronously in the background".to_string(),
-        "    • Shows 'calc.' while calculation is in progress".to_string(),
+        "    • In file viewer mode (s): also shows individual file sizes".to_string(),
+        "    • Directory sizes are calculated asynchronously in the background".to_string(),
+        "    • File sizes are read from metadata instantly".to_string(),
+        "    • Shows 'calc.' while directory calculation is in progress".to_string(),
         "    • Format: K (kilobytes), M (megabytes), G (gigabytes), T (terabytes)".to_string(),
-        "    • Sizes include all files and subdirectories recursively".to_string(),
+        "    • Directory sizes include all files and subdirectories recursively".to_string(),
         "    • Results are cached until you toggle off or navigate away".to_string(),
         "".to_string(),
         "  Safety limits (to prevent hanging on large directories):".to_string(),
