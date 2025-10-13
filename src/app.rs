@@ -83,6 +83,7 @@ impl App {
             mouse,
             &mut self.nav,
             &mut self.file_viewer,
+            &mut self.search,
             &mut self.bookmarks,
             &mut self.ui,
             &mut self.show_files,

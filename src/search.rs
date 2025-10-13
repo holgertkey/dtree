@@ -357,6 +357,18 @@ impl Search {
         self.selected = self.selected.saturating_sub(1);
     }
 
+    /// Get number of search results
+    pub fn get_results_count(&self) -> usize {
+        self.results.len()
+    }
+
+    /// Set selected index (with bounds checking)
+    pub fn set_selected(&mut self, index: usize) {
+        if index < self.results.len() {
+            self.selected = index;
+        }
+    }
+
     /// Get selected result path
     pub fn get_selected_result(&self) -> Option<PathBuf> {
         self.results.get(self.selected).map(|r| r.path.clone())

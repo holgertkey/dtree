@@ -17,6 +17,7 @@ pub struct EventHandler {
     pub dragging_vertical: bool, // For bottom panel resize
     pub last_click_time: Option<(Instant, usize)>,
     pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
+    pub last_search_click_time: Option<(Instant, usize)>, // For search results double-click
 }
 
 impl EventHandler {
@@ -26,6 +27,7 @@ impl EventHandler {
             dragging_vertical: false,
             last_click_time: None,
             last_bookmark_click_time: None,
+            last_search_click_time: None,
         }
     }
 
@@ -569,6 +571,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        search: &mut Search,
         bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
@@ -578,7 +581,7 @@ impl EventHandler {
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse, nav, file_viewer, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_mouse_click(mouse, nav, file_viewer, search, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             MouseEventKind::Drag(MouseButton::Left) => {
                 // Ignore dragging in fullscreen mode
@@ -601,10 +604,10 @@ impl EventHandler {
                 }
             }
             MouseEventKind::ScrollUp => {
-                self.handle_scroll_up(mouse, nav, file_viewer, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_scroll_up(mouse, nav, file_viewer, search, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_scroll_down(mouse, nav, file_viewer, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_scroll_down(mouse, nav, file_viewer, search, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
             }
             _ => {}
         }
@@ -616,6 +619,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        search: &mut Search,
         bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
@@ -626,6 +630,43 @@ impl EventHandler {
         // In fullscreen mode, ignore mouse clicks
         if fullscreen_viewer {
             return Ok(());
+        }
+
+        // Check click in search results panel
+        if search.show_results && ui.bottom_panel_height > 0 {
+            if mouse.row >= ui.bottom_panel_top + 1 && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
+                let results_count = search.get_results_count();
+                if results_count > 0 {
+                    let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
+                    if clicked_row < results_count {
+                        let now = Instant::now();
+                        let is_double_click = if let Some((last_time, last_idx)) = self.last_search_click_time {
+                            clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(config.behavior.double_click_timeout_ms)
+                        } else {
+                            false
+                        };
+
+                        if is_double_click {
+                            // Double-click: jump to search result
+                            search.set_selected(clicked_row);
+                            if let Some(path) = search.get_selected_result() {
+                                let _ = nav.expand_path_to_node(&path, *show_files);
+                                search.focus_on_results = false;
+                                if *show_files {
+                                    let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false, config);
+                                    *show_help = false;
+                                }
+                            }
+                            self.last_search_click_time = None;
+                        } else {
+                            // Single click: just select the result
+                            search.set_selected(clicked_row);
+                            self.last_search_click_time = Some((now, clicked_row));
+                        }
+                    }
+                }
+                return Ok(());
+            }
         }
 
         // Check click in bookmarks panel (selection mode only, not creation mode)
@@ -776,6 +817,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        search: &mut Search,
         bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
@@ -785,6 +827,11 @@ impl EventHandler {
     ) -> Result<()> {
         // Check if mouse is over bottom panel (bookmarks/search)
         if ui.bottom_panel_height > 0 && mouse.row >= ui.bottom_panel_top {
+            // Search results panel - scroll results list
+            if search.show_results {
+                search.move_up();
+                return Ok(());
+            }
             // Bookmarks panel - scroll bookmarks list
             if bookmarks.is_selecting || bookmarks.is_creating {
                 if bookmarks.is_selecting {
@@ -819,6 +866,7 @@ impl EventHandler {
         mouse: MouseEvent,
         nav: &mut Navigation,
         file_viewer: &mut FileViewer,
+        search: &mut Search,
         bookmarks: &mut Bookmarks,
         ui: &mut UI,
         show_files: &mut bool,
@@ -828,6 +876,11 @@ impl EventHandler {
     ) -> Result<()> {
         // Check if mouse is over bottom panel (bookmarks/search)
         if ui.bottom_panel_height > 0 && mouse.row >= ui.bottom_panel_top {
+            // Search results panel - scroll results list
+            if search.show_results {
+                search.move_down();
+                return Ok(());
+            }
             // Bookmarks panel - scroll bookmarks list
             if bookmarks.is_selecting || bookmarks.is_creating {
                 if bookmarks.is_selecting {
