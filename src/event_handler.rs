@@ -239,6 +239,18 @@ impl EventHandler {
 
             // Handle fullscreen-specific keys
             match key.code {
+                KeyCode::Char('j') | KeyCode::Down => {
+                    // Scroll down (j or Down arrow)
+                    let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
+                    let lines_to_show = content_height.saturating_sub(2);
+                    file_viewer.scroll_down(lines_to_show);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    // Scroll up (k or Up arrow)
+                    file_viewer.scroll_up();
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::Char('n') => {
                     // Toggle line numbers (only in fullscreen mode)
                     file_viewer.toggle_line_numbers();

@@ -513,7 +513,7 @@ impl UI {
         } else if is_fullscreen {
             // Fullscreen mode
             let line_num_hint = if file_viewer.show_line_numbers { "n: hide lines" } else { "n: show lines" };
-            format!(" File Viewer (Fullscreen - {} | Ctrl+j/k: scroll | q: back | Esc: exit){} ", line_num_hint, scroll_info)
+            format!(" File Viewer (Fullscreen - j/k: scroll | {} | q: back | Esc: exit){} ", line_num_hint, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
@@ -804,7 +804,9 @@ pub fn get_help_content() -> Vec<String> {
         "    n            Toggle line numbers (show/hide)".to_string(),
         "".to_string(),
         "  Navigation (fullscreen mode):".to_string(),
-        "    Ctrl+j/k     Scroll by line (fine control)".to_string(),
+        "    j / ↓        Scroll down by line".to_string(),
+        "    k / ↑        Scroll up by line".to_string(),
+        "    Ctrl+j/k     Alternative scroll by line".to_string(),
         "    Page Up/Down Scroll by page (fast navigation)".to_string(),
         "    Home         Jump to top of file".to_string(),
         "    End          Jump to bottom of file".to_string(),
