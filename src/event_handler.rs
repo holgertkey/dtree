@@ -219,15 +219,23 @@ impl EventHandler {
                 return Ok(Some(PathBuf::new()));
             }
 
-            // Handle Ctrl+j/k for scrolling
+            // Handle Ctrl+j/k for file navigation in same directory
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('j') | KeyCode::Char('J') => {
-                        file_viewer.scroll_down_simple();
+                        // Move to next file in directory
+                        nav.move_down();
+                        if let Some(node) = nav.get_selected_node() {
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                        }
                         return Ok(Some(PathBuf::new()));
                     }
                     KeyCode::Char('k') | KeyCode::Char('K') => {
-                        file_viewer.scroll_up();
+                        // Move to previous file in directory
+                        nav.move_up();
+                        if let Some(node) = nav.get_selected_node() {
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                        }
                         return Ok(Some(PathBuf::new()));
                     }
                     _ => {
