@@ -64,15 +64,13 @@ fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
                             editor,
                             file_path.replace("'", "'\\''"));
 
-    let status = Command::new("sh")
+    let _status = Command::new("sh")
         .arg("-c")
         .arg(&shell_cmd)
         .status()?;
 
-    if !status.success() {
-        eprintln!("Error: Editor exited with status: {}", status);
-        std::process::exit(1);
-    }
+    // Don't check exit status - many editors return non-zero codes for normal exit
+    // (e.g., when user presses Esc or q)
 
     Ok(())
 }
@@ -95,15 +93,13 @@ fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
                             hex_editor,
                             file_path.replace("'", "'\\''"));
 
-    let status = Command::new("sh")
+    let _status = Command::new("sh")
         .arg("-c")
         .arg(&shell_cmd)
         .status()?;
 
-    if !status.success() {
-        eprintln!("Error: Hex editor exited with status: {}", status);
-        std::process::exit(1);
-    }
+    // Don't check exit status - many hex viewers return non-zero codes for normal exit
+    // (e.g., mcview returns 1 when user presses Esc or q)
 
     Ok(())
 }
@@ -125,15 +121,13 @@ fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
                             file_manager,
                             dir_path.replace("'", "'\\''"));
 
-    let status = Command::new("sh")
+    let _status = Command::new("sh")
         .arg("-c")
         .arg(&shell_cmd)
         .status()?;
 
-    if !status.success() {
-        eprintln!("Error: File manager exited with status: {}", status);
-        std::process::exit(1);
-    }
+    // Don't check exit status - many file managers return non-zero codes for normal exit
+    // (e.g., mc returns 1 when user presses Esc or q)
 
     Ok(())
 }
