@@ -132,6 +132,17 @@ impl App {
     pub fn set_fullscreen_viewer(&mut self, file_path: &std::path::Path) -> Result<()> {
         self.fullscreen_viewer = true;
         self.show_files = true;
+
+        // Reload tree with files enabled (so we can navigate between files with Ctrl+j/k)
+        self.nav.reload_tree(true)?;
+
+        // Find and select the current file in the flat list
+        if let Some(index) = self.nav.flat_list.iter().position(|node| {
+            node.borrow().path == file_path
+        }) {
+            self.nav.selected = index;
+        }
+
         // Load file with very large width for fullscreen (terminal width unknown at this point)
         let max_lines = self.config.behavior.max_file_lines;
         let enable_highlighting = self.config.appearance.enable_syntax_highlighting;
