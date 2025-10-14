@@ -203,7 +203,7 @@ fn default_follow_symlinks() -> bool { false }
 fn default_double_click_timeout() -> u64 { 500 }
 fn default_editor() -> String { "nano".to_string() }
 fn default_file_manager() -> String { "mc".to_string() }
-fn default_hex_editor() -> String { "hexyl".to_string() }
+fn default_hex_editor() -> String { "mcview".to_string() }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -486,13 +486,14 @@ editor = "nano"
 file_manager = "mc"
 
 # External hex editor for binary files (press 'e' on binary file in fullscreen mode)
-# Default: hexyl (modern hex viewer with colors, install: cargo install hexyl)
+# Default: mcview (part of Midnight Commander)
 # Popular hex viewers:
-#   - "hexyl"   - Modern, colorful hex viewer (recommended)
+#   - "mcview"  - Midnight Commander's internal viewer (recommended)
+#   - "hexyl"   - Modern, colorful hex viewer (install: cargo install hexyl)
 #   - "xxd"     - Standard hex dump utility (included with vim)
 #   - "hexdump" - Classic hex dump tool
 #   - "hd"      - Alias for hexdump -C
-hex_editor = "hexyl"
+hex_editor = "mcview"
 
 [keybindings]
 # Key bindings (each can have multiple keys)
