@@ -206,6 +206,75 @@ impl EventHandler {
             }
         }
 
+        // In fullscreen viewer mode, only allow specific keys for file viewing
+        if *fullscreen_viewer {
+            // Handle Esc key - exits completely
+            if matches!(key.code, KeyCode::Esc) {
+                return Ok(None);
+            }
+
+            // Handle q key - returns to tree view
+            if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
+                *fullscreen_viewer = false;
+                return Ok(Some(PathBuf::new()));
+            }
+
+            // Handle Ctrl+j/k for scrolling
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                match key.code {
+                    KeyCode::Char('j') | KeyCode::Char('J') => {
+                        file_viewer.scroll_down_simple();
+                        return Ok(Some(PathBuf::new()));
+                    }
+                    KeyCode::Char('k') | KeyCode::Char('K') => {
+                        file_viewer.scroll_up();
+                        return Ok(Some(PathBuf::new()));
+                    }
+                    _ => {
+                        // Ignore all other Ctrl combinations in fullscreen mode
+                        return Ok(Some(PathBuf::new()));
+                    }
+                }
+            }
+
+            // Handle fullscreen-specific keys
+            match key.code {
+                KeyCode::Char('n') => {
+                    // Toggle line numbers (only in fullscreen mode)
+                    file_viewer.toggle_line_numbers();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::PageUp => {
+                    // Scroll up by page
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    file_viewer.scroll_page_up(visible_height);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::PageDown => {
+                    // Scroll down by page
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    let max_visible_lines = visible_height.saturating_sub(2);
+                    file_viewer.scroll_page_down(visible_height, max_visible_lines);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Home => {
+                    // Jump to top of file
+                    file_viewer.reset_scroll();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::End => {
+                    // Jump to end of file
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    file_viewer.scroll_to_end(visible_height);
+                    return Ok(Some(PathBuf::new()));
+                }
+                _ => {
+                    // Ignore all other keys in fullscreen mode
+                    return Ok(Some(PathBuf::new()));
+                }
+            }
+        }
+
         // Handle Ctrl+j/k for scrolling in file viewer or help
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
@@ -226,11 +295,9 @@ impl EventHandler {
         }
 
         // Handle Esc key - always exits without directory change
+        // (fullscreen mode already handled above)
         if matches!(key.code, KeyCode::Esc) {
-            if *fullscreen_viewer {
-                // In fullscreen: Esc exits completely
-                return Ok(None);
-            } else if search.is_active() {
+            if search.is_active() {
                 // If search is running, cancel it but keep results
                 search.cancel_search();
                 return Ok(Some(PathBuf::new()));
@@ -243,27 +310,22 @@ impl EventHandler {
             }
         }
 
-        // Handle q key - exits with directory change (except in fullscreen)
+        // Handle q key - exits with directory change
+        // (fullscreen mode already handled above)
         if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
-            if *fullscreen_viewer {
-                // In fullscreen: q returns to tree view
-                *fullscreen_viewer = false;
-                return Ok(Some(PathBuf::new()));
-            } else {
-                // Normal mode: q exits with cd to selected directory (or parent if file)
-                if let Some(node) = nav.get_selected_node() {
-                    let node_borrowed = node.borrow();
-                    if node_borrowed.is_dir {
-                        return Ok(Some(node_borrowed.path.clone()));
-                    } else {
-                        // If cursor is on a file, return parent directory
-                        if let Some(parent) = node_borrowed.path.parent() {
-                            return Ok(Some(parent.to_path_buf()));
-                        }
+            // Normal mode: q exits with cd to selected directory (or parent if file)
+            if let Some(node) = nav.get_selected_node() {
+                let node_borrowed = node.borrow();
+                if node_borrowed.is_dir {
+                    return Ok(Some(node_borrowed.path.clone()));
+                } else {
+                    // If cursor is on a file, return parent directory
+                    if let Some(parent) = node_borrowed.path.parent() {
+                        return Ok(Some(parent.to_path_buf()));
                     }
                 }
-                return Ok(None);
             }
+            return Ok(None);
         }
 
         match key.code {
@@ -500,12 +562,6 @@ impl EventHandler {
                 // Enter bookmark selection mode
                 bookmarks.enter_selection_mode();
             }
-            KeyCode::Char('n') => {
-                // Toggle line numbers (only in fullscreen mode)
-                if *fullscreen_viewer {
-                    file_viewer.toggle_line_numbers();
-                }
-            }
             KeyCode::Char('z') => {
                 // Toggle directory size display
                 *show_sizes = !*show_sizes;
@@ -520,34 +576,6 @@ impl EventHandler {
                 } else {
                     // Clear cache when disabling
                     dir_size_cache.clear();
-                }
-            }
-            KeyCode::PageUp => {
-                // Scroll up by page (fullscreen mode only)
-                if *fullscreen_viewer {
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    file_viewer.scroll_page_up(visible_height);
-                }
-            }
-            KeyCode::PageDown => {
-                // Scroll down by page (fullscreen mode only)
-                if *fullscreen_viewer {
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    let max_visible_lines = visible_height.saturating_sub(2);
-                    file_viewer.scroll_page_down(visible_height, max_visible_lines);
-                }
-            }
-            KeyCode::Home => {
-                // Jump to top of file (fullscreen mode only)
-                if *fullscreen_viewer {
-                    file_viewer.reset_scroll();
-                }
-            }
-            KeyCode::End => {
-                // Jump to end of file (fullscreen mode only)
-                if *fullscreen_viewer {
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    file_viewer.scroll_to_end(visible_height);
                 }
             }
             _ => {}
