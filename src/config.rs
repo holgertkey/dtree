@@ -177,6 +177,10 @@ pub struct BehaviorConfig {
     /// External file manager command
     #[serde(default = "default_file_manager")]
     pub file_manager: String,
+
+    /// External hex editor for viewing binary files
+    #[serde(default = "default_hex_editor")]
+    pub hex_editor: String,
 }
 
 impl Default for BehaviorConfig {
@@ -188,6 +192,7 @@ impl Default for BehaviorConfig {
             double_click_timeout_ms: default_double_click_timeout(),
             editor: default_editor(),
             file_manager: default_file_manager(),
+            hex_editor: default_hex_editor(),
         }
     }
 }
@@ -198,6 +203,7 @@ fn default_follow_symlinks() -> bool { false }
 fn default_double_click_timeout() -> u64 { 500 }
 fn default_editor() -> String { "nano".to_string() }
 fn default_file_manager() -> String { "mc".to_string() }
+fn default_hex_editor() -> String { "hexyl".to_string() }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -398,6 +404,11 @@ impl Config {
         which::which(&self.behavior.file_manager).is_ok()
     }
 
+    /// Check if the configured hex editor exists in the system
+    pub fn hex_editor_exists(&self) -> bool {
+        which::which(&self.behavior.hex_editor).is_ok()
+    }
+
     /// Create a default config file with comments
     pub fn create_default_file(path: &Path) -> Result<()> {
         let default_config = r#"# dtree configuration file
@@ -467,6 +478,15 @@ editor = "nano"
 #   - "broot"   - Navigate directories with fuzzy search
 #   - "yazi"    - Modern terminal file manager
 file_manager = "mc"
+
+# External hex editor for binary files (press 'e' on binary file in fullscreen mode)
+# Default: hexyl (modern hex viewer with colors, install: cargo install hexyl)
+# Popular hex viewers:
+#   - "hexyl"   - Modern, colorful hex viewer (recommended)
+#   - "xxd"     - Standard hex dump utility (included with vim)
+#   - "hexdump" - Classic hex dump tool
+#   - "hd"      - Alias for hexdump -C
+hex_editor = "hexyl"
 
 [keybindings]
 # Key bindings (each can have multiple keys)

@@ -28,6 +28,7 @@ pub struct FileViewer {
     pub current_permissions: u32,
     pub show_line_numbers: bool,
     pub syntax_name: Option<String>,
+    pub is_binary: bool,
 }
 
 impl FileViewer {
@@ -41,6 +42,7 @@ impl FileViewer {
             current_permissions: 0,
             show_line_numbers: false,
             syntax_name: None,
+            is_binary: false,
         }
     }
 
@@ -62,6 +64,7 @@ impl FileViewer {
         self.current_size = 0;
         self.current_permissions = 0;
         self.syntax_name = None;
+        self.is_binary = false;
 
         // Check if this is a file
         if !path.is_file() {
@@ -85,6 +88,13 @@ impl FileViewer {
                 self.content.push(format!("[Cannot read metadata: {}]", e));
                 return Ok(());
             }
+        }
+
+        // Check if file is binary before trying to read it as text
+        if Self::is_binary_file(path) {
+            self.is_binary = true;
+            self.load_binary_info(path);
+            return Ok(());
         }
 
         // Try to open file
@@ -249,6 +259,102 @@ impl FileViewer {
         self.current_size = 0;
         self.current_permissions = 0;
         self.syntax_name = None;
+        self.is_binary = false;
+    }
+
+    /// Check if a file is binary by looking for NULL bytes in the first 8KB
+    pub fn is_binary_file(path: &Path) -> bool {
+        use std::io::Read;
+
+        let file = match File::open(path) {
+            Ok(f) => f,
+            Err(_) => return false,
+        };
+
+        let mut reader = BufReader::new(file);
+        let mut buffer = [0u8; 8192]; // Check first 8KB
+
+        match reader.read(&mut buffer) {
+            Ok(n) if n > 0 => {
+                // Check for NULL bytes (indicator of binary data)
+                buffer[..n].contains(&0)
+            }
+            _ => false,
+        }
+    }
+
+    /// Load informational message for binary files
+    fn load_binary_info(&mut self, path: &Path) {
+        let file_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Unknown");
+
+        let size_str = format_file_size(self.current_size);
+        let perms_str = format_permissions(self.current_permissions);
+
+        // Try to detect file type using file extension
+        let file_type = Self::guess_binary_type(path);
+
+        self.content = vec![
+            "".to_string(),
+            "╔══════════════════════════════════════════════════════════════════╗".to_string(),
+            "║                         BINARY FILE                              ║".to_string(),
+            "╚══════════════════════════════════════════════════════════════════╝".to_string(),
+            "".to_string(),
+            format!("  File: {}", file_name),
+            format!("  Size: {} ({} bytes)", size_str, self.current_size),
+            format!("  Type: {}", file_type),
+            format!("  Permissions: {}", perms_str),
+            "".to_string(),
+            "  This is a binary file and cannot be displayed as text.".to_string(),
+            "".to_string(),
+            "  Available Actions:".to_string(),
+            "    e  -  Open in hex editor (configured in config.toml)".to_string(),
+            "    o  -  Open in file manager".to_string(),
+            "    c  -  Copy path to clipboard".to_string(),
+            "    q  -  Return to tree view".to_string(),
+            "".to_string(),
+            "  Tip: Configure your preferred hex editor in ~/.config/dtree/config.toml".to_string(),
+            "       Default: hexyl (install with: cargo install hexyl)".to_string(),
+            "".to_string(),
+        ];
+    }
+
+    /// Guess binary file type based on extension
+    fn guess_binary_type(path: &Path) -> String {
+        let extension = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        match extension.as_str() {
+            // Executables
+            "exe" | "dll" | "so" | "dylib" | "bin" => "Executable / Library".to_string(),
+            // Archives
+            "zip" | "tar" | "gz" | "bz2" | "xz" | "7z" | "rar" => "Archive".to_string(),
+            // Images
+            "png" | "jpg" | "jpeg" | "gif" | "bmp" | "ico" | "webp" => "Image".to_string(),
+            // Video
+            "mp4" | "mkv" | "avi" | "mov" | "wmv" | "flv" | "webm" => "Video".to_string(),
+            // Audio
+            "mp3" | "wav" | "flac" | "ogg" | "m4a" | "aac" => "Audio".to_string(),
+            // Documents
+            "pdf" => "PDF Document".to_string(),
+            "doc" | "docx" => "Word Document".to_string(),
+            "xls" | "xlsx" => "Excel Spreadsheet".to_string(),
+            "ppt" | "pptx" => "PowerPoint Presentation".to_string(),
+            // Database
+            "db" | "sqlite" | "sqlite3" => "Database".to_string(),
+            // Object files
+            "o" | "a" | "lib" => "Object / Library File".to_string(),
+            // ISO images
+            "iso" | "img" => "Disk Image".to_string(),
+            // Font files
+            "ttf" | "otf" | "woff" | "woff2" => "Font File".to_string(),
+            _ => "Binary Data".to_string(),
+        }
     }
 
     /// Format file information string

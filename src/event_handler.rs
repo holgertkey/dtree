@@ -264,6 +264,54 @@ impl EventHandler {
                     file_viewer.toggle_line_numbers();
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char('e') | KeyCode::Char('E') => {
+                    // Open file in editor (or hex editor for binary files)
+                    if let Some(node) = nav.get_selected_node() {
+                        let node_borrowed = node.borrow();
+                        if !node_borrowed.is_dir {
+                            let path = node_borrowed.path.clone();
+                            drop(node_borrowed);
+
+                            // Check if binary file
+                            if file_viewer.is_binary {
+                                // Return special marker for hex editor
+                                let marker_path = PathBuf::from(format!("HEXEDITOR:{}", path.display()));
+                                return Ok(Some(marker_path));
+                            } else {
+                                // Return special marker for text editor
+                                let marker_path = PathBuf::from(format!("EDITOR:{}", path.display()));
+                                return Ok(Some(marker_path));
+                            }
+                        }
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('c') | KeyCode::Char('C') => {
+                    // Copy path to clipboard
+                    if let Some(node) = nav.get_selected_node() {
+                        if let Ok(mut clipboard) = Clipboard::new() {
+                            let _ = clipboard.set_text(node.borrow().path.display().to_string());
+                        }
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('o') | KeyCode::Char('O') => {
+                    // Open in file manager
+                    if let Some(node) = nav.get_selected_node() {
+                        let node_borrowed = node.borrow();
+                        let path_to_open = if node_borrowed.is_dir {
+                            node_borrowed.path.clone()
+                        } else {
+                            node_borrowed.path.parent()
+                                .unwrap_or(&node_borrowed.path)
+                                .to_path_buf()
+                        };
+                        drop(node_borrowed);
+                        let marker_path = PathBuf::from(format!("FILEMGR:{}", path_to_open.display()));
+                        return Ok(Some(marker_path));
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::PageUp => {
                     // Scroll up by page
                     let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
@@ -546,13 +594,27 @@ impl EventHandler {
                 }
             }
             _ if config.keybindings.is_open_editor(key.code) => {
-                // Open file in external editor
+                // Open file in external editor (or hex editor for binary files)
                 if let Some(node) = nav.get_selected_node() {
                     let node_borrowed = node.borrow();
                     if !node_borrowed.is_dir {
-                        // Return special marker path to signal editor opening
-                        let marker_path = PathBuf::from(format!("EDITOR:{}", node_borrowed.path.display()));
-                        return Ok(Some(marker_path));
+                        let path = node_borrowed.path.clone();
+                        drop(node_borrowed);
+
+                        // Check if file is binary
+                        use crate::file_viewer::FileViewer;
+                        use std::path::Path;
+                        let is_binary = FileViewer::is_binary_file(Path::new(&path));
+
+                        if is_binary {
+                            // Return special marker for hex editor
+                            let marker_path = PathBuf::from(format!("HEXEDITOR:{}", path.display()));
+                            return Ok(Some(marker_path));
+                        } else {
+                            // Return special marker for text editor
+                            let marker_path = PathBuf::from(format!("EDITOR:{}", path.display()));
+                            return Ok(Some(marker_path));
+                        }
                     }
                 }
             }

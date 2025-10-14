@@ -77,6 +77,37 @@ fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
     Ok(())
 }
 
+/// Open a binary file in the external hex editor specified in config
+fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
+    let hex_editor = &config.behavior.hex_editor;
+
+    // Check if hex editor exists
+    if !config.hex_editor_exists() {
+        eprintln!("Error: Hex editor '{}' not found in system.", hex_editor);
+        eprintln!("Install it with: cargo install hexyl");
+        eprintln!("Or edit the configuration file to choose a different hex editor.");
+        std::process::exit(1);
+    }
+
+    // Use shell to execute hex editor with proper terminal handling
+    // Properly quote the file path to handle spaces and special characters
+    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
+                            hex_editor,
+                            file_path.replace("'", "'\\''"));
+
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg(&shell_cmd)
+        .status()?;
+
+    if !status.success() {
+        eprintln!("Error: Hex editor exited with status: {}", status);
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
 /// Open a directory in the external file manager specified in config
 fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
     let file_manager = &config.behavior.file_manager;
@@ -297,6 +328,8 @@ fn main() -> Result<()> {
                     let path_str = path.to_string_lossy();
                     if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
                         open_in_editor(file_path, &config)?;
+                    } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
+                        open_in_hex_editor(file_path, &config)?;
                     } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
                         open_in_file_manager(dir_path, &config)?;
                     } else {
@@ -330,6 +363,8 @@ fn main() -> Result<()> {
             let path_str = path.to_string_lossy();
             if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
                 open_in_editor(file_path, &config)?;
+            } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
+                open_in_hex_editor(file_path, &config)?;
             } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
                 open_in_file_manager(dir_path, &config)?;
             } else {
