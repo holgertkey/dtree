@@ -51,13 +51,6 @@ struct Args {
 fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
     let editor = &config.behavior.editor;
 
-    // Check if editor exists
-    if !config.editor_exists() {
-        eprintln!("Error: Editor '{}' not found in system.", editor);
-        eprintln!("Edit the configuration file to choose the editor.");
-        std::process::exit(1);
-    }
-
     // Use shell to execute editor with proper terminal handling
     // Properly quote the file path to handle spaces and special characters
     let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
@@ -79,14 +72,6 @@ fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
 fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
     let hex_editor = &config.behavior.hex_editor;
 
-    // Check if hex editor exists
-    if !config.hex_editor_exists() {
-        eprintln!("Error: Hex editor '{}' not found in system.", hex_editor);
-        eprintln!("Install it with: cargo install hexyl");
-        eprintln!("Or edit the configuration file to choose a different hex editor.");
-        std::process::exit(1);
-    }
-
     // Use shell to execute hex editor with proper terminal handling
     // Properly quote the file path to handle spaces and special characters
     let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
@@ -107,13 +92,6 @@ fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
 /// Open a directory in the external file manager specified in config
 fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
     let file_manager = &config.behavior.file_manager;
-
-    // Check if file manager exists
-    if !config.file_manager_exists() {
-        eprintln!("Error: File manager '{}' not found in system.", file_manager);
-        eprintln!("Edit the configuration file to choose the file manager.");
-        std::process::exit(1);
-    }
 
     // Use shell to execute file manager with proper terminal handling
     // Properly quote the directory path to handle spaces and special characters

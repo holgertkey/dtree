@@ -369,9 +369,10 @@ impl Config {
 
     /// Load configuration with fallback order:
     /// 1. Global config (~/.config/dtree/config.toml)
-    /// 2. Default config
+    /// 2. Default config (if file is missing or has errors)
     ///
     /// If config file doesn't exist, it will be created automatically with default values.
+    /// If config file has parse errors, detailed error is shown and default config is loaded.
     pub fn load() -> Self {
         let mut config = Config::default();
 
@@ -385,28 +386,33 @@ impl Config {
 
             // Load config from file
             if global_path.exists() {
-                if let Ok(global_config) = Self::from_file(&global_path) {
-                    config = global_config;
+                match Self::from_file(&global_path) {
+                    Ok(global_config) => {
+                        config = global_config;
+                    }
+                    Err(e) => {
+                        // Show detailed error and exit
+                        eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        eprintln!("⚠  Configuration file error!");
+                        eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        eprintln!();
+                        eprintln!("Config file: {}", global_path.display());
+                        eprintln!();
+                        eprintln!("Error details:");
+                        eprintln!("{:#}", e);
+                        eprintln!();
+                        eprintln!("To fix:");
+                        eprintln!("  1. Edit the config file and fix the syntax error");
+                        eprintln!("  2. Or delete the file - it will be recreated with defaults");
+                        eprintln!();
+                        eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        std::process::exit(1);
+                    }
                 }
             }
         }
 
         config
-    }
-
-    /// Check if the configured editor exists in the system
-    pub fn editor_exists(&self) -> bool {
-        which::which(&self.behavior.editor).is_ok()
-    }
-
-    /// Check if the configured file manager exists in the system
-    pub fn file_manager_exists(&self) -> bool {
-        which::which(&self.behavior.file_manager).is_ok()
-    }
-
-    /// Check if the configured hex editor exists in the system
-    pub fn hex_editor_exists(&self) -> bool {
-        which::which(&self.behavior.hex_editor).is_ok()
     }
 
     /// Create a default config file with comments
