@@ -511,26 +511,17 @@ impl UI {
         let title = if show_help {
             format!(" Help{} ", scroll_info)
         } else if is_fullscreen {
-            // Fullscreen mode
-            let line_num_hint = if file_viewer.show_line_numbers { "n: hide lines" } else { "n: show lines" };
-
-            // Add tail/head mode indicator
+            // Fullscreen mode - simplified title
             let mode_indicator = if file_viewer.tail_mode {
-                " [TAIL MODE - showing last lines]"
+                " [TAIL MODE]"
             } else if file_viewer.total_lines.is_some() && file_viewer.total_lines.unwrap() > file_viewer.content.len() {
-                " [HEAD MODE - showing first lines]"
+                " [HEAD MODE]"
             } else {
                 ""
             };
 
-            let tail_hint = if file_viewer.can_use_tail_mode() {
-                " | End: tail | Home: head"
-            } else {
-                ""
-            };
-
-            format!(" File Viewer (Fullscreen{} - j/k: scroll | Ctrl+j/k: next/prev file | {}{} | q: back | Esc: exit){} ",
-                mode_indicator, line_num_hint, tail_hint, scroll_info)
+            format!(" File Viewer (Fullscreen{} - j/k: scroll | Ctrl+j/k: next/prev file | q: back | Esc: exit){} ",
+                mode_indicator, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
@@ -806,7 +797,7 @@ pub fn get_help_content() -> Vec<String> {
         "  When enabled:".to_string(),
         "    • Shows files in addition to directories".to_string(),
         "    • Displays file preview panel on the right".to_string(),
-        "    • Shows file content (first 1000 lines)".to_string(),
+        "    • Shows file content (up to 10000 lines by default)".to_string(),
         "    • Displays file information (size, lines, permissions)".to_string(),
         "".to_string(),
         "  File Preview Navigation:".to_string(),
@@ -850,9 +841,17 @@ pub fn get_help_content() -> Vec<String> {
         "    Ctrl+j       Jump to next file in directory".to_string(),
         "    Ctrl+k       Jump to previous file in directory".to_string(),
         "    Page Up/Down Scroll by page (fast navigation)".to_string(),
-        "    Home         Jump to top of file".to_string(),
-        "    End          Jump to bottom of file".to_string(),
+        "    Home         Switch to HEAD mode (show first 10000 lines)".to_string(),
+        "    End          Switch to TAIL mode (show last 10000 lines)".to_string(),
         "    Scroll wheel Scroll by line with mouse".to_string(),
+        "".to_string(),
+        "  Large File Viewing:".to_string(),
+        "    • Files with more than 10000 lines show HEAD or TAIL mode indicator".to_string(),
+        "    • HEAD mode shows first 10000 lines (default)".to_string(),
+        "    • TAIL mode shows last 10000 lines (useful for logs)".to_string(),
+        "    • Press End to switch to TAIL mode, Home to switch back to HEAD".to_string(),
+        "    • Mode indicator appears in title: [HEAD MODE] or [TAIL MODE]".to_string(),
+        "    • For large files (>1MB), tail mode uses efficient backward reading".to_string(),
         "".to_string(),
         "  Text Selection (fullscreen mode):".to_string(),
         "    Shift+Mouse  Select text (bypasses mouse capture)".to_string(),
