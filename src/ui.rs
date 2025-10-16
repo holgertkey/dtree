@@ -513,7 +513,24 @@ impl UI {
         } else if is_fullscreen {
             // Fullscreen mode
             let line_num_hint = if file_viewer.show_line_numbers { "n: hide lines" } else { "n: show lines" };
-            format!(" File Viewer (Fullscreen - j/k: scroll | Ctrl+j/k: next/prev file | {} | q: back | Esc: exit){} ", line_num_hint, scroll_info)
+
+            // Add tail/head mode indicator
+            let mode_indicator = if file_viewer.tail_mode {
+                " [TAIL MODE - showing last lines]"
+            } else if file_viewer.total_lines.is_some() && file_viewer.total_lines.unwrap() > file_viewer.content.len() {
+                " [HEAD MODE - showing first lines]"
+            } else {
+                ""
+            };
+
+            let tail_hint = if file_viewer.can_use_tail_mode() {
+                " | End: tail | Home: head"
+            } else {
+                ""
+            };
+
+            format!(" File Viewer (Fullscreen{} - j/k: scroll | Ctrl+j/k: next/prev file | {}{} | q: back | Esc: exit){} ",
+                mode_indicator, line_num_hint, tail_hint, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };

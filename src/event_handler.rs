@@ -326,14 +326,32 @@ impl EventHandler {
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Home => {
-                    // Jump to top of file
-                    file_viewer.reset_scroll();
+                    // Switch to head mode (show first N lines) and reload file
+                    if file_viewer.can_use_tail_mode() && file_viewer.tail_mode {
+                        file_viewer.enable_head_mode();
+                        // Reload file with head mode
+                        if let Some(node) = nav.get_selected_node() {
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                        }
+                    } else {
+                        // Normal Home behavior - jump to top
+                        file_viewer.reset_scroll();
+                    }
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::End => {
-                    // Jump to end of file
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    file_viewer.scroll_to_end(visible_height);
+                    // Switch to tail mode (show last N lines) and reload file
+                    if file_viewer.can_use_tail_mode() && !file_viewer.tail_mode {
+                        file_viewer.enable_tail_mode();
+                        // Reload file with tail mode
+                        if let Some(node) = nav.get_selected_node() {
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                        }
+                    } else {
+                        // Normal End behavior - jump to bottom
+                        let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                        file_viewer.scroll_to_end(visible_height);
+                    }
                     return Ok(Some(PathBuf::new()));
                 }
                 _ => {

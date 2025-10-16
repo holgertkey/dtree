@@ -197,7 +197,7 @@ impl Default for BehaviorConfig {
     }
 }
 
-fn default_max_file_lines() -> usize { 1000 }
+fn default_max_file_lines() -> usize { 10000 }
 fn default_show_hidden() -> bool { true }
 fn default_follow_symlinks() -> bool { true }
 fn default_double_click_timeout() -> u64 { 500 }
@@ -455,7 +455,7 @@ highlight_color = "yellow"
 
 [behavior]
 # Maximum number of lines to read from files
-max_file_lines = 1000
+max_file_lines = 10000
 
 # Show hidden files (dotfiles)
 show_hidden = true
@@ -529,7 +529,7 @@ mod tests {
     fn test_default_config() {
         let config = Config::default();
         assert_eq!(config.appearance.split_position, 50);
-        assert_eq!(config.behavior.max_file_lines, 1000);
+        assert_eq!(config.behavior.max_file_lines, 10000);
         assert!(config.behavior.show_hidden);
     }
 

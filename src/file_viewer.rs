@@ -29,6 +29,8 @@ pub struct FileViewer {
     pub show_line_numbers: bool,
     pub syntax_name: Option<String>,
     pub is_binary: bool,
+    pub tail_mode: bool,  // true = showing last N lines, false = showing first N lines
+    pub total_lines: Option<usize>,  // total lines in file (if known)
 }
 
 impl FileViewer {
@@ -43,12 +45,83 @@ impl FileViewer {
             show_line_numbers: false,
             syntax_name: None,
             is_binary: false,
+            tail_mode: false,
+            total_lines: None,
         }
     }
 
     /// Toggle line numbers display
     pub fn toggle_line_numbers(&mut self) {
         self.show_line_numbers = !self.show_line_numbers;
+    }
+
+    /// Read last N lines from a file (for tail mode)
+    fn read_tail_lines(path: &Path, max_lines: usize) -> Result<(Vec<String>, usize)> {
+        use std::io::{Seek, SeekFrom};
+
+        let mut file = File::open(path)?;
+        let file_size = file.metadata()?.len();
+
+        // If file is small, just read all lines
+        if file_size < 1024 * 1024 {  // < 1MB
+            let reader = BufReader::new(file);
+            let all_lines: Vec<String> = reader.lines().filter_map(|l| l.ok()).collect();
+            let total = all_lines.len();
+
+            if total <= max_lines {
+                return Ok((all_lines, total));
+            }
+
+            let start_idx = total.saturating_sub(max_lines);
+            return Ok((all_lines[start_idx..].to_vec(), total));
+        }
+
+        // For large files: seek backward from end
+        // Strategy: read chunks backwards until we have enough lines
+        const CHUNK_SIZE: u64 = 64 * 1024;  // 64KB chunks
+        let mut buffer = Vec::new();
+        let mut current_pos = file_size;
+        let mut lines_found = 0;
+
+        loop {
+            // Calculate chunk position
+            let chunk_start = current_pos.saturating_sub(CHUNK_SIZE);
+            let chunk_size = (current_pos - chunk_start) as usize;
+
+            // Seek to chunk start
+            file.seek(SeekFrom::Start(chunk_start))?;
+
+            // Read chunk
+            let mut chunk = vec![0u8; chunk_size];
+            std::io::Read::read_exact(&mut file, &mut chunk)?;
+
+            // Prepend to buffer
+            chunk.append(&mut buffer);
+            buffer = chunk;
+
+            // Count lines in buffer
+            lines_found = buffer.iter().filter(|&&b| b == b'\n').count();
+
+            // If we have enough lines or reached start, stop
+            if lines_found >= max_lines || chunk_start == 0 {
+                break;
+            }
+
+            current_pos = chunk_start;
+        }
+
+        // Convert buffer to string and split into lines
+        let text = String::from_utf8_lossy(&buffer);
+        let all_lines: Vec<String> = text.lines().map(|s| s.to_string()).collect();
+        let total = all_lines.len();
+
+        // Return last max_lines
+        if total <= max_lines {
+            Ok((all_lines, total))
+        } else {
+            let start_idx = total.saturating_sub(max_lines);
+            Ok((all_lines[start_idx..].to_vec(), total))
+        }
     }
 
     /// Load file content with specified max width and max lines
@@ -65,6 +138,8 @@ impl FileViewer {
         self.current_permissions = 0;
         self.syntax_name = None;
         self.is_binary = false;
+        // Note: tail_mode is NOT reset here - it persists across reloads
+        self.total_lines = None;
 
         // Check if this is a file
         if !path.is_file() {
@@ -97,40 +172,73 @@ impl FileViewer {
             return Ok(());
         }
 
-        // Try to open file
-        let file = match File::open(path) {
-            Ok(f) => f,
-            Err(e) => {
-                self.content.push(format!("[Error: {}]", e));
-                return Ok(());
+        // Read file content based on mode (head or tail)
+        let (raw_lines, total_lines) = if self.tail_mode {
+            // Tail mode: read last N lines
+            match Self::read_tail_lines(path, max_lines) {
+                Ok(result) => result,
+                Err(e) => {
+                    self.content.push(format!("[Error reading file: {}]", e));
+                    return Ok(());
+                }
             }
+        } else {
+            // Head mode: read first N lines
+            let file = match File::open(path) {
+                Ok(f) => f,
+                Err(e) => {
+                    self.content.push(format!("[Error: {}]", e));
+                    return Ok(());
+                }
+            };
+
+            let reader = BufReader::new(file);
+            let mut lines = Vec::new();
+            let mut line_count = 0;
+            let mut total = 0;
+
+            for line in reader.lines() {
+                total += 1;
+
+                if line_count >= max_lines {
+                    // Continue counting total lines even after truncation
+                    continue;
+                }
+
+                match line {
+                    Ok(content) => {
+                        lines.push(content);
+                        line_count += 1;
+                    }
+                    Err(e) => {
+                        // Possibly binary file or encoding error
+                        self.content.clear();
+                        self.content.push(format!("[Binary file or encoding error: {}]", e));
+                        return Ok(());
+                    }
+                }
+            }
+
+            (lines, total)
         };
 
-        let reader = BufReader::new(file);
-        let mut line_count = 0;
+        // Store total lines for UI display
+        self.total_lines = Some(total_lines);
 
-        for line in reader.lines() {
-            if line_count >= max_lines {
-                self.content.push(format!("\n[... truncated at {} lines ...]", max_lines));
-                break;
-            }
+        // Process lines: replace tabs and truncate
+        for content in raw_lines {
+            // Replace tabs with spaces (4 spaces per tab)
+            let content_no_tabs = content.replace('\t', "    ");
+            // Truncate line to prevent Unicode artifacts
+            let truncated = Self::truncate_line(&content_no_tabs, max_width);
+            self.content.push(truncated);
+        }
 
-            match line {
-                Ok(content) => {
-                    // Replace tabs with spaces (4 spaces per tab)
-                    let content_no_tabs = content.replace('\t', "    ");
-                    // Truncate line to prevent Unicode artifacts
-                    let truncated = Self::truncate_line(&content_no_tabs, max_width);
-                    self.content.push(truncated);
-                    line_count += 1;
-                }
-                Err(e) => {
-                    // Possibly binary file or encoding error
-                    self.content.clear();
-                    self.content.push(format!("[Binary file or encoding error: {}]", e));
-                    break;
-                }
-            }
+        // Add truncation indicator if needed
+        if !self.tail_mode && total_lines > max_lines {
+            self.content.push(format!("\n[... truncated, showing first {} of {} lines. Press End to see tail ...]", max_lines, total_lines));
+        } else if self.tail_mode && total_lines > max_lines {
+            self.content.insert(0, format!("[... showing last {} of {} lines. Press Home to see head ...]", max_lines, total_lines));
         }
 
         if self.content.is_empty() {
@@ -260,6 +368,28 @@ impl FileViewer {
         self.current_permissions = 0;
         self.syntax_name = None;
         self.is_binary = false;
+        self.tail_mode = false;
+        self.total_lines = None;
+    }
+
+    /// Switch to tail mode (show last N lines)
+    pub fn enable_tail_mode(&mut self) {
+        self.tail_mode = true;
+    }
+
+    /// Switch to head mode (show first N lines)
+    pub fn enable_head_mode(&mut self) {
+        self.tail_mode = false;
+    }
+
+    /// Toggle between head and tail mode
+    pub fn toggle_tail_mode(&mut self) {
+        self.tail_mode = !self.tail_mode;
+    }
+
+    /// Check if file can use tail mode (is a text file and has path set)
+    pub fn can_use_tail_mode(&self) -> bool {
+        !self.is_binary && !self.current_path.as_os_str().is_empty()
     }
 
     /// Check if a file is binary by looking for NULL bytes in the first 8KB
