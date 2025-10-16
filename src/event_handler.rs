@@ -259,7 +259,7 @@ impl EventHandler {
                     file_viewer.scroll_up();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('n') => {
+                _ if config.keybindings.is_show_line_numbers(key.code) => {
                     // Toggle line numbers (only in fullscreen mode)
                     file_viewer.toggle_line_numbers();
                     return Ok(Some(PathBuf::new()));
