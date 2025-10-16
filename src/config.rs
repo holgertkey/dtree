@@ -198,8 +198,8 @@ impl Default for BehaviorConfig {
 }
 
 fn default_max_file_lines() -> usize { 1000 }
-fn default_show_hidden() -> bool { false }
-fn default_follow_symlinks() -> bool { false }
+fn default_show_hidden() -> bool { true }
+fn default_follow_symlinks() -> bool { true }
 fn default_double_click_timeout() -> u64 { 500 }
 fn default_editor() -> String { "nano".to_string() }
 fn default_file_manager() -> String { "mc".to_string() }
@@ -458,10 +458,10 @@ highlight_color = "yellow"
 max_file_lines = 1000
 
 # Show hidden files (dotfiles)
-show_hidden = false
+show_hidden = true
 
 # Follow symbolic links
-follow_symlinks = false
+follow_symlinks = true
 
 # Double-click timeout in milliseconds
 double_click_timeout_ms = 500
@@ -530,7 +530,7 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.appearance.split_position, 50);
         assert_eq!(config.behavior.max_file_lines, 1000);
-        assert!(!config.behavior.show_hidden);
+        assert!(config.behavior.show_hidden);
     }
 
     #[test]

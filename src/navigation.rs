@@ -9,12 +9,14 @@ pub struct Navigation {
     pub root: TreeNodeRef,
     pub flat_list: Vec<TreeNodeRef>,
     pub selected: usize,
+    pub show_hidden: bool,
+    pub follow_symlinks: bool,
 }
 
 impl Navigation {
-    pub fn new(start_path: PathBuf, show_files: bool) -> Result<Self> {
+    pub fn new(start_path: PathBuf, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<Self> {
         let mut root = TreeNode::new(start_path, 0)?;
-        root.load_children(show_files)?;
+        root.load_children(show_files, show_hidden, follow_symlinks)?;
         root.is_expanded = true;
         let root = Rc::new(RefCell::new(root));
 
@@ -22,6 +24,8 @@ impl Navigation {
             root,
             flat_list: Vec::new(),
             selected: 0,
+            show_hidden,
+            follow_symlinks,
         };
 
         nav.rebuild_flat_list();
@@ -65,15 +69,15 @@ impl Navigation {
     /// Toggle node expansion at path
     /// Returns Some(error_message) if node has error after toggle, None otherwise
     pub fn toggle_node(&mut self, path: &Path, show_files: bool) -> Result<Option<String>> {
-        let error_msg = Self::toggle_node_recursive(&self.root, path, show_files)?;
+        let error_msg = Self::toggle_node_recursive(&self.root, path, show_files, self.show_hidden, self.follow_symlinks)?;
         self.rebuild_flat_list();
         Ok(error_msg)
     }
 
-    fn toggle_node_recursive(node: &TreeNodeRef, target_path: &Path, show_files: bool) -> Result<Option<String>> {
+    fn toggle_node_recursive(node: &TreeNodeRef, target_path: &Path, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<Option<String>> {
         let mut node_borrowed = node.borrow_mut();
         if node_borrowed.path == target_path {
-            node_borrowed.toggle_expand(show_files)?;
+            node_borrowed.toggle_expand(show_files, show_hidden, follow_symlinks)?;
             // Check if node has error after toggle
             let error_msg = if node_borrowed.has_error {
                 node_borrowed.error_message.clone()
@@ -87,7 +91,7 @@ impl Navigation {
         drop(node_borrowed);
 
         for child in &children {
-            if let Some(error_msg) = Self::toggle_node_recursive(child, target_path, show_files)? {
+            if let Some(error_msg) = Self::toggle_node_recursive(child, target_path, show_files, show_hidden, follow_symlinks)? {
                 return Ok(Some(error_msg));
             }
         }
@@ -97,24 +101,24 @@ impl Navigation {
 
     /// Reload tree with new show_files setting
     pub fn reload_tree(&mut self, show_files: bool) -> Result<()> {
-        Self::reload_node_recursive(&self.root, show_files)?;
+        Self::reload_node_recursive(&self.root, show_files, self.show_hidden, self.follow_symlinks)?;
         self.rebuild_flat_list();
         Ok(())
     }
 
-    fn reload_node_recursive(node: &TreeNodeRef, show_files: bool) -> Result<()> {
+    fn reload_node_recursive(node: &TreeNodeRef, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
         let mut node_borrowed = node.borrow_mut();
         if node_borrowed.is_expanded && node_borrowed.is_dir {
             // Clear children and reload with new mode
             node_borrowed.children.clear();
-            node_borrowed.load_children(show_files)?;
+            node_borrowed.load_children(show_files, show_hidden, follow_symlinks)?;
 
             // Recursively reload child nodes
             let children = node_borrowed.children.clone();
             drop(node_borrowed);
 
             for child in &children {
-                Self::reload_node_recursive(child, show_files)?;
+                Self::reload_node_recursive(child, show_files, show_hidden, follow_symlinks)?;
             }
         }
         Ok(())
@@ -131,7 +135,7 @@ impl Navigation {
             let current_path = self.root.borrow().path.clone();
 
             let mut new_root = TreeNode::new(parent_path, 0)?;
-            new_root.load_children(show_files)?;
+            new_root.load_children(show_files, self.show_hidden, self.follow_symlinks)?;
             new_root.is_expanded = true;
 
             self.root = Rc::new(RefCell::new(new_root));
@@ -161,7 +165,7 @@ impl Navigation {
         let old_selected = self.selected;
 
         let mut new_root = TreeNode::new(target_path, 0)?;
-        new_root.load_children(show_files)?;
+        new_root.load_children(show_files, self.show_hidden, self.follow_symlinks)?;
         new_root.is_expanded = true;
 
         // Check if the new root has an error
@@ -182,7 +186,7 @@ impl Navigation {
 
     /// Expand path to node (for search results)
     pub fn expand_path_to_node(&mut self, target_path: &PathBuf, show_files: bool) -> Result<()> {
-        Self::expand_path_recursive(&self.root, target_path, show_files)?;
+        Self::expand_path_recursive(&self.root, target_path, show_files, self.show_hidden, self.follow_symlinks)?;
         self.rebuild_flat_list();
 
         // Find and select element in tree
@@ -196,7 +200,7 @@ impl Navigation {
         Ok(())
     }
 
-    fn expand_path_recursive(node: &TreeNodeRef, target_path: &PathBuf, show_files: bool) -> Result<bool> {
+    fn expand_path_recursive(node: &TreeNodeRef, target_path: &PathBuf, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<bool> {
         let mut node_borrowed = node.borrow_mut();
 
         // If this is the target node, do nothing
@@ -211,7 +215,7 @@ impl Navigation {
 
         // Load children if needed
         if node_borrowed.children.is_empty() && node_borrowed.is_dir {
-            node_borrowed.load_children(show_files)?;
+            node_borrowed.load_children(show_files, show_hidden, follow_symlinks)?;
         }
 
         // Expand current node
@@ -222,7 +226,7 @@ impl Navigation {
         drop(node_borrowed);
 
         for child in &children {
-            if Self::expand_path_recursive(child, target_path, show_files)? {
+            if Self::expand_path_recursive(child, target_path, show_files, show_hidden, follow_symlinks)? {
                 return Ok(true);
             }
         }

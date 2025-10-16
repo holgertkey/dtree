@@ -34,7 +34,7 @@ impl App {
         // Load configuration from global config file
         let config = Config::load();
 
-        let nav = Navigation::new(start_path, config.behavior.show_hidden)?;
+        let nav = Navigation::new(start_path, false, config.behavior.show_hidden, config.behavior.follow_symlinks)?;
         let mut file_viewer = FileViewer::new();
         let search = Search::new();
         let mut ui = UI::new();

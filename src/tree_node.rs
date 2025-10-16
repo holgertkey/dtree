@@ -38,7 +38,7 @@ impl TreeNode {
         })
     }
 
-    pub fn load_children(&mut self, show_files: bool) -> Result<()> {
+    pub fn load_children(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
         if !self.is_dir || !self.children.is_empty() {
             return Ok(());
         }
@@ -62,7 +62,26 @@ impl TreeNode {
             match entry {
                 Ok(entry) => {
                     let path = entry.path();
+
+                    // Check if entry is a symlink and whether to follow it
+                    if !follow_symlinks {
+                        if let Ok(metadata) = fs::symlink_metadata(&path) {
+                            if metadata.is_symlink() {
+                                continue; // Skip symlinks if follow_symlinks is false
+                            }
+                        }
+                    }
+
                     let is_dir = path.is_dir();
+
+                    // Check if file/directory is hidden (starts with .)
+                    if !show_hidden {
+                        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                            if name.starts_with('.') {
+                                continue; // Skip hidden files/directories
+                            }
+                        }
+                    }
 
                     // Show directories always, files only if show_files == true
                     if is_dir || show_files {
@@ -109,7 +128,7 @@ impl TreeNode {
         Ok(())
     }
 
-    pub fn toggle_expand(&mut self, show_files: bool) -> Result<()> {
+    pub fn toggle_expand(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
         if !self.is_dir {
             return Ok(());
         }
@@ -117,7 +136,7 @@ impl TreeNode {
         if self.is_expanded {
             self.is_expanded = false;
         } else {
-            self.load_children(show_files)?;
+            self.load_children(show_files, show_hidden, follow_symlinks)?;
             self.is_expanded = true;
         }
 

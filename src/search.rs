@@ -102,7 +102,7 @@ impl Search {
     }
 
     /// Execute two-phase search: quick + deep background scan
-    pub fn perform_search(&mut self, root: &TreeNodeRef, show_files: bool) {
+    pub fn perform_search(&mut self, root: &TreeNodeRef, show_files: bool, show_hidden: bool, follow_symlinks: bool) {
         // Cancel any existing search
         self.cancel_search();
 
@@ -123,10 +123,10 @@ impl Search {
         let is_fuzzy = self.fuzzy_mode;
 
         // Phase 1: Quick search through already loaded nodes
-        self.search_loaded_nodes(root, &query_lower, show_files, is_fuzzy);
+        self.search_loaded_nodes(root, &query_lower, show_files, show_hidden, is_fuzzy);
 
         // Phase 2: Deep search in background thread
-        self.spawn_deep_search(root, query_lower, show_files, is_fuzzy);
+        self.spawn_deep_search(root, query_lower, show_files, show_hidden, follow_symlinks, is_fuzzy);
 
         self.show_results = true;
         self.focus_on_results = true; // Always focus on results after search
@@ -135,12 +135,19 @@ impl Search {
     }
 
     /// Phase 1: Quick search through already loaded (visible) nodes
-    fn search_loaded_nodes(&mut self, node: &TreeNodeRef, query: &str, show_files: bool, fuzzy: bool) {
+    fn search_loaded_nodes(&mut self, node: &TreeNodeRef, query: &str, show_files: bool, show_hidden: bool, fuzzy: bool) {
         use fuzzy_matcher::FuzzyMatcher;
         use fuzzy_matcher::skim::SkimMatcherV2;
 
         let node_borrowed = node.borrow();
         let name_lower = node_borrowed.name.to_lowercase();
+
+        // Check if node is hidden (starts with .)
+        let is_hidden = node_borrowed.name.starts_with('.');
+        if !show_hidden && is_hidden {
+            // Skip hidden files/directories if show_hidden is false
+            return;
+        }
 
         // Check current node
         if show_files || node_borrowed.is_dir {
@@ -174,13 +181,13 @@ impl Search {
             drop(node_borrowed);
 
             for child in &children {
-                self.search_loaded_nodes(child, query, show_files, fuzzy);
+                self.search_loaded_nodes(child, query, show_files, show_hidden, fuzzy);
             }
         }
     }
 
     /// Phase 2: Spawn background thread for deep search
-    fn spawn_deep_search(&mut self, root: &TreeNodeRef, query: String, show_files: bool, fuzzy: bool) {
+    fn spawn_deep_search(&mut self, root: &TreeNodeRef, query: String, show_files: bool, show_hidden: bool, follow_symlinks: bool, fuzzy: bool) {
         let (result_tx, result_rx) = unbounded();
         let (cancel_tx, cancel_rx) = bounded(1);
 
@@ -189,7 +196,7 @@ impl Search {
 
         // Spawn search thread
         let handle = thread::spawn(move || {
-            Self::deep_search_recursive(&root_path, &query, &result_tx, &cancel_rx, show_files, fuzzy, &mut 0);
+            Self::deep_search_recursive(&root_path, &query, &result_tx, &cancel_rx, show_files, show_hidden, follow_symlinks, fuzzy, &mut 0);
             let _ = result_tx.send(SearchMessage::Done);
         });
 
@@ -205,6 +212,8 @@ impl Search {
         result_tx: &Sender<SearchMessage>,
         cancel_rx: &Receiver<()>,
         show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
         fuzzy: bool,
         scanned: &mut usize,
     ) {
@@ -216,11 +225,29 @@ impl Search {
             return;
         }
 
+        // Check if entry is a symlink and whether to follow it
+        if !follow_symlinks {
+            if let Ok(metadata) = std::fs::symlink_metadata(path) {
+                if metadata.is_symlink() {
+                    return; // Skip symlinks if follow_symlinks is false
+                }
+            }
+        }
+
         // Check if this is a directory
         let is_dir = path.is_dir();
 
         if !is_dir && !show_files {
             return; // Skip files if not in file viewing mode
+        }
+
+        // Check if file/directory is hidden (starts with .)
+        if !show_hidden {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.starts_with('.') {
+                    return; // Skip hidden files/directories
+                }
+            }
         }
 
         // Check if name matches query
@@ -269,7 +296,7 @@ impl Search {
                     }
 
                     let child_path = entry.path();
-                    Self::deep_search_recursive(&child_path, query, result_tx, cancel_rx, show_files, fuzzy, scanned);
+                    Self::deep_search_recursive(&child_path, query, result_tx, cancel_rx, show_files, show_hidden, follow_symlinks, fuzzy, scanned);
                 }
             }
         }

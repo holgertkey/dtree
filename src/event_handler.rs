@@ -679,7 +679,7 @@ impl EventHandler {
                 return Ok(Some(PathBuf::new()));
             }
             KeyCode::Enter => {
-                search.perform_search(&nav.root, show_files);
+                search.perform_search(&nav.root, show_files, nav.show_hidden, nav.follow_symlinks);
                 return Ok(Some(PathBuf::new()));
             }
             KeyCode::Char(c) => {
