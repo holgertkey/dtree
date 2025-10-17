@@ -274,12 +274,20 @@ impl UI {
             " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: show sizes | /: search | i: help) "
         };
 
+        // Check cursor color setting - "dim" means no color highlight, just dimming
+        let cursor_color_str = &config.appearance.colors.cursor_color;
+        let highlight_style = if cursor_color_str.to_lowercase() == "dim" {
+            Style::default().add_modifier(Modifier::DIM)
+        } else {
+            let cursor_color = Config::parse_color(cursor_color_str);
+            Style::default().fg(cursor_color)
+        };
+
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title(title))
-            .highlight_style(Style::default()
-                .add_modifier(Modifier::DIM))
+            .highlight_style(highlight_style)
             .highlight_symbol(">> ");
 
         frame.render_stateful_widget(list, area, &mut state);
@@ -389,14 +397,21 @@ impl UI {
             Style::default()
         };
 
+        // Check cursor color setting - "dim" means no color highlight, just dimming
+        let cursor_color_str = &config.appearance.colors.cursor_color;
+        let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
+            Style::default().add_modifier(Modifier::DIM)
+        } else {
+            let cursor_color = Config::parse_color(cursor_color_str);
+            Style::default().fg(cursor_color).add_modifier(Modifier::BOLD)
+        };
+
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title(title)
                 .border_style(border_style))
-            .highlight_style(Style::default()
-                .fg(highlight_color)
-                .add_modifier(Modifier::BOLD))
+            .highlight_style(cursor_highlight_style)
             .highlight_symbol(">> ");
 
         frame.render_stateful_widget(list, area, &mut state);
@@ -544,7 +559,6 @@ impl UI {
     fn render_bookmarks_panel(&self, frame: &mut Frame, area: Rect, bookmarks: &Bookmarks, config: &Config) {
         let border_color = Config::parse_color(&config.appearance.colors.border_color);
         let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
-        let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
         let file_color = Config::parse_color(&config.appearance.colors.file_color);
 
         if bookmarks.is_creating {
@@ -661,14 +675,21 @@ impl UI {
                     format!(" Bookmarks: {} | ↑↓/jk: move{} | Tab: filter | Enter: select | Esc: cancel ", mode_hint, deletion_hint)
                 };
 
+                // Check cursor color setting - "dim" means no color highlight, just dimming
+                let cursor_color_str = &config.appearance.colors.cursor_color;
+                let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
+                    Style::default().add_modifier(Modifier::DIM)
+                } else {
+                    let cursor_color = Config::parse_color(cursor_color_str);
+                    Style::default().fg(cursor_color).add_modifier(Modifier::BOLD)
+                };
+
                 let list = List::new(items)
                     .block(Block::default()
                         .borders(Borders::ALL)
                         .title(hint)
                         .border_style(Style::default().fg(selected_color)))
-                    .highlight_style(Style::default()
-                        .fg(highlight_color)
-                        .add_modifier(Modifier::BOLD))
+                    .highlight_style(cursor_highlight_style)
                     .highlight_symbol(">> ");
 
                 frame.render_stateful_widget(list, area, &mut state);
