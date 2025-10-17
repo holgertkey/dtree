@@ -44,6 +44,10 @@ pub struct ThemeConfig {
     #[serde(default = "default_main_border_color")]
     pub main_border_color: String,
 
+    /// Color for panel borders (search, bookmarks)
+    #[serde(default = "default_panel_border_color")]
+    pub panel_border_color: String,
+
     /// Color for background (optional, uses terminal default if not set)
     #[serde(default = "default_background_color")]
     pub background_color: String,
@@ -61,6 +65,7 @@ impl Default for ThemeConfig {
             cursor_color: default_cursor_color(),
             tree_cursor_color: default_tree_cursor_color(),
             main_border_color: default_main_border_color(),
+            panel_border_color: default_panel_border_color(),
             background_color: default_background_color(),
         }
     }
@@ -123,6 +128,7 @@ impl ThemeConfig {
                 cursor_color: "yellow".to_string(),     // for search & bookmarks
                 tree_cursor_color: "dim".to_string(),   // "dim" = no color, just dimming
                 main_border_color: "gray".to_string(),  // main window border
+                panel_border_color: "cyan".to_string(), // panel borders (search, bookmarks)
                 background_color: "reset".to_string(),  // terminal default
             }),
             "gruvbox" => Some(Self {
@@ -136,6 +142,7 @@ impl ThemeConfig {
                 cursor_color: "#fabd2f".to_string(),    // yellow for search & bookmarks
                 tree_cursor_color: "dim".to_string(),   // "dim" = no color, just dimming
                 main_border_color: "#928374".to_string(), // gray border
+                panel_border_color: "#fe8019".to_string(), // orange panel borders (search, bookmarks)
                 background_color: "#282828".to_string(), // gruvbox dark bg
             }),
             "nord" => Some(Self {
@@ -149,6 +156,7 @@ impl ThemeConfig {
                 cursor_color: "#ebcb8b".to_string(),   // yellow for search & bookmarks
                 tree_cursor_color: "dim".to_string(),  // "dim" = no color, just dimming
                 main_border_color: "#4c566a".to_string(), // polar night gray border
+                panel_border_color: "#88c0d0".to_string(), // cyan panel borders (search, bookmarks)
                 background_color: "#2e3440".to_string(), // nord dark bg
             }),
             _ => None,
@@ -166,6 +174,7 @@ fn default_highlight_color() -> String { "yellow".to_string() }
 fn default_cursor_color() -> String { "yellow".to_string() }
 fn default_tree_cursor_color() -> String { "dim".to_string() }
 fn default_main_border_color() -> String { "gray".to_string() }
+fn default_panel_border_color() -> String { "cyan".to_string() }
 fn default_background_color() -> String { "reset".to_string() }
 
 /// Appearance configuration
@@ -527,6 +536,9 @@ impl Config {
             if config.appearance.colors.main_border_color == default_colors.main_border_color {
                 config.appearance.colors.main_border_color = preset.main_border_color;
             }
+            if config.appearance.colors.panel_border_color == default_colors.panel_border_color {
+                config.appearance.colors.panel_border_color = preset.panel_border_color;
+            }
             if config.appearance.colors.background_color == default_colors.background_color {
                 config.appearance.colors.background_color = preset.background_color;
             }
@@ -588,6 +600,7 @@ syntax_theme = "base16-ocean.dark"
 # cursor_color = "yellow"           # Cursor highlight for search & bookmarks
 # tree_cursor_color = "dim"         # Cursor highlight for tree ("dim" = no color, just dimming)
 # main_border_color = "gray"        # Main window border color
+# panel_border_color = "cyan"       # Panel borders (search, bookmarks)
 # background_color = "reset"        # Background color ("reset" = terminal default)
 
 [behavior]

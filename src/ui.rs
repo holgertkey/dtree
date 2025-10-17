@@ -304,6 +304,7 @@ impl UI {
         let search_text = format!("Search{}: {}", mode_indicator, search.query);
 
         let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
+        let panel_border_color = Config::parse_color(&config.appearance.colors.panel_border_color);
 
         let title_hint = if search.fuzzy_mode {
             " Enter to search | Esc: cancel | Fuzzy mode: /query "
@@ -314,7 +315,8 @@ impl UI {
         let paragraph = Paragraph::new(search_text)
             .block(Block::default()
                 .borders(Borders::ALL)
-                .title(title_hint))
+                .title(title_hint)
+                .border_style(Style::default().fg(panel_border_color)))
             .style(Style::default().fg(selected_color));
 
         frame.render_widget(paragraph, area);
@@ -325,8 +327,8 @@ impl UI {
         let root_parent = root_path.parent().unwrap_or(&root_path);
 
         let file_color = Config::parse_color(&config.appearance.colors.file_color);
-        let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
         let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
+        let panel_border_color = Config::parse_color(&config.appearance.colors.panel_border_color);
 
         let dir_color = Config::parse_color(&config.appearance.colors.directory_color);
 
@@ -397,11 +399,7 @@ impl UI {
                 search.results.len())
         };
 
-        let border_style = if search.focus_on_results {
-            Style::default().fg(selected_color)
-        } else {
-            Style::default()
-        };
+        let border_style = Style::default().fg(panel_border_color);
 
         // Check cursor color setting - "dim" means no color highlight, just dimming
         let cursor_color_str = &config.appearance.colors.cursor_color;
@@ -572,6 +570,7 @@ impl UI {
         let border_color = Config::parse_color(&config.appearance.colors.border_color);
         let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
         let file_color = Config::parse_color(&config.appearance.colors.file_color);
+        let panel_border_color = Config::parse_color(&config.appearance.colors.panel_border_color);
 
         if bookmarks.is_creating {
             // Creation mode - bookmark list + input bar
@@ -607,7 +606,8 @@ impl UI {
                 let list = List::new(items)
                     .block(Block::default()
                         .borders(Borders::ALL)
-                        .title(count_text));
+                        .title(count_text)
+                        .border_style(Style::default().fg(panel_border_color)));
 
                 frame.render_widget(list, list_area);
             }
@@ -619,7 +619,8 @@ impl UI {
             let paragraph = Paragraph::new(input_text)
                 .block(Block::default()
                     .borders(Borders::ALL)
-                    .title(title))
+                    .title(title)
+                    .border_style(Style::default().fg(panel_border_color)))
                 .style(Style::default().fg(selected_color).add_modifier(Modifier::BOLD));
 
             frame.render_widget(paragraph, input_area);
@@ -700,7 +701,7 @@ impl UI {
                     .block(Block::default()
                         .borders(Borders::ALL)
                         .title(hint)
-                        .border_style(Style::default().fg(selected_color)))
+                        .border_style(Style::default().fg(panel_border_color)))
                     .highlight_style(cursor_highlight_style)
                     .highlight_symbol(">> ");
 
