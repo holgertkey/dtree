@@ -7,6 +7,7 @@ mod search;
 mod ui;
 mod event_handler;
 mod config;
+mod theme;
 mod bookmarks;
 mod dir_size;
 mod file_icons;

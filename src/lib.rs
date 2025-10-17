@@ -4,6 +4,7 @@ pub mod file_viewer;
 pub mod navigation;
 pub mod search;
 pub mod config;
+pub mod theme;
 pub mod bookmarks;
 pub mod ui;
 pub mod event_handler;
