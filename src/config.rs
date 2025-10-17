@@ -548,8 +548,7 @@ syntax_theme = "base16-ocean.dark"
 # These colors override the preset theme colors above
 # By default, all colors are commented out to use the preset theme
 # Uncomment and modify any color to override the theme
-#
-# [appearance.colors]
+[appearance.colors]
 # Color formats:
 #   - Color names: black, red, green, yellow, blue, magenta, cyan, gray, white
 #   - RGB hex: #RRGGBB (e.g., #fe8019)
