@@ -32,9 +32,17 @@ pub struct ThemeConfig {
     #[serde(default = "default_highlight_color")]
     pub highlight_color: String,
 
-    /// Color for cursor/selection highlight
+    /// Color for cursor/selection highlight (search & bookmarks)
     #[serde(default = "default_cursor_color")]
     pub cursor_color: String,
+
+    /// Color for tree cursor/selection highlight
+    #[serde(default = "default_tree_cursor_color")]
+    pub tree_cursor_color: String,
+
+    /// Color for main window border
+    #[serde(default = "default_main_border_color")]
+    pub main_border_color: String,
 
     /// Color for background (optional, uses terminal default if not set)
     #[serde(default = "default_background_color")]
@@ -51,6 +59,8 @@ impl Default for ThemeConfig {
             error_color: default_error_color(),
             highlight_color: default_highlight_color(),
             cursor_color: default_cursor_color(),
+            tree_cursor_color: default_tree_cursor_color(),
+            main_border_color: default_main_border_color(),
             background_color: default_background_color(),
         }
     }
@@ -110,8 +120,10 @@ impl ThemeConfig {
                 border_color: "gray".to_string(),
                 error_color: "red".to_string(),
                 highlight_color: "yellow".to_string(),
-                cursor_color: "dim".to_string(), // "dim" = no color highlight, just dimming
-                background_color: "reset".to_string(), // use terminal default
+                cursor_color: "yellow".to_string(),     // for search & bookmarks
+                tree_cursor_color: "dim".to_string(),   // "dim" = no color, just dimming
+                main_border_color: "gray".to_string(),  // main window border
+                background_color: "reset".to_string(),  // terminal default
             }),
             "gruvbox" => Some(Self {
                 // Gruvbox dark theme - warm, high contrast
@@ -121,7 +133,9 @@ impl ThemeConfig {
                 border_color: "#928374".to_string(),    // gray
                 error_color: "#fb4934".to_string(),     // bright red
                 highlight_color: "#fabd2f".to_string(), // bright yellow
-                cursor_color: "dim".to_string(),        // "dim" = no color, just dimming
+                cursor_color: "#fabd2f".to_string(),    // yellow for search & bookmarks
+                tree_cursor_color: "dim".to_string(),   // "dim" = no color, just dimming
+                main_border_color: "#928374".to_string(), // gray border
                 background_color: "#282828".to_string(), // gruvbox dark bg
             }),
             "nord" => Some(Self {
@@ -132,7 +146,9 @@ impl ThemeConfig {
                 border_color: "#4c566a".to_string(),   // polar night gray
                 error_color: "#bf616a".to_string(),    // aurora red
                 highlight_color: "#ebcb8b".to_string(), // aurora yellow
-                cursor_color: "dim".to_string(),       // "dim" = no color, just dimming
+                cursor_color: "#ebcb8b".to_string(),   // yellow for search & bookmarks
+                tree_cursor_color: "dim".to_string(),  // "dim" = no color, just dimming
+                main_border_color: "#4c566a".to_string(), // polar night gray border
                 background_color: "#2e3440".to_string(), // nord dark bg
             }),
             _ => None,
@@ -147,7 +163,9 @@ fn default_file_color() -> String { "white".to_string() }
 fn default_border_color() -> String { "gray".to_string() }
 fn default_error_color() -> String { "red".to_string() }
 fn default_highlight_color() -> String { "yellow".to_string() }
-fn default_cursor_color() -> String { "dim".to_string() }
+fn default_cursor_color() -> String { "yellow".to_string() }
+fn default_tree_cursor_color() -> String { "dim".to_string() }
+fn default_main_border_color() -> String { "gray".to_string() }
 fn default_background_color() -> String { "reset".to_string() }
 
 /// Appearance configuration
@@ -503,6 +521,12 @@ impl Config {
             if config.appearance.colors.cursor_color == default_colors.cursor_color {
                 config.appearance.colors.cursor_color = preset.cursor_color;
             }
+            if config.appearance.colors.tree_cursor_color == default_colors.tree_cursor_color {
+                config.appearance.colors.tree_cursor_color = preset.tree_cursor_color;
+            }
+            if config.appearance.colors.main_border_color == default_colors.main_border_color {
+                config.appearance.colors.main_border_color = preset.main_border_color;
+            }
             if config.appearance.colors.background_color == default_colors.background_color {
                 config.appearance.colors.background_color = preset.background_color;
             }
@@ -560,8 +584,10 @@ syntax_theme = "base16-ocean.dark"
 # file_color = "white"              # Color for file names
 # border_color = "gray"             # Color for UI borders
 # error_color = "red"               # Color for error messages
-# highlight_color = "yellow"        # Color for search highlights (not used for cursor)
-# cursor_color = "dim"              # Cursor highlight ("dim" = no color, just dimming | any color = colored highlight)
+# highlight_color = "yellow"        # Color for fuzzy search character highlighting
+# cursor_color = "yellow"           # Cursor highlight for search & bookmarks
+# tree_cursor_color = "dim"         # Cursor highlight for tree ("dim" = no color, just dimming)
+# main_border_color = "gray"        # Main window border color
 # background_color = "reset"        # Background color ("reset" = terminal default)
 
 [behavior]

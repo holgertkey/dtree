@@ -274,19 +274,25 @@ impl UI {
             " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: show sizes | /: search | i: help) "
         };
 
-        // Check cursor color setting - "dim" means no color highlight, just dimming
-        let cursor_color_str = &config.appearance.colors.cursor_color;
-        let highlight_style = if cursor_color_str.to_lowercase() == "dim" {
+        // Check tree cursor color setting - "dim" means no color highlight, just dimming
+        let tree_cursor_color_str = &config.appearance.colors.tree_cursor_color;
+        let highlight_style = if tree_cursor_color_str.to_lowercase() == "dim" {
             Style::default().add_modifier(Modifier::DIM)
         } else {
-            let cursor_color = Config::parse_color(cursor_color_str);
-            Style::default().fg(cursor_color)
+            let tree_cursor_color = Config::parse_color(tree_cursor_color_str);
+            Style::default().fg(tree_cursor_color)
         };
+
+        // Apply main border color and background color
+        let main_border_color = Config::parse_color(&config.appearance.colors.main_border_color);
+        let background_color = Config::parse_color(&config.appearance.colors.background_color);
 
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
-                .title(title))
+                .title(title)
+                .border_style(Style::default().fg(main_border_color))
+                .style(Style::default().bg(background_color)))
             .highlight_style(highlight_style)
             .highlight_symbol(">> ");
 
@@ -439,6 +445,10 @@ impl UI {
         self.viewer_area_top = area.y;
         self.viewer_area_height = area.height;
 
+        // Apply main border color and background color
+        let main_border_color = Config::parse_color(&config.appearance.colors.main_border_color);
+        let background_color = Config::parse_color(&config.appearance.colors.background_color);
+
         let content_height = area.height.saturating_sub(2) as usize;
 
         let content_to_display = if show_help {
@@ -551,7 +561,9 @@ impl UI {
         let paragraph = Paragraph::new(visible_lines)
             .block(Block::default()
                 .borders(borders)
-                .title(title));
+                .title(title)
+                .border_style(Style::default().fg(main_border_color))
+                .style(Style::default().bg(background_color)));
 
         frame.render_widget(paragraph, area);
     }
