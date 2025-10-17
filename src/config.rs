@@ -110,7 +110,7 @@ impl ThemeConfig {
                 border_color: "gray".to_string(),
                 error_color: "red".to_string(),
                 highlight_color: "yellow".to_string(),
-                cursor_color: "black".to_string(),
+                cursor_color: "yellow".to_string(),
                 background_color: "reset".to_string(), // use terminal default
             }),
             "gruvbox" => Some(Self {
@@ -147,7 +147,7 @@ fn default_file_color() -> String { "white".to_string() }
 fn default_border_color() -> String { "gray".to_string() }
 fn default_error_color() -> String { "red".to_string() }
 fn default_highlight_color() -> String { "yellow".to_string() }
-fn default_cursor_color() -> String { "black".to_string() }
+fn default_cursor_color() -> String { "yellow".to_string() }
 fn default_background_color() -> String { "reset".to_string() }
 
 /// Appearance configuration
@@ -562,7 +562,7 @@ syntax_theme = "base16-ocean.dark"
 # border_color = "gray"             # Color for UI borders
 # error_color = "red"               # Color for error messages
 # highlight_color = "yellow"        # Color for search highlights
-# cursor_color = "black"            # Color for cursor text (background of selection)
+# cursor_color = "yellow"           # Color for cursor text (background of selection)
 # background_color = "reset"        # Background color ("reset" = terminal default)
 
 [behavior]

@@ -274,16 +274,12 @@ impl UI {
             " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: show sizes | /: search | i: help) "
         };
 
-        let cursor_color = Config::parse_color(&config.appearance.colors.cursor_color);
-        let selected_bg_color = Config::parse_color(&config.appearance.colors.selected_color);
-
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title(title))
             .highlight_style(Style::default()
-                .fg(cursor_color)
-                .bg(selected_bg_color))
+                .add_modifier(Modifier::DIM))
             .highlight_symbol(">> ");
 
         frame.render_stateful_widget(list, area, &mut state);
@@ -393,17 +389,14 @@ impl UI {
             Style::default()
         };
 
-        let cursor_color = Config::parse_color(&config.appearance.colors.cursor_color);
-        let selected_bg_color = Config::parse_color(&config.appearance.colors.selected_color);
-
         let list = List::new(items)
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title(title)
                 .border_style(border_style))
             .highlight_style(Style::default()
-                .fg(cursor_color)
-                .bg(selected_bg_color))
+                .fg(highlight_color)
+                .add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
 
         frame.render_stateful_widget(list, area, &mut state);
@@ -668,17 +661,14 @@ impl UI {
                     format!(" Bookmarks: {} | ↑↓/jk: move{} | Tab: filter | Enter: select | Esc: cancel ", mode_hint, deletion_hint)
                 };
 
-                let cursor_color = Config::parse_color(&config.appearance.colors.cursor_color);
-                let selected_bg_color = Config::parse_color(&config.appearance.colors.selected_color);
-
                 let list = List::new(items)
                     .block(Block::default()
                         .borders(Borders::ALL)
                         .title(hint)
                         .border_style(Style::default().fg(selected_color)))
                     .highlight_style(Style::default()
-                        .fg(cursor_color)
-                        .bg(selected_bg_color))
+                        .fg(highlight_color)
+                        .add_modifier(Modifier::BOLD))
                     .highlight_symbol(">> ");
 
                 frame.render_stateful_widget(list, area, &mut state);
