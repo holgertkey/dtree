@@ -88,6 +88,39 @@ impl ThemeConfig {
             }
         }
     }
+
+    /// Get preset theme colors by theme name
+    pub fn get_preset_theme(theme_name: &str) -> Option<Self> {
+        match theme_name.to_lowercase().as_str() {
+            "default" => Some(Self {
+                selected_color: "cyan".to_string(),
+                directory_color: "blue".to_string(),
+                file_color: "white".to_string(),
+                border_color: "gray".to_string(),
+                error_color: "red".to_string(),
+                highlight_color: "yellow".to_string(),
+            }),
+            "gruvbox" => Some(Self {
+                // Gruvbox dark theme - warm, high contrast
+                selected_color: "#fe8019".to_string(),  // bright orange
+                directory_color: "#83a598".to_string(), // bright blue
+                file_color: "#ebdbb2".to_string(),      // light foreground
+                border_color: "#928374".to_string(),    // gray
+                error_color: "#fb4934".to_string(),     // bright red
+                highlight_color: "#fabd2f".to_string(), // bright yellow
+            }),
+            "nord" => Some(Self {
+                // Nord theme - cold, muted colors
+                selected_color: "#88c0d0".to_string(), // frost cyan
+                directory_color: "#81a1c1".to_string(), // frost blue
+                file_color: "#eceff4".to_string(),     // snow white
+                border_color: "#4c566a".to_string(),   // polar night gray
+                error_color: "#bf616a".to_string(),    // aurora red
+                highlight_color: "#ebcb8b".to_string(), // aurora yellow
+            }),
+            _ => None,
+        }
+    }
 }
 
 // Default color functions
@@ -422,6 +455,34 @@ impl Config {
             }
         }
 
+        // Apply preset theme colors if theme is set
+        // This allows using preset themes while still allowing per-color overrides
+        if let Some(preset) = ThemeConfig::get_preset_theme(&config.appearance.theme) {
+            // Only apply preset colors if they weren't explicitly customized in config
+            // We check if colors match defaults - if they do, apply preset
+            let default_colors = ThemeConfig::default();
+
+            // Apply preset color only if user hasn't customized it
+            if config.appearance.colors.selected_color == default_colors.selected_color {
+                config.appearance.colors.selected_color = preset.selected_color;
+            }
+            if config.appearance.colors.directory_color == default_colors.directory_color {
+                config.appearance.colors.directory_color = preset.directory_color;
+            }
+            if config.appearance.colors.file_color == default_colors.file_color {
+                config.appearance.colors.file_color = preset.file_color;
+            }
+            if config.appearance.colors.border_color == default_colors.border_color {
+                config.appearance.colors.border_color = preset.border_color;
+            }
+            if config.appearance.colors.error_color == default_colors.error_color {
+                config.appearance.colors.error_color = preset.error_color;
+            }
+            if config.appearance.colors.highlight_color == default_colors.highlight_color {
+                config.appearance.colors.highlight_color = preset.highlight_color;
+            }
+        }
+
         config
     }
 
@@ -431,7 +492,14 @@ impl Config {
 # This file uses TOML format: https://toml.io
 
 [appearance]
-# Theme name (currently only "default" is supported)
+# Theme name - preset color schemes
+# Available themes:
+#   "default" - Classic terminal colors (blue dirs, cyan selection)
+#   "gruvbox" - Warm, high contrast theme inspired by Gruvbox
+#   "nord"    - Cold, muted colors inspired by Nord theme
+#
+# You can override individual colors in [appearance.colors] section below
+# Preset themes provide a good starting point with harmonious color palettes
 theme = "default"
 
 # Show file type icons (requires nerd fonts)
@@ -452,10 +520,15 @@ enable_syntax_highlighting = true
 syntax_theme = "base16-ocean.dark"
 
 # Custom theme colors
+# These colors override the preset theme colors above
+# If you want to use a preset theme completely, comment out or remove this section
 [appearance.colors]
-# Color names: black, red, green, yellow, blue, magenta, cyan, gray, white
-# Or RGB hex: #RRGGBB
-# Or indexed: 0-255
+# Color formats:
+#   - Color names: black, red, green, yellow, blue, magenta, cyan, gray, white
+#   - RGB hex: #RRGGBB (e.g., #fe8019)
+#   - Indexed: 0-255 (256-color palette)
+#
+# To use preset themes without customization, comment out these lines:
 selected_color = "cyan"
 directory_color = "blue"
 file_color = "white"
