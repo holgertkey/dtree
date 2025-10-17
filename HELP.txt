@@ -292,4 +292,3 @@ FILE TYPE ICONS
 
   To reset to defaults: delete the config file, it will be recreated on next run.
 
-Press 'i' again to close this help screen
