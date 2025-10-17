@@ -31,6 +31,14 @@ pub struct ThemeConfig {
     /// Color for search highlights
     #[serde(default = "default_highlight_color")]
     pub highlight_color: String,
+
+    /// Color for cursor/selection highlight
+    #[serde(default = "default_cursor_color")]
+    pub cursor_color: String,
+
+    /// Color for background (optional, uses terminal default if not set)
+    #[serde(default = "default_background_color")]
+    pub background_color: String,
 }
 
 impl Default for ThemeConfig {
@@ -42,6 +50,8 @@ impl Default for ThemeConfig {
             border_color: default_border_color(),
             error_color: default_error_color(),
             highlight_color: default_highlight_color(),
+            cursor_color: default_cursor_color(),
+            background_color: default_background_color(),
         }
     }
 }
@@ -50,6 +60,7 @@ impl ThemeConfig {
     /// Parse a color string to ratatui Color
     pub fn parse_color(color_str: &str) -> Color {
         match color_str.to_lowercase().as_str() {
+            "reset" => Color::Reset, // Use terminal default
             "black" => Color::Black,
             "red" => Color::Red,
             "green" => Color::Green,
@@ -75,7 +86,7 @@ impl ThemeConfig {
                 ) {
                     Color::Rgb(r, g, b)
                 } else {
-                    Color::White // Fallback
+                    Color::Reset // Fallback to terminal default
                 }
             }
             // Try to parse as indexed color (0-255)
@@ -83,7 +94,7 @@ impl ThemeConfig {
                 if let Ok(idx) = s.parse::<u8>() {
                     Color::Indexed(idx)
                 } else {
-                    Color::White // Fallback
+                    Color::Reset // Fallback to terminal default
                 }
             }
         }
@@ -99,6 +110,8 @@ impl ThemeConfig {
                 border_color: "gray".to_string(),
                 error_color: "red".to_string(),
                 highlight_color: "yellow".to_string(),
+                cursor_color: "black".to_string(),
+                background_color: "reset".to_string(), // use terminal default
             }),
             "gruvbox" => Some(Self {
                 // Gruvbox dark theme - warm, high contrast
@@ -108,6 +121,8 @@ impl ThemeConfig {
                 border_color: "#928374".to_string(),    // gray
                 error_color: "#fb4934".to_string(),     // bright red
                 highlight_color: "#fabd2f".to_string(), // bright yellow
+                cursor_color: "#282828".to_string(),    // dark background (for cursor text)
+                background_color: "#282828".to_string(), // gruvbox dark bg
             }),
             "nord" => Some(Self {
                 // Nord theme - cold, muted colors
@@ -117,6 +132,8 @@ impl ThemeConfig {
                 border_color: "#4c566a".to_string(),   // polar night gray
                 error_color: "#bf616a".to_string(),    // aurora red
                 highlight_color: "#ebcb8b".to_string(), // aurora yellow
+                cursor_color: "#2e3440".to_string(),   // polar night (for cursor text)
+                background_color: "#2e3440".to_string(), // nord dark bg
             }),
             _ => None,
         }
@@ -130,6 +147,8 @@ fn default_file_color() -> String { "white".to_string() }
 fn default_border_color() -> String { "gray".to_string() }
 fn default_error_color() -> String { "red".to_string() }
 fn default_highlight_color() -> String { "yellow".to_string() }
+fn default_cursor_color() -> String { "black".to_string() }
+fn default_background_color() -> String { "reset".to_string() }
 
 /// Appearance configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -481,6 +500,12 @@ impl Config {
             if config.appearance.colors.highlight_color == default_colors.highlight_color {
                 config.appearance.colors.highlight_color = preset.highlight_color;
             }
+            if config.appearance.colors.cursor_color == default_colors.cursor_color {
+                config.appearance.colors.cursor_color = preset.cursor_color;
+            }
+            if config.appearance.colors.background_color == default_colors.background_color {
+                config.appearance.colors.background_color = preset.background_color;
+            }
         }
 
         config
@@ -521,20 +546,24 @@ syntax_theme = "base16-ocean.dark"
 
 # Custom theme colors
 # These colors override the preset theme colors above
-# If you want to use a preset theme completely, comment out or remove this section
-[appearance.colors]
+# By default, all colors are commented out to use the preset theme
+# Uncomment and modify any color to override the theme
+#
+# [appearance.colors]
 # Color formats:
 #   - Color names: black, red, green, yellow, blue, magenta, cyan, gray, white
 #   - RGB hex: #RRGGBB (e.g., #fe8019)
 #   - Indexed: 0-255 (256-color palette)
+#   - "reset" - use terminal default color
 #
-# To use preset themes without customization, comment out these lines:
-selected_color = "cyan"
-directory_color = "blue"
-file_color = "white"
-border_color = "gray"
-error_color = "red"
-highlight_color = "yellow"
+# selected_color = "cyan"           # Color for selected item text
+# directory_color = "blue"          # Color for directory names
+# file_color = "white"              # Color for file names
+# border_color = "gray"             # Color for UI borders
+# error_color = "red"               # Color for error messages
+# highlight_color = "yellow"        # Color for search highlights
+# cursor_color = "black"            # Color for cursor text (background of selection)
+# background_color = "reset"        # Background color ("reset" = terminal default)
 
 [behavior]
 # Maximum number of lines to read from files
