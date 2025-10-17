@@ -347,6 +347,9 @@ impl EventHandler {
                         if let Some(node) = nav.get_selected_node() {
                             let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
                         }
+                        // Scroll to end after switching to tail mode
+                        let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                        file_viewer.scroll_to_end(visible_height);
                     } else {
                         // Normal End behavior - jump to bottom
                         let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
