@@ -636,7 +636,16 @@ impl FileViewer {
         // Format permissions
         let permissions_str = format_permissions(self.current_permissions);
 
-        format!(" {} | {} | {} | {}", file_name, size_str, lines_info, permissions_str)
+        // Add search info if there are search results
+        let search_info = if !self.search_results.is_empty() {
+            format!(" | Search: {} matches for '{}'", self.search_results.len(), self.search_query)
+        } else if !self.search_query.is_empty() {
+            format!(" | Search: no matches for '{}'", self.search_query)
+        } else {
+            String::new()
+        };
+
+        format!(" {} | {} | {} | {}{}", file_name, size_str, lines_info, permissions_str, search_info)
     }
 }
 
