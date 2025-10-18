@@ -150,6 +150,14 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
 }
 
 fn main() -> Result<()> {
+    // Set up panic hook to ensure terminal is always cleaned up
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        // Try to clean up terminal before panicking
+        let _ = cleanup_terminal();
+        original_hook(panic_info);
+    }));
+
     // Preprocess arguments: convert -bm to --bm for clap compatibility
     let args: Vec<String> = std::env::args()
         .map(|arg| if arg == "-bm" { "--bm".to_string() } else { arg })

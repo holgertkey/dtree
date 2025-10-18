@@ -24,9 +24,16 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 }
 
 pub fn cleanup_terminal() -> Result<()> {
-    disable_raw_mode()?;
+    use std::io::Write;
+
+    // Clean up in reverse order of setup
     std::io::stderr().execute(DisableMouseCapture)?;
     std::io::stderr().execute(LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+
+    // Ensure all terminal commands are flushed
+    std::io::stderr().flush()?;
+
     Ok(())
 }
 
