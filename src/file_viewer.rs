@@ -507,8 +507,13 @@ impl FileViewer {
         self.current_match = 0;
     }
 
-    /// Exit search mode
+    /// Exit search mode (but keep results)
     pub fn exit_search_mode(&mut self) {
+        self.search_mode = false;
+    }
+
+    /// Clear search completely
+    pub fn clear_search(&mut self) {
         self.search_mode = false;
         self.search_query.clear();
         self.search_results.clear();

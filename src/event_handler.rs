@@ -213,8 +213,12 @@ impl EventHandler {
                 return self.handle_file_search_input(key, file_viewer);
             }
 
-            // Handle Esc key - exits completely
+            // Handle Esc key - clear search if active, otherwise exit
             if matches!(key.code, KeyCode::Esc) {
+                if !file_viewer.search_results.is_empty() {
+                    file_viewer.clear_search();
+                    return Ok(Some(PathBuf::new()));
+                }
                 return Ok(None);
             }
 
@@ -257,13 +261,13 @@ impl EventHandler {
                     file_viewer.enter_search_mode();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('n') => {
-                    // Next search match
+                KeyCode::Char('n') if !file_viewer.search_results.is_empty() => {
+                    // Next search match (only if there are results)
                     file_viewer.next_match();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('N') => {
-                    // Previous search match
+                KeyCode::Char('N') if !file_viewer.search_results.is_empty() => {
+                    // Previous search match (only if there are results)
                     file_viewer.prev_match();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -742,12 +746,12 @@ impl EventHandler {
     ) -> Result<Option<PathBuf>> {
         match key.code {
             KeyCode::Esc => {
-                file_viewer.exit_search_mode();
+                file_viewer.clear_search();  // Clear everything
                 return Ok(Some(PathBuf::new()));
             }
             KeyCode::Enter => {
-                file_viewer.perform_search();
-                file_viewer.next_match(); // Jump to first match after search
+                file_viewer.perform_search();  // This will scroll to first match
+                file_viewer.exit_search_mode();  // Exit input mode but keep results
                 return Ok(Some(PathBuf::new()));
             }
             KeyCode::Char(c) => {

@@ -499,9 +499,10 @@ impl UI {
                 .skip(file_viewer.scroll)
                 .take(lines_to_show)
                 .map(|(idx, line)| {
-                    let line_num = file_viewer.scroll + idx + 1;
-                    let is_match = file_viewer.line_has_match(line_num);
-                    let is_current = file_viewer.is_current_match(line_num);
+                    let line_idx = file_viewer.scroll + idx;  // 0-indexed for search
+                    let line_num = line_idx + 1;  // 1-indexed for display
+                    let is_match = file_viewer.line_has_match(line_idx);
+                    let is_current = file_viewer.is_current_match(line_idx);
 
                     let mut spans = Vec::new();
 
@@ -521,11 +522,12 @@ impl UI {
                     // Add line content with background highlight for matches
                     for span in &line.spans {
                         let mut style = span.style;
-                        if is_match {
-                            style = style.bg(highlight_color);
-                        }
                         if is_current {
-                            style = style.add_modifier(Modifier::BOLD);
+                            // Current match: reversed colors + bold
+                            style = style.add_modifier(Modifier::REVERSED | Modifier::BOLD);
+                        } else if is_match {
+                            // Other matches: just background highlight
+                            style = style.bg(highlight_color);
                         }
                         spans.push(Span::styled(span.content.clone(), style));
                     }
@@ -541,9 +543,10 @@ impl UI {
                 .skip(file_viewer.scroll)
                 .take(lines_to_show)
                 .map(|(idx, line)| {
-                    let line_num = file_viewer.scroll + idx + 1;
-                    let is_match = file_viewer.line_has_match(line_num);
-                    let is_current = file_viewer.is_current_match(line_num);
+                    let line_idx = file_viewer.scroll + idx;  // 0-indexed for search
+                    let line_num = line_idx + 1;  // 1-indexed for display
+                    let is_match = file_viewer.line_has_match(line_idx);
+                    let is_current = file_viewer.is_current_match(line_idx);
 
                     let mut spans = Vec::new();
 
@@ -561,15 +564,14 @@ impl UI {
                     }
 
                     // Add line content with background highlight for matches
-                    let style = if is_match {
+                    let style = if is_current {
+                        // Current match: reversed colors + bold
+                        Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD)
+                    } else if is_match {
+                        // Other matches: just background highlight
                         Style::default().bg(highlight_color)
                     } else {
                         Style::default()
-                    };
-                    let style = if is_current {
-                        style.add_modifier(Modifier::BOLD)
-                    } else {
-                        style
                     };
                     spans.push(Span::styled(line.as_str(), style));
 
@@ -611,9 +613,9 @@ impl UI {
                 ""
             };
 
-            // Add search match info if there are results
+            // Add search match info if there are results or in search mode
             let search_info = if !file_viewer.search_results.is_empty() {
-                format!(" | {} ", file_viewer.get_match_info())
+                format!(" | {} | n/N: next/prev ", file_viewer.get_match_info())
             } else if file_viewer.search_mode && !file_viewer.search_query.is_empty() {
                 " | No matches ".to_string()
             } else {
