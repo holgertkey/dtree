@@ -152,7 +152,7 @@ FULLSCREEN VIEWER (press 'v' on a file)
   When viewing a file in fullscreen mode:
     q            Return to tree view (stay in program)
     Esc          Exit program completely (return to terminal)
-    n            Toggle line numbers (show/hide)
+    l            Toggle line numbers (show/hide)
 
   Navigation (fullscreen mode):
     j / ↓        Scroll down by line

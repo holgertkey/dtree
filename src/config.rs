@@ -56,7 +56,7 @@ impl Default for AppearanceConfig {
 fn default_theme() -> String { "default".to_string() }
 fn default_show_icons() -> bool { false }
 fn default_split_position() -> u16 { 20 }
-fn default_show_line_numbers() -> bool { false }
+fn default_show_line_numbers() -> bool { true }
 fn default_enable_syntax_highlighting() -> bool { true }
 fn default_syntax_theme() -> String { "base16-ocean.dark".to_string() }
 
@@ -184,7 +184,7 @@ fn default_open_editor_keys() -> Vec<String> { vec!["e".to_string()] }
 fn default_open_file_manager_keys() -> Vec<String> { vec!["o".to_string()] }
 fn default_create_bookmark_keys() -> Vec<String> { vec!["m".to_string()] }
 fn default_select_bookmark_keys() -> Vec<String> { vec!["'".to_string()] }
-fn default_show_line_numbers_keys() -> Vec<String> { vec!["n".to_string()] }
+fn default_show_line_numbers_keys() -> Vec<String> { vec!["l".to_string()] }
 
 impl KeybindingsConfig {
     /// Check if a key matches any of the configured keys in the list
@@ -394,7 +394,7 @@ show_icons = false
 split_position = 20
 
 # Show line numbers in fullscreen viewer by default (toggle with 'n' key)
-show_line_numbers = false
+show_line_numbers = true
 
 # Enable syntax highlighting for code files
 enable_syntax_highlighting = true
@@ -482,7 +482,7 @@ open_editor = ["e"]
 open_file_manager = ["o"]
 create_bookmark = ["m"]
 select_bookmark = ["'"]
-show_line_numbers = ["n"]
+show_line_numbers = ["l"]
 "#;
 
         // Create parent directory if it doesn't exist
