@@ -4,67 +4,75 @@ use serde::{Deserialize, Serialize};
 pub mod presets;
 
 /// Theme configuration with customizable colors
+/// All fields are Option<String>:
+/// - None means the color is not set (use preset theme value)
+/// - Some(value) means the color is explicitly set (override preset)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeConfig {
     /// Color for selected items
-    #[serde(default = "default_selected_color")]
-    pub selected_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_color: Option<String>,
 
     /// Color for directory names
-    #[serde(default = "default_directory_color")]
-    pub directory_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub directory_color: Option<String>,
 
     /// Color for file names
-    #[serde(default = "default_file_color")]
-    pub file_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_color: Option<String>,
 
     /// Color for borders
-    #[serde(default = "default_border_color")]
-    pub border_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_color: Option<String>,
 
     /// Color for error messages
-    #[serde(default = "default_error_color")]
-    pub error_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_color: Option<String>,
 
     /// Color for search highlights
-    #[serde(default = "default_highlight_color")]
-    pub highlight_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub highlight_color: Option<String>,
 
     /// Color for cursor/selection highlight (search & bookmarks)
-    #[serde(default = "default_cursor_color")]
-    pub cursor_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_color: Option<String>,
 
     /// Color for tree cursor/selection highlight
-    #[serde(default = "default_tree_cursor_color")]
-    pub tree_cursor_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tree_cursor_color: Option<String>,
+
+    /// Background color for tree cursor/selection line
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tree_cursor_bg_color: Option<String>,
 
     /// Color for main window border
-    #[serde(default = "default_main_border_color")]
-    pub main_border_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub main_border_color: Option<String>,
 
     /// Color for panel borders (search, bookmarks)
-    #[serde(default = "default_panel_border_color")]
-    pub panel_border_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub panel_border_color: Option<String>,
 
     /// Color for background (optional, uses terminal default if not set)
-    #[serde(default = "default_background_color")]
-    pub background_color: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
 }
 
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
-            selected_color: default_selected_color(),
-            directory_color: default_directory_color(),
-            file_color: default_file_color(),
-            border_color: default_border_color(),
-            error_color: default_error_color(),
-            highlight_color: default_highlight_color(),
-            cursor_color: default_cursor_color(),
-            tree_cursor_color: default_tree_cursor_color(),
-            main_border_color: default_main_border_color(),
-            panel_border_color: default_panel_border_color(),
-            background_color: default_background_color(),
+            selected_color: None,
+            directory_color: None,
+            file_color: None,
+            border_color: None,
+            error_color: None,
+            highlight_color: None,
+            cursor_color: None,
+            tree_cursor_color: None,
+            tree_cursor_bg_color: None,
+            main_border_color: None,
+            panel_border_color: None,
+            background_color: None,
         }
     }
 }
@@ -117,17 +125,22 @@ impl ThemeConfig {
     pub fn get_preset_theme(theme_name: &str) -> Option<Self> {
         presets::get_preset(theme_name)
     }
-}
 
-// Default color functions
-fn default_selected_color() -> String { "cyan".to_string() }
-fn default_directory_color() -> String { "blue".to_string() }
-fn default_file_color() -> String { "white".to_string() }
-fn default_border_color() -> String { "gray".to_string() }
-fn default_error_color() -> String { "red".to_string() }
-fn default_highlight_color() -> String { "yellow".to_string() }
-fn default_cursor_color() -> String { "yellow".to_string() }
-fn default_tree_cursor_color() -> String { "dim".to_string() }
-fn default_main_border_color() -> String { "gray".to_string() }
-fn default_panel_border_color() -> String { "cyan".to_string() }
-fn default_background_color() -> String { "reset".to_string() }
+    /// Get fallback color values (used when no preset is set and no custom color is provided)
+    pub fn fallback_colors() -> Self {
+        Self {
+            selected_color: Some("cyan".to_string()),
+            directory_color: Some("blue".to_string()),
+            file_color: Some("white".to_string()),
+            border_color: Some("gray".to_string()),
+            error_color: Some("red".to_string()),
+            highlight_color: Some("yellow".to_string()),
+            cursor_color: Some("yellow".to_string()),
+            tree_cursor_color: Some("dim".to_string()),
+            tree_cursor_bg_color: Some("dim".to_string()),
+            main_border_color: Some("gray".to_string()),
+            panel_border_color: Some("cyan".to_string()),
+            background_color: Some("reset".to_string()),
+        }
+    }
+}

@@ -222,13 +222,13 @@ impl UI {
 
             // Color coding: errors in configured color, directories and files use theme colors
             let style = if node_borrowed.has_error {
-                let error_color = Config::parse_color(&config.appearance.colors.error_color);
+                let error_color = Config::parse_color(Config::get_color(&config.appearance.colors.error_color));
                 Style::default().fg(error_color)
             } else if node_borrowed.is_dir {
-                let dir_color = Config::parse_color(&config.appearance.colors.directory_color);
+                let dir_color = Config::parse_color(Config::get_color(&config.appearance.colors.directory_color));
                 Style::default().fg(dir_color)
             } else {
-                let file_color = Config::parse_color(&config.appearance.colors.file_color);
+                let file_color = Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
                 Style::default().fg(file_color)
             };
 
@@ -274,18 +274,26 @@ impl UI {
             " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: show sizes | /: search | i: help) "
         };
 
-        // Check tree cursor color setting - "dim" means no color highlight, just dimming
-        let tree_cursor_color_str = &config.appearance.colors.tree_cursor_color;
-        let highlight_style = if tree_cursor_color_str.to_lowercase() == "dim" {
+        // Check tree cursor color settings - "dim" means no color/background, just dimming
+        let tree_cursor_color_str = Config::get_color(&config.appearance.colors.tree_cursor_color);
+        let tree_cursor_bg_color_str = Config::get_color(&config.appearance.colors.tree_cursor_bg_color);
+
+        let mut highlight_style = if tree_cursor_color_str.to_lowercase() == "dim" {
             Style::default().add_modifier(Modifier::DIM)
         } else {
             let tree_cursor_color = Config::parse_color(tree_cursor_color_str);
             Style::default().fg(tree_cursor_color)
         };
 
+        // Apply background color if not "dim"
+        if tree_cursor_bg_color_str.to_lowercase() != "dim" {
+            let tree_cursor_bg_color = Config::parse_color(tree_cursor_bg_color_str);
+            highlight_style = highlight_style.bg(tree_cursor_bg_color);
+        }
+
         // Apply main border color and background color
-        let main_border_color = Config::parse_color(&config.appearance.colors.main_border_color);
-        let background_color = Config::parse_color(&config.appearance.colors.background_color);
+        let main_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.main_border_color));
+        let background_color = Config::parse_color(Config::get_color(&config.appearance.colors.background_color));
 
         let list = List::new(items)
             .block(Block::default()
@@ -303,8 +311,8 @@ impl UI {
         let mode_indicator = if search.fuzzy_mode { " (fuzzy)" } else { "" };
         let search_text = format!("Search{}: {}", mode_indicator, search.query);
 
-        let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
-        let panel_border_color = Config::parse_color(&config.appearance.colors.panel_border_color);
+        let selected_color = Config::parse_color(Config::get_color(&config.appearance.colors.selected_color));
+        let panel_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.panel_border_color));
 
         let title_hint = if search.fuzzy_mode {
             " Enter to search | Esc: cancel | Fuzzy mode: /query "
@@ -326,11 +334,11 @@ impl UI {
         let root_path = root.borrow().path.clone();
         let root_parent = root_path.parent().unwrap_or(&root_path);
 
-        let file_color = Config::parse_color(&config.appearance.colors.file_color);
-        let highlight_color = Config::parse_color(&config.appearance.colors.highlight_color);
-        let panel_border_color = Config::parse_color(&config.appearance.colors.panel_border_color);
+        let file_color = Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
+        let highlight_color = Config::parse_color(Config::get_color(&config.appearance.colors.highlight_color));
+        let panel_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.panel_border_color));
 
-        let dir_color = Config::parse_color(&config.appearance.colors.directory_color);
+        let dir_color = Config::parse_color(Config::get_color(&config.appearance.colors.directory_color));
 
         let items: Vec<ListItem> = search.results.iter().map(|result| {
             let display_path = result.path.strip_prefix(root_parent)
@@ -402,7 +410,7 @@ impl UI {
         let border_style = Style::default().fg(panel_border_color);
 
         // Check cursor color setting - "dim" means no color highlight, just dimming
-        let cursor_color_str = &config.appearance.colors.cursor_color;
+        let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
         let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
             Style::default().add_modifier(Modifier::DIM)
         } else {
@@ -444,8 +452,8 @@ impl UI {
         self.viewer_area_height = area.height;
 
         // Apply main border color and background color
-        let main_border_color = Config::parse_color(&config.appearance.colors.main_border_color);
-        let background_color = Config::parse_color(&config.appearance.colors.background_color);
+        let main_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.main_border_color));
+        let background_color = Config::parse_color(Config::get_color(&config.appearance.colors.background_color));
 
         let content_height = area.height.saturating_sub(2) as usize;
 
@@ -476,7 +484,7 @@ impl UI {
                     if show_numbers {
                         // Add line numbers to highlighted lines
                         let line_num = file_viewer.scroll + idx + 1;
-                        let border_color = Config::parse_color(&config.appearance.colors.border_color);
+                        let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
                         let mut spans = vec![
                             Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
                         ];
@@ -498,7 +506,7 @@ impl UI {
                     if show_numbers {
                         // Add line numbers (1-indexed, starting from scroll position)
                         let line_num = file_viewer.scroll + idx + 1;
-                        let border_color = Config::parse_color(&config.appearance.colors.border_color);
+                        let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
                         Line::from(vec![
                             Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
                             Span::raw(line.as_str()),
@@ -515,7 +523,7 @@ impl UI {
             let file_info = file_viewer.format_file_info();
             let separator = "─".repeat(area.width.saturating_sub(2) as usize);
 
-            let border_color = Config::parse_color(&config.appearance.colors.border_color);
+            let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
 
             visible_lines.push(Line::from(
                 Span::styled(separator, Style::default().fg(border_color))
@@ -567,10 +575,10 @@ impl UI {
     }
 
     fn render_bookmarks_panel(&self, frame: &mut Frame, area: Rect, bookmarks: &Bookmarks, config: &Config) {
-        let border_color = Config::parse_color(&config.appearance.colors.border_color);
-        let selected_color = Config::parse_color(&config.appearance.colors.selected_color);
-        let file_color = Config::parse_color(&config.appearance.colors.file_color);
-        let panel_border_color = Config::parse_color(&config.appearance.colors.panel_border_color);
+        let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
+        let selected_color = Config::parse_color(Config::get_color(&config.appearance.colors.selected_color));
+        let file_color = Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
+        let panel_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.panel_border_color));
 
         if bookmarks.is_creating {
             // Creation mode - bookmark list + input bar
@@ -647,7 +655,7 @@ impl UI {
                 frame.render_widget(paragraph, area);
             } else {
                 // Has bookmarks - show list with navigation
-                let error_color = Config::parse_color(&config.appearance.colors.error_color);
+                let error_color = Config::parse_color(Config::get_color(&config.appearance.colors.error_color));
                 let items: Vec<ListItem> = filtered.iter().enumerate().map(|(idx, bookmark)| {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
                     let path_str = bookmark.path.display().to_string();
@@ -689,7 +697,7 @@ impl UI {
                 };
 
                 // Check cursor color setting - "dim" means no color highlight, just dimming
-                let cursor_color_str = &config.appearance.colors.cursor_color;
+                let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
                 let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
                     Style::default().add_modifier(Modifier::DIM)
                 } else {

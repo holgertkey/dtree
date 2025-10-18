@@ -270,6 +270,11 @@ impl Config {
         ThemeConfig::parse_color(color_str)
     }
 
+    /// Get a color value (guaranteed to be Some after load())
+    pub fn get_color(opt: &Option<String>) -> &str {
+        opt.as_ref().expect("Color should be resolved after config load")
+    }
+
     /// Load configuration from a file
     pub fn from_file(path: &Path) -> Result<Self> {
         let content = fs::read_to_string(path)
@@ -331,48 +336,34 @@ impl Config {
             }
         }
 
-        // Apply preset theme colors if theme is set
-        // This allows using preset themes while still allowing per-color overrides
-        if let Some(preset) = ThemeConfig::get_preset_theme(&config.appearance.theme) {
-            // Only apply preset colors if they weren't explicitly customized in config
-            // We check if colors match defaults - if they do, apply preset
-            let default_colors = ThemeConfig::default();
+        // Apply color resolution:
+        // 1. Use explicitly set color from config file (if Some)
+        // 2. Otherwise, use preset theme color (if theme is set and preset has color)
+        // 3. Otherwise, use fallback default color
+        let preset = ThemeConfig::get_preset_theme(&config.appearance.theme);
+        let fallback = ThemeConfig::fallback_colors();
 
-            // Apply preset color only if user hasn't customized it
-            if config.appearance.colors.selected_color == default_colors.selected_color {
-                config.appearance.colors.selected_color = preset.selected_color;
-            }
-            if config.appearance.colors.directory_color == default_colors.directory_color {
-                config.appearance.colors.directory_color = preset.directory_color;
-            }
-            if config.appearance.colors.file_color == default_colors.file_color {
-                config.appearance.colors.file_color = preset.file_color;
-            }
-            if config.appearance.colors.border_color == default_colors.border_color {
-                config.appearance.colors.border_color = preset.border_color;
-            }
-            if config.appearance.colors.error_color == default_colors.error_color {
-                config.appearance.colors.error_color = preset.error_color;
-            }
-            if config.appearance.colors.highlight_color == default_colors.highlight_color {
-                config.appearance.colors.highlight_color = preset.highlight_color;
-            }
-            if config.appearance.colors.cursor_color == default_colors.cursor_color {
-                config.appearance.colors.cursor_color = preset.cursor_color;
-            }
-            if config.appearance.colors.tree_cursor_color == default_colors.tree_cursor_color {
-                config.appearance.colors.tree_cursor_color = preset.tree_cursor_color;
-            }
-            if config.appearance.colors.main_border_color == default_colors.main_border_color {
-                config.appearance.colors.main_border_color = preset.main_border_color;
-            }
-            if config.appearance.colors.panel_border_color == default_colors.panel_border_color {
-                config.appearance.colors.panel_border_color = preset.panel_border_color;
-            }
-            if config.appearance.colors.background_color == default_colors.background_color {
-                config.appearance.colors.background_color = preset.background_color;
-            }
+        // Helper macro to apply color resolution
+        macro_rules! resolve_color {
+            ($field:ident) => {
+                config.appearance.colors.$field = config.appearance.colors.$field
+                    .or_else(|| preset.as_ref().and_then(|p| p.$field.clone()))
+                    .or_else(|| fallback.$field.clone());
+            };
         }
+
+        resolve_color!(selected_color);
+        resolve_color!(directory_color);
+        resolve_color!(file_color);
+        resolve_color!(border_color);
+        resolve_color!(error_color);
+        resolve_color!(highlight_color);
+        resolve_color!(cursor_color);
+        resolve_color!(tree_cursor_color);
+        resolve_color!(tree_cursor_bg_color);
+        resolve_color!(main_border_color);
+        resolve_color!(panel_border_color);
+        resolve_color!(background_color);
 
         config
     }
@@ -429,6 +420,7 @@ syntax_theme = "base16-ocean.dark"
 # highlight_color = "yellow"        # Color for fuzzy search character highlighting
 # cursor_color = "yellow"           # Cursor highlight for search & bookmarks
 # tree_cursor_color = "dim"         # Cursor highlight for tree ("dim" = no color, just dimming)
+# tree_cursor_bg_color = "dim"      # Cursor background for tree ("dim" = no background color)
 # main_border_color = "gray"        # Main window border color
 # panel_border_color = "cyan"       # Panel borders (search, bookmarks)
 # background_color = "reset"        # Background color ("reset" = terminal default)
