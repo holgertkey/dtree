@@ -55,7 +55,7 @@ impl Default for AppearanceConfig {
 
 fn default_theme() -> String { "default".to_string() }
 fn default_show_icons() -> bool { false }
-fn default_split_position() -> u16 { 50 }
+fn default_split_position() -> u16 { 20 }
 fn default_show_line_numbers() -> bool { false }
 fn default_enable_syntax_highlighting() -> bool { true }
 fn default_syntax_theme() -> String { "base16-ocean.dark".to_string() }
@@ -110,7 +110,7 @@ fn default_max_file_lines() -> usize { 10000 }
 fn default_show_hidden() -> bool { true }
 fn default_follow_symlinks() -> bool { true }
 fn default_double_click_timeout() -> u64 { 500 }
-fn default_editor() -> String { "nano".to_string() }
+fn default_editor() -> String { "nvim".to_string() }
 fn default_file_manager() -> String { "mc".to_string() }
 fn default_hex_editor() -> String { "mcview".to_string() }
 
@@ -388,7 +388,7 @@ theme = "default"
 show_icons = false
 
 # Split position for file viewer (20-80, percentage)
-split_position = 50
+split_position = 20
 
 # Show line numbers in fullscreen viewer by default (toggle with 'n' key)
 show_line_numbers = false
@@ -439,11 +439,11 @@ follow_symlinks = true
 double_click_timeout_ms = 500
 
 # External editor for opening files (press 'e' to open)
-# Default: nano (if not installed, change to your preferred editor)
+# Default: nvim (if not installed, change to your preferred editor)
 # Popular options:
-#   - Terminal editors: "nano", "vim", "nvim", "emacs", "micro", "helix"
+#   - Terminal editors: "nvim", "vim", "nano", "emacs", "micro", "helix"
 #   - GUI editors (if terminal wrapper available): "code", "subl", "gedit"
-editor = "nano"
+editor = "nvim"
 
 # External file manager (press 'o' to open)
 # Default: mc (Midnight Commander)
@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert_eq!(config.appearance.split_position, 50);
+        assert_eq!(config.appearance.split_position, 20);
         assert_eq!(config.behavior.max_file_lines, 10000);
         assert!(config.behavior.show_hidden);
     }
