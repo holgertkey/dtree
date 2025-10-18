@@ -499,7 +499,8 @@ impl UI {
                 .skip(file_viewer.scroll)
                 .take(lines_to_show)
                 .map(|(idx, line)| {
-                    let line_idx = file_viewer.scroll + idx;  // 0-indexed for search
+                    // idx already contains scroll offset after enumerate().skip()
+                    let line_idx = idx;  // 0-indexed absolute position in content
                     let line_num = line_idx + 1;  // 1-indexed for display
                     let is_match = file_viewer.line_has_match(line_idx);
                     let is_current = file_viewer.is_current_match(line_idx);
@@ -543,7 +544,8 @@ impl UI {
                 .skip(file_viewer.scroll)
                 .take(lines_to_show)
                 .map(|(idx, line)| {
-                    let line_idx = file_viewer.scroll + idx;  // 0-indexed for search
+                    // idx already contains scroll offset after enumerate().skip()
+                    let line_idx = idx;  // 0-indexed absolute position in content
                     let line_num = line_idx + 1;  // 1-indexed for display
                     let is_match = file_viewer.line_has_match(line_idx);
                     let is_current = file_viewer.is_current_match(line_idx);
