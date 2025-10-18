@@ -358,6 +358,7 @@ impl Config {
         resolve_color!(border_color);
         resolve_color!(error_color);
         resolve_color!(highlight_color);
+        resolve_color!(file_search_highlight_color);
         resolve_color!(cursor_color);
         resolve_color!(tree_cursor_color);
         resolve_color!(tree_cursor_bg_color);
@@ -419,7 +420,8 @@ syntax_theme = "base16-ocean.dark"
 # file_color = "white"              # Color for file names
 # border_color = "gray"             # Color for UI borders
 # error_color = "red"               # Color for error messages
-# highlight_color = "yellow"        # Color for fuzzy search character highlighting
+# highlight_color = "yellow"        # Color for fuzzy search character highlighting (directory search)
+# file_search_highlight_color = "yellow"  # Color for file content search highlighting
 # cursor_color = "yellow"           # Cursor highlight for search & bookmarks
 # tree_cursor_color = "dim"         # Cursor highlight for tree ("dim" = no color, just dimming)
 # tree_cursor_bg_color = "dim"      # Cursor background for tree ("dim" = no background color)

@@ -485,8 +485,8 @@ impl UI {
 
         let show_numbers = is_fullscreen && file_viewer.show_line_numbers && !show_help;
 
-        // Get highlight color for search matches
-        let highlight_color = Config::parse_color(Config::get_color(&config.appearance.colors.highlight_color));
+        // Get highlight color for file search matches
+        let file_search_highlight_color = Config::parse_color(Config::get_color(&config.appearance.colors.file_search_highlight_color));
 
         // Use highlighted content if available, otherwise fall back to plain text
         let use_highlighting = !file_viewer.highlighted_content.is_empty() && !show_help;
@@ -511,9 +511,9 @@ impl UI {
                     if show_numbers {
                         let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
                         let num_style = if is_current {
-                            Style::default().fg(highlight_color).add_modifier(Modifier::BOLD)
+                            Style::default().fg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                         } else if is_match {
-                            Style::default().fg(highlight_color)
+                            Style::default().fg(file_search_highlight_color)
                         } else {
                             Style::default().fg(border_color)
                         };
@@ -544,7 +544,7 @@ impl UI {
                                 let match_style = if is_current {
                                     span.style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
                                 } else {
-                                    span.style.bg(highlight_color).add_modifier(Modifier::BOLD)
+                                    span.style.bg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                                 };
                                 spans.push(Span::styled(matched.to_string(), match_style));
 
@@ -587,9 +587,9 @@ impl UI {
                     if show_numbers {
                         let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
                         let num_style = if is_current {
-                            Style::default().fg(highlight_color).add_modifier(Modifier::BOLD)
+                            Style::default().fg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                         } else if is_match {
-                            Style::default().fg(highlight_color)
+                            Style::default().fg(file_search_highlight_color)
                         } else {
                             Style::default().fg(border_color)
                         };
@@ -618,7 +618,7 @@ impl UI {
                             let match_style = if is_current {
                                 Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD)
                             } else {
-                                Style::default().bg(highlight_color).add_modifier(Modifier::BOLD)
+                                Style::default().bg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                             };
                             spans.push(Span::styled(matched.to_string(), match_style));
 

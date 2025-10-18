@@ -29,9 +29,13 @@ pub struct ThemeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_color: Option<String>,
 
-    /// Color for search highlights
+    /// Color for search highlights (directory search)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub highlight_color: Option<String>,
+
+    /// Color for file content search highlights
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_search_highlight_color: Option<String>,
 
     /// Color for cursor/selection highlight (search & bookmarks)
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -67,6 +71,7 @@ impl Default for ThemeConfig {
             border_color: None,
             error_color: None,
             highlight_color: None,
+            file_search_highlight_color: None,
             cursor_color: None,
             tree_cursor_color: None,
             tree_cursor_bg_color: None,
@@ -135,6 +140,7 @@ impl ThemeConfig {
             border_color: Some("gray".to_string()),
             error_color: Some("red".to_string()),
             highlight_color: Some("yellow".to_string()),
+            file_search_highlight_color: Some("yellow".to_string()),
             cursor_color: Some("yellow".to_string()),
             tree_cursor_color: Some("dim".to_string()),
             tree_cursor_bg_color: Some("dim".to_string()),

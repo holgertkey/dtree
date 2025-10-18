@@ -21,6 +21,7 @@ fn default_theme() -> ThemeConfig {
         border_color: Some("gray".to_string()),
         error_color: Some("red".to_string()),
         highlight_color: Some("yellow".to_string()),
+        file_search_highlight_color: Some("yellow".to_string()),
         cursor_color: Some("yellow".to_string()),     // for search & bookmarks
         tree_cursor_color: Some("dim".to_string()),   // "dim" = no color, just dimming
         tree_cursor_bg_color: Some("dim".to_string()), // "dim" = no background color
@@ -39,6 +40,7 @@ fn gruvbox_theme() -> ThemeConfig {
         border_color: Some("#928374".to_string()),    // gray
         error_color: Some("#fb4934".to_string()),     // bright red
         highlight_color: Some("#fabd2f".to_string()), // bright yellow
+        file_search_highlight_color: Some("#fabd2f".to_string()), // bright yellow for file search
         cursor_color: Some("#fabd2f".to_string()),    // yellow for search & bookmarks
         tree_cursor_color: Some("dim".to_string()),   // "dim" = no color, just dimming
         tree_cursor_bg_color: Some("dim".to_string()), // "dim" = no background color
@@ -57,6 +59,7 @@ fn nord_theme() -> ThemeConfig {
         border_color: Some("#4c566a".to_string()),   // polar night gray
         error_color: Some("#bf616a".to_string()),    // aurora red
         highlight_color: Some("#ebcb8b".to_string()), // aurora yellow
+        file_search_highlight_color: Some("#ebcb8b".to_string()), // aurora yellow for file search
         cursor_color: Some("#ebcb8b".to_string()),   // yellow for search & bookmarks
         tree_cursor_color: Some("dim".to_string()),  // "dim" = no color, just dimming
         tree_cursor_bg_color: Some("dim".to_string()), // "dim" = no background color
@@ -75,6 +78,7 @@ fn tokyonight_theme() -> ThemeConfig {
         border_color: Some("#3b4261".to_string()),    // dark gray
         error_color: Some("#f7768e".to_string()),     // red
         highlight_color: Some("#e0af68".to_string()), // yellow
+        file_search_highlight_color: Some("#e0af68".to_string()), // yellow for file search
         cursor_color: Some("#bb9af7".to_string()),    // purple for search & bookmarks
         tree_cursor_color: Some("dim".to_string()),   // "dim" = no color, just dimming
         tree_cursor_bg_color: Some("dim".to_string()), // "dim" = no background color
@@ -93,6 +97,7 @@ fn dracula_theme() -> ThemeConfig {
         border_color: Some("#6272a4".to_string()),    // comment gray
         error_color: Some("#ff5555".to_string()),     // red
         highlight_color: Some("#f1fa8c".to_string()), // yellow
+        file_search_highlight_color: Some("#f1fa8c".to_string()), // yellow for file search
         cursor_color: Some("#bd93f9".to_string()),    // purple for search & bookmarks
         tree_cursor_color: Some("dim".to_string()),   // "dim" = no color, just dimming
         tree_cursor_bg_color: Some("dim".to_string()), // "dim" = no background color
