@@ -520,17 +520,48 @@ impl UI {
                         spans.push(Span::styled(format!("{:4} ", line_num), num_style));
                     }
 
-                    // Add line content with background highlight for matches
-                    for span in &line.spans {
-                        let mut style = span.style;
-                        if is_current {
-                            // Current match: reversed colors + bold
-                            style = style.add_modifier(Modifier::REVERSED | Modifier::BOLD);
-                        } else if is_match {
-                            // Other matches: just background highlight
-                            style = style.bg(highlight_color);
+                    // Add line content with search query highlighting
+                    if is_match && !file_viewer.search_query.is_empty() {
+                        // Highlight only the search query within the line
+                        let query_lower = file_viewer.search_query.to_lowercase();
+
+                        for span in &line.spans {
+                            let text = &span.content;
+                            let text_lower = text.to_lowercase();
+
+                            if let Some(match_pos) = text_lower.find(&query_lower) {
+                                // Split text into: before | match | after
+                                let before = &text[..match_pos];
+                                let matched = &text[match_pos..match_pos + file_viewer.search_query.len()];
+                                let after = &text[match_pos + file_viewer.search_query.len()..];
+
+                                // Before match
+                                if !before.is_empty() {
+                                    spans.push(Span::styled(before.to_string(), span.style));
+                                }
+
+                                // Matched text
+                                let match_style = if is_current {
+                                    span.style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
+                                } else {
+                                    span.style.bg(highlight_color).add_modifier(Modifier::BOLD)
+                                };
+                                spans.push(Span::styled(matched.to_string(), match_style));
+
+                                // After match
+                                if !after.is_empty() {
+                                    spans.push(Span::styled(after.to_string(), span.style));
+                                }
+                            } else {
+                                // No match in this span, use original style
+                                spans.push(Span::styled(span.content.clone(), span.style));
+                            }
                         }
-                        spans.push(Span::styled(span.content.clone(), style));
+                    } else {
+                        // No match or no query - use original styling
+                        for span in &line.spans {
+                            spans.push(Span::styled(span.content.clone(), span.style));
+                        }
                     }
 
                     Line::from(spans)
@@ -565,17 +596,44 @@ impl UI {
                         spans.push(Span::styled(format!("{:4} ", line_num), num_style));
                     }
 
-                    // Add line content with background highlight for matches
-                    let style = if is_current {
-                        // Current match: reversed colors + bold
-                        Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD)
-                    } else if is_match {
-                        // Other matches: just background highlight
-                        Style::default().bg(highlight_color)
+                    // Add line content with search query highlighting
+                    if is_match && !file_viewer.search_query.is_empty() {
+                        // Highlight only the search query within the line
+                        let text = line.as_str();
+                        let text_lower = text.to_lowercase();
+                        let query_lower = file_viewer.search_query.to_lowercase();
+
+                        if let Some(match_pos) = text_lower.find(&query_lower) {
+                            // Split text into: before | match | after
+                            let before = &text[..match_pos];
+                            let matched = &text[match_pos..match_pos + file_viewer.search_query.len()];
+                            let after = &text[match_pos + file_viewer.search_query.len()..];
+
+                            // Before match
+                            if !before.is_empty() {
+                                spans.push(Span::styled(before.to_string(), Style::default()));
+                            }
+
+                            // Matched text
+                            let match_style = if is_current {
+                                Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD)
+                            } else {
+                                Style::default().bg(highlight_color).add_modifier(Modifier::BOLD)
+                            };
+                            spans.push(Span::styled(matched.to_string(), match_style));
+
+                            // After match
+                            if !after.is_empty() {
+                                spans.push(Span::styled(after.to_string(), Style::default()));
+                            }
+                        } else {
+                            // Shouldn't happen, but fallback to normal
+                            spans.push(Span::styled(line.as_str(), Style::default()));
+                        }
                     } else {
-                        Style::default()
-                    };
-                    spans.push(Span::styled(line.as_str(), style));
+                        // No match or no query - normal text
+                        spans.push(Span::styled(line.as_str(), Style::default()));
+                    }
 
                     Line::from(spans)
                 })
