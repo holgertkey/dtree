@@ -447,15 +447,32 @@ impl UI {
     }
 
     fn render_file_viewer(&mut self, frame: &mut Frame, area: Rect, file_viewer: &FileViewer, show_help: bool, config: &Config) {
-        self.viewer_area_start = area.x;
-        self.viewer_area_top = area.y;
-        self.viewer_area_height = area.height;
+        // Check if we're in fullscreen mode (area == frame.area())
+        let is_fullscreen = area == frame.area();
+
+        // Reserve space for search bar if in fullscreen search mode
+        let (viewer_area, search_bar_area) = if is_fullscreen && file_viewer.search_mode {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(3),
+                    Constraint::Length(3),
+                ])
+                .split(area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (area, None)
+        };
+
+        self.viewer_area_start = viewer_area.x;
+        self.viewer_area_top = viewer_area.y;
+        self.viewer_area_height = viewer_area.height;
 
         // Apply main border color and background color
         let main_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.main_border_color));
         let background_color = Config::parse_color(Config::get_color(&config.appearance.colors.background_color));
 
-        let content_height = area.height.saturating_sub(2) as usize;
+        let content_height = viewer_area.height.saturating_sub(2) as usize;
 
         let content_to_display = if show_help {
             get_help_content()
@@ -466,9 +483,10 @@ impl UI {
         // Calculate visible lines (leaving space for separator and file info)
         let lines_to_show = content_height.saturating_sub(2);
 
-        // Check if we're in fullscreen mode (area == frame.area())
-        let is_fullscreen = area == frame.area();
         let show_numbers = is_fullscreen && file_viewer.show_line_numbers && !show_help;
+
+        // Get highlight color for search matches
+        let highlight_color = Config::parse_color(Config::get_color(&config.appearance.colors.highlight_color));
 
         // Use highlighted content if available, otherwise fall back to plain text
         let use_highlighting = !file_viewer.highlighted_content.is_empty() && !show_help;
@@ -481,18 +499,38 @@ impl UI {
                 .skip(file_viewer.scroll)
                 .take(lines_to_show)
                 .map(|(idx, line)| {
+                    let line_num = file_viewer.scroll + idx + 1;
+                    let is_match = file_viewer.line_has_match(line_num);
+                    let is_current = file_viewer.is_current_match(line_num);
+
+                    let mut spans = Vec::new();
+
+                    // Add line numbers if enabled
                     if show_numbers {
-                        // Add line numbers to highlighted lines
-                        let line_num = file_viewer.scroll + idx + 1;
                         let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
-                        let mut spans = vec![
-                            Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
-                        ];
-                        spans.extend(line.spans.iter().cloned());
-                        Line::from(spans)
-                    } else {
-                        line.clone()
+                        let num_style = if is_current {
+                            Style::default().fg(highlight_color).add_modifier(Modifier::BOLD)
+                        } else if is_match {
+                            Style::default().fg(highlight_color)
+                        } else {
+                            Style::default().fg(border_color)
+                        };
+                        spans.push(Span::styled(format!("{:4} ", line_num), num_style));
                     }
+
+                    // Add line content with background highlight for matches
+                    for span in &line.spans {
+                        let mut style = span.style;
+                        if is_match {
+                            style = style.bg(highlight_color);
+                        }
+                        if is_current {
+                            style = style.add_modifier(Modifier::BOLD);
+                        }
+                        spans.push(Span::styled(span.content.clone(), style));
+                    }
+
+                    Line::from(spans)
                 })
                 .collect()
         } else {
@@ -503,17 +541,39 @@ impl UI {
                 .skip(file_viewer.scroll)
                 .take(lines_to_show)
                 .map(|(idx, line)| {
+                    let line_num = file_viewer.scroll + idx + 1;
+                    let is_match = file_viewer.line_has_match(line_num);
+                    let is_current = file_viewer.is_current_match(line_num);
+
+                    let mut spans = Vec::new();
+
+                    // Add line numbers if enabled
                     if show_numbers {
-                        // Add line numbers (1-indexed, starting from scroll position)
-                        let line_num = file_viewer.scroll + idx + 1;
                         let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
-                        Line::from(vec![
-                            Span::styled(format!("{:4} ", line_num), Style::default().fg(border_color)),
-                            Span::raw(line.as_str()),
-                        ])
-                    } else {
-                        Line::from(line.as_str())
+                        let num_style = if is_current {
+                            Style::default().fg(highlight_color).add_modifier(Modifier::BOLD)
+                        } else if is_match {
+                            Style::default().fg(highlight_color)
+                        } else {
+                            Style::default().fg(border_color)
+                        };
+                        spans.push(Span::styled(format!("{:4} ", line_num), num_style));
                     }
+
+                    // Add line content with background highlight for matches
+                    let style = if is_match {
+                        Style::default().bg(highlight_color)
+                    } else {
+                        Style::default()
+                    };
+                    let style = if is_current {
+                        style.add_modifier(Modifier::BOLD)
+                    } else {
+                        style
+                    };
+                    spans.push(Span::styled(line.as_str(), style));
+
+                    Line::from(spans)
                 })
                 .collect()
         };
@@ -551,8 +611,17 @@ impl UI {
                 ""
             };
 
-            format!(" File Viewer (Fullscreen{} - j/k: scroll | Ctrl+j/k: next/prev file | q: back | Esc: exit){} ",
-                mode_indicator, scroll_info)
+            // Add search match info if there are results
+            let search_info = if !file_viewer.search_results.is_empty() {
+                format!(" | {} ", file_viewer.get_match_info())
+            } else if file_viewer.search_mode && !file_viewer.search_query.is_empty() {
+                " | No matches ".to_string()
+            } else {
+                String::new()
+            };
+
+            format!(" File Viewer (Fullscreen{} - /: search | j/k: scroll | Ctrl+j/k: next/prev file | q: back | Esc: exit){}{} ",
+                mode_indicator, search_info, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
@@ -570,6 +639,29 @@ impl UI {
                 .title(title)
                 .border_style(Style::default().fg(main_border_color))
                 .style(Style::default().bg(background_color)));
+
+        frame.render_widget(paragraph, viewer_area);
+
+        // Render file search bar if in search mode
+        if let Some(search_area) = search_bar_area {
+            self.render_file_search_bar(frame, search_area, file_viewer, config);
+        }
+    }
+
+    fn render_file_search_bar(&self, frame: &mut Frame, area: Rect, file_viewer: &FileViewer, config: &Config) {
+        let search_text = format!("Search: {}█", file_viewer.search_query);
+
+        let selected_color = Config::parse_color(Config::get_color(&config.appearance.colors.selected_color));
+        let panel_border_color = Config::parse_color(Config::get_color(&config.appearance.colors.panel_border_color));
+
+        let title_hint = " Enter to search | n: next | N: prev | Esc: cancel ";
+
+        let paragraph = Paragraph::new(search_text)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(title_hint)
+                .border_style(Style::default().fg(panel_border_color)))
+            .style(Style::default().fg(selected_color));
 
         frame.render_widget(paragraph, area);
     }

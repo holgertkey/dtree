@@ -31,6 +31,12 @@ pub struct FileViewer {
     pub is_binary: bool,
     pub tail_mode: bool,  // true = showing last N lines, false = showing first N lines
     pub total_lines: Option<usize>,  // total lines in file (if known)
+
+    // Search functionality
+    pub search_mode: bool,
+    pub search_query: String,
+    pub search_results: Vec<usize>,  // Line numbers with matches (0-indexed)
+    pub current_match: usize,  // Current match index in search_results
 }
 
 impl FileViewer {
@@ -47,6 +53,10 @@ impl FileViewer {
             is_binary: false,
             tail_mode: false,
             total_lines: None,
+            search_mode: false,
+            search_query: String::new(),
+            search_results: Vec::new(),
+            current_match: 0,
         }
     }
 
@@ -485,6 +495,115 @@ impl FileViewer {
             "ttf" | "otf" | "woff" | "woff2" => "Font File".to_string(),
             _ => "Binary Data".to_string(),
         }
+    }
+
+    // ===== Search functionality =====
+
+    /// Enter search mode
+    pub fn enter_search_mode(&mut self) {
+        self.search_mode = true;
+        self.search_query.clear();
+        self.search_results.clear();
+        self.current_match = 0;
+    }
+
+    /// Exit search mode
+    pub fn exit_search_mode(&mut self) {
+        self.search_mode = false;
+        self.search_query.clear();
+        self.search_results.clear();
+        self.current_match = 0;
+    }
+
+    /// Add character to search query
+    pub fn add_search_char(&mut self, c: char) {
+        self.search_query.push(c);
+    }
+
+    /// Remove last character from search query
+    pub fn search_backspace(&mut self) {
+        self.search_query.pop();
+    }
+
+    /// Perform search and populate search_results
+    pub fn perform_search(&mut self) {
+        self.search_results.clear();
+        self.current_match = 0;
+
+        if self.search_query.is_empty() {
+            return;
+        }
+
+        let query_lower = self.search_query.to_lowercase();
+
+        // Search through content lines
+        for (line_idx, line) in self.content.iter().enumerate() {
+            if line.to_lowercase().contains(&query_lower) {
+                self.search_results.push(line_idx);
+            }
+        }
+
+        // Auto-scroll to first match
+        if !self.search_results.is_empty() {
+            self.scroll_to_match(0);
+        }
+    }
+
+    /// Go to next search match
+    pub fn next_match(&mut self) {
+        if self.search_results.is_empty() {
+            return;
+        }
+
+        self.current_match = (self.current_match + 1) % self.search_results.len();
+        self.scroll_to_match(self.current_match);
+    }
+
+    /// Go to previous search match
+    pub fn prev_match(&mut self) {
+        if self.search_results.is_empty() {
+            return;
+        }
+
+        if self.current_match == 0 {
+            self.current_match = self.search_results.len() - 1;
+        } else {
+            self.current_match -= 1;
+        }
+        self.scroll_to_match(self.current_match);
+    }
+
+    /// Scroll to specific match
+    fn scroll_to_match(&mut self, match_idx: usize) {
+        if match_idx >= self.search_results.len() {
+            return;
+        }
+
+        let target_line = self.search_results[match_idx];
+        // Center the match on screen (approximately)
+        self.scroll = target_line.saturating_sub(5);
+    }
+
+    /// Get match info string for display
+    pub fn get_match_info(&self) -> String {
+        if self.search_results.is_empty() {
+            "No matches".to_string()
+        } else {
+            format!("Match {}/{}", self.current_match + 1, self.search_results.len())
+        }
+    }
+
+    /// Check if a line has a match
+    pub fn line_has_match(&self, line_idx: usize) -> bool {
+        self.search_results.contains(&line_idx)
+    }
+
+    /// Check if a line is the current match
+    pub fn is_current_match(&self, line_idx: usize) -> bool {
+        if self.search_results.is_empty() {
+            return false;
+        }
+        self.search_results.get(self.current_match) == Some(&line_idx)
     }
 
     /// Format file information string

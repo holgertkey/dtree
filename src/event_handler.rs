@@ -208,6 +208,11 @@ impl EventHandler {
 
         // In fullscreen viewer mode, only allow specific keys for file viewing
         if *fullscreen_viewer {
+            // File search mode in fullscreen viewer
+            if file_viewer.search_mode {
+                return self.handle_file_search_input(key, file_viewer);
+            }
+
             // Handle Esc key - exits completely
             if matches!(key.code, KeyCode::Esc) {
                 return Ok(None);
@@ -247,6 +252,21 @@ impl EventHandler {
 
             // Handle fullscreen-specific keys
             match key.code {
+                KeyCode::Char('/') => {
+                    // Enter file search mode
+                    file_viewer.enter_search_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('n') => {
+                    // Next search match
+                    file_viewer.next_match();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Char('N') => {
+                    // Previous search match
+                    file_viewer.prev_match();
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::Char('j') | KeyCode::Down => {
                     // Scroll down (j or Down arrow)
                     let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
@@ -709,6 +729,33 @@ impl EventHandler {
             }
             KeyCode::Backspace => {
                 search.backspace();
+                return Ok(Some(PathBuf::new()));
+            }
+            _ => return Ok(Some(PathBuf::new())),
+        }
+    }
+
+    fn handle_file_search_input(
+        &mut self,
+        key: KeyEvent,
+        file_viewer: &mut FileViewer,
+    ) -> Result<Option<PathBuf>> {
+        match key.code {
+            KeyCode::Esc => {
+                file_viewer.exit_search_mode();
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Enter => {
+                file_viewer.perform_search();
+                file_viewer.next_match(); // Jump to first match after search
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Char(c) => {
+                file_viewer.add_search_char(c);
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Backspace => {
+                file_viewer.search_backspace();
                 return Ok(Some(PathBuf::new()));
             }
             _ => return Ok(Some(PathBuf::new())),
