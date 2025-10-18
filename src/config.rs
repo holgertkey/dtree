@@ -376,9 +376,11 @@ impl Config {
 [appearance]
 # Theme name - preset color schemes
 # Available themes:
-#   "default" - Classic terminal colors (blue dirs, cyan selection)
-#   "gruvbox" - Warm, high contrast theme inspired by Gruvbox
-#   "nord"    - Cold, muted colors inspired by Nord theme
+#   "default"    - Classic terminal colors (blue dirs, cyan selection)
+#   "gruvbox"    - Warm, high contrast theme inspired by Gruvbox
+#   "nord"       - Cold, muted colors inspired by Nord theme
+#   "tokyonight" - Modern dark theme with vibrant colors
+#   "dracula"    - Popular dark theme with high contrast
 #
 # You can override individual colors in [appearance.colors] section below
 # Preset themes provide a good starting point with harmonious color palettes
