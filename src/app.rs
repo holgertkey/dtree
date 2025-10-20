@@ -27,6 +27,7 @@ pub struct App {
     fullscreen_viewer: bool,
     show_sizes: bool,
     dir_size_cache: DirSizeCache,
+    need_terminal_clear: bool,
 }
 
 impl App {
@@ -59,6 +60,7 @@ impl App {
             fullscreen_viewer: false,
             show_sizes: false,
             dir_size_cache: DirSizeCache::new(),
+            need_terminal_clear: false,
         })
     }
 
@@ -80,6 +82,7 @@ impl App {
             &mut self.fullscreen_viewer,
             &mut self.show_sizes,
             &mut self.dir_size_cache,
+            &mut self.need_terminal_clear,
             &self.ui,
             &self.config,
         )
@@ -149,6 +152,13 @@ impl App {
         let theme = &self.config.appearance.syntax_theme.clone();
         self.file_viewer.load_file_with_width(file_path, None, max_lines, enable_highlighting, theme)?;
         Ok(())
+    }
+
+    /// Check if terminal needs to be cleared, and reset the flag
+    pub fn should_clear_terminal(&mut self) -> bool {
+        let result = self.need_terminal_clear;
+        self.need_terminal_clear = false;
+        result
     }
 }
 

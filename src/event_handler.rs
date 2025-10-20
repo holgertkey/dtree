@@ -46,6 +46,7 @@ impl EventHandler {
         fullscreen_viewer: &mut bool,
         show_sizes: &mut bool,
         dir_size_cache: &mut DirSizeCache,
+        need_terminal_clear: &mut bool,
         ui: &UI,
         config: &Config,
     ) -> Result<Option<PathBuf>> {
@@ -225,6 +226,7 @@ impl EventHandler {
             // Handle q key - returns to tree view
             if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
                 *fullscreen_viewer = false;
+                *need_terminal_clear = true; // Clear terminal to remove mouse tracking artifacts
                 return Ok(Some(PathBuf::new()));
             }
 

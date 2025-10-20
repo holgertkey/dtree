@@ -39,6 +39,11 @@ pub fn cleanup_terminal() -> Result<()> {
 
 pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: &mut App) -> Result<Option<PathBuf>> {
     loop {
+        // Check if terminal needs to be cleared (e.g., after exiting fullscreen mode)
+        if app.should_clear_terminal() {
+            terminal.clear()?;
+        }
+
         terminal.draw(|f| app.render(f))?;
 
         // Poll for events with 100ms timeout to allow background search to update
