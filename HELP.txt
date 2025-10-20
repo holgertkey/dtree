@@ -164,13 +164,30 @@ FULLSCREEN VIEWER (press 'v' on a file)
     End          Switch to TAIL mode (show last 10000 lines)
     Scroll wheel Scroll by line with mouse
 
-  Large File Viewing:
+  Large File Viewing (HEAD/TAIL modes):
     • Files with more than 10000 lines show HEAD or TAIL mode indicator
     • HEAD mode shows first 10000 lines (default)
     • TAIL mode shows last 10000 lines (useful for logs)
     • Press End to switch to TAIL mode, Home to switch back to HEAD
     • Mode indicator appears in title: [HEAD MODE] or [TAIL MODE]
     • For large files (>1MB), tail mode uses efficient backward reading
+    • Example use case: viewing log files - press End to see latest entries
+
+  File Search (fullscreen mode):
+    /            Enter file search mode (search within current file)
+    Type query   Type your search query (case-insensitive)
+    Enter        Execute search and jump to first match
+    n            Jump to next match (cycles through results)
+    N            Jump to previous match (Shift+n)
+    Esc          Clear search and exit search mode
+
+    Search features:
+    • Case-insensitive substring matching
+    • Highlights matching lines during navigation
+    • Shows match counter: "Match 3/15" in the title bar
+    • Auto-scrolls to center matched line on screen
+    • Works in both HEAD and TAIL modes
+    • Results persist until cleared with Esc
 
   Text Selection (fullscreen mode):
     Shift+Mouse  Select text (bypasses mouse capture)
@@ -178,9 +195,10 @@ FULLSCREEN VIEWER (press 'v' on a file)
 
   Important notes:
     • In fullscreen mode, ONLY viewer keys work (see above)
-    • All other keys are disabled (search, bookmarks, tree navigation, etc.)
+    • All other keys are disabled (tree search, bookmarks, tree navigation, etc.)
     • When launched via CLI (dt -v file.txt), file mode is enabled automatically
     • This allows Ctrl+j/k to navigate between files in the same directory
+    • File search (/) is different from tree search - it searches within the file
 
 MOUSE SUPPORT
   Click          Select item in tree
