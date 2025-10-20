@@ -1,4 +1,4 @@
-# dtree
+# dtree - Directory Tree Navigator
 
 **A fast, lightweight, and feature-rich TUI for interactive directory tree navigation.**
 
@@ -65,9 +65,12 @@ sudo cp target/release/dtree /usr/local/bin/
 Add this to your `~/.bashrc` for seamless shell integration:
 
 ```bash
+# Directory tree navigator
 dt() {
+  # Store current directory before navigation
   local prev_dir="$PWD"
 
+  # Handle special case: dt - (return to previous directory)
   if [ "$1" = "-" ]; then
     if [ -n "$DTREE_PREV_DIR" ] && [ -d "$DTREE_PREV_DIR" ]; then
       cd "$DTREE_PREV_DIR" || return
@@ -79,13 +82,20 @@ dt() {
     return
   fi
 
+  # If flags or bookmark commands are passed, run dtree directly
   case "$1" in
-    -h|--help|--version|-bm)
+    -h|--help|--version)
+      command dtree "$@"
+      return
+      ;;
+    -bm)
+      # Bookmark management - run directly
       command dtree "$@"
       return
       ;;
   esac
 
+  # For navigation: dtree resolves paths/bookmarks
   local result=$(command dtree "$@")
   local exit_code=$?
 
@@ -93,8 +103,10 @@ dt() {
     return $exit_code
   fi
 
+  # Only cd if result is a valid directory
   if [ -n "$result" ] && [ -d "$result" ]; then
     cd "$result" || return
+    # Save previous directory for dt -
     export DTREE_PREV_DIR="$prev_dir"
   fi
 }
@@ -369,32 +381,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Syntax highlighting powered by [syntect](https://github.com/trishume/syntect)
 - Fuzzy search using [fuzzy-matcher](https://github.com/lotabout/fuzzy-matcher)
 - Inspired by tools like `tree`, `ranger`, and `nnn`
-
----
-
-## Roadmap
-
-See [CLAUDE.md](./CLAUDE.md) for the complete development roadmap.
-
-### Completed ✅
-
-- Interactive tree navigation
-- File preview with syntax highlighting
-- Async fuzzy search
-- Bookmarks system
-- Directory size calculation
-- Fullscreen viewer with file search and tail mode
-- Binary file support
-- Configuration system
-- External editor/file manager integration
-
-### Planned 🔮
-
-- Navigation history (back/forward)
-- Advanced filtering (.gitignore support, custom patterns)
-- Pre-defined color themes
-- Plugin system
-- Performance monitoring
 
 ---
 
