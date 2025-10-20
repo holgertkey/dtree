@@ -56,7 +56,7 @@ impl Default for AppearanceConfig {
 fn default_theme() -> String { "default".to_string() }
 fn default_show_icons() -> bool { false }
 fn default_split_position() -> u16 { 20 }
-fn default_show_line_numbers() -> bool { true }
+fn default_show_line_numbers() -> bool { false }
 fn default_enable_syntax_highlighting() -> bool { true }
 fn default_syntax_theme() -> String { "base16-ocean.dark".to_string() }
 
@@ -393,8 +393,8 @@ show_icons = false
 # Split position for file viewer (20-80, percentage)
 split_position = 20
 
-# Show line numbers in fullscreen viewer by default (toggle with 'n' key)
-show_line_numbers = true
+# Show line numbers in fullscreen viewer by default (toggle with 'l' key)
+show_line_numbers = false
 
 # Enable syntax highlighting for code files
 enable_syntax_highlighting = true
