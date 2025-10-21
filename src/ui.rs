@@ -435,8 +435,14 @@ impl UI {
         let theme = &config.appearance.syntax_theme;
 
         if fullscreen {
-            // For fullscreen, use None to get maximum width (no truncation)
-            file_viewer.load_file_with_width(path, None, max_lines, enable_highlighting, theme)
+            // For fullscreen, use terminal width (accounting for borders and line numbers)
+            // Line numbers take ~6 chars, borders take 2, leave some margin
+            let max_width = if file_viewer.show_line_numbers {
+                self.terminal_width.saturating_sub(8) as usize
+            } else {
+                self.terminal_width.saturating_sub(2) as usize
+            };
+            file_viewer.load_file_with_width(path, Some(max_width), max_lines, enable_highlighting, theme)
         } else {
             // For split view, calculate available width based on split position
             let max_width = self.terminal_width

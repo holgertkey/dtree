@@ -293,9 +293,13 @@ impl EventHandler {
                 KeyCode::Char('w') | KeyCode::Char('W') => {
                     // Toggle line wrapping (only in fullscreen mode)
                     file_viewer.toggle_wrap();
+                    // Save current scroll position
+                    let saved_scroll = file_viewer.scroll;
                     // Reload the current file to apply wrapping changes
                     if let Some(node) = nav.get_selected_node() {
                         let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                        // Restore scroll position (clamped to content length)
+                        file_viewer.scroll = saved_scroll.min(file_viewer.content.len().saturating_sub(1));
                     }
                     return Ok(Some(PathBuf::new()));
                 }
