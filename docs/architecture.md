@@ -9,13 +9,13 @@ dtree is built with a modular architecture that separates concerns into distinct
 ```
 ┌─────────────────────────────────────────────┐
 │              main.rs                        │
-│  (Entry point, terminal setup, CLI)        │
+│  (Entry point, terminal setup, CLI)         │
 └──────────────────┬──────────────────────────┘
                    │
         ┌──────────▼──────────┐
         │       App           │
         │  (State manager)    │
-        └──┬──┬──┬──┬──┬──┬──┘
+        └──┬──┬──┬──┬──┬──┬───┘
            │  │  │  │  │  │
      ┌─────┘  │  │  │  │  └──────┐
      │        │  │  │  │         │
