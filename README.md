@@ -39,6 +39,19 @@ dt /path/to/directory
 
 # View a file in fullscreen
 dt -v README.md
+
+# Create and use bookmarks
+dt                    # Open dtree
+# Press 'm' to create bookmark
+# Press 'q' to exit
+dt myproject          # Jump to bookmark instantly
+
+# Basic navigation inside dtree:
+# j/k - move up/down
+# l/h - expand/collapse
+# s - toggle file preview
+# / - search
+# i - help
 ```
 
 ---
@@ -120,54 +133,175 @@ source ~/.bashrc
 
 ---
 
-## Usage
+## CLI Commands
 
-### Navigation
+### Basic Usage
 
-```
-j/k or ↓/↑    Navigate down/up
-l/→ or h/←    Expand/collapse directory
-Enter         Change root to selected directory
-u/Backspace   Go to parent directory
-q             Exit and cd to selected directory
+```bash
+# Launch interactive tree from current directory
+dt
+
+# Navigate to specific directory
+dt /path/to/directory
+
+# Jump to bookmark
+dt myproject
+
+# Return to previous directory (like cd -)
+dt -
 ```
 
 ### File Viewing
 
-```
-s             Toggle file viewer mode
-v             Open file in fullscreen viewer
-Ctrl+j/k      Scroll file preview
-e             Open in external editor
-o             Open in file manager
+```bash
+# View file in fullscreen mode
+dt -v README.md
+dtree --view README.md
+
+# After viewing, press 'q' to navigate to file's directory
 ```
 
-### Search
+### Bookmark Management
 
+```bash
+# List all bookmarks
+dt -bm
+dt -bm list
+
+# Add bookmark for current directory
+dt -bm add myproject
+
+# Add bookmark for specific path
+dt -bm add myproject /path/to/directory
+
+# Remove bookmark
+dt -bm remove myproject
 ```
-/             Enter search mode
-              Type query (or /query for fuzzy search)
-Enter         Execute search
-Tab           Switch focus between tree and results
-n/N           Next/previous match (in fullscreen)
+
+### Help and Version
+
+```bash
+# Show help
+dtree -h
+dtree --help
+
+# Show version
+dtree --version
 ```
+
+### Navigation Priority
+
+When you run `dt <name>`, dtree resolves in this order:
+1. **Bookmark** - If bookmark exists, jump to it
+2. **Path** - If valid path, navigate to it
+3. **Error** - Show error message
+
+---
+
+## Keyboard Shortcuts
+
+### Tree Navigation
+
+| Key | Action |
+|-----|--------|
+| `j` or `↓` | Move down one item |
+| `k` or `↑` | Move up one item |
+| `l` or `→` | Expand directory (show children) |
+| `h` or `←` | Collapse directory (hide children) |
+| `Enter` | Change root to selected directory |
+| `u` or `Backspace` | Go to parent directory |
+| `q` | Exit and cd to selected directory |
+| `Esc` | Exit without changing directory |
+
+### File Viewing (Split View)
+
+| Key | Action |
+|-----|--------|
+| `s` | Toggle file viewer mode (show/hide split view) |
+| `v` | Open file in fullscreen viewer |
+| `Ctrl+j` | Scroll preview down by line |
+| `Ctrl+k` | Scroll preview up by line |
+| `Page Down` | Scroll preview down by page |
+| `Page Up` | Scroll preview up by page |
+| `Home` | Jump to start of file |
+| `End` | Jump to end of file |
+
+### Fullscreen Viewer
+
+| Key | Action |
+|-----|--------|
+| `j` or `↓` | Scroll down by line |
+| `k` or `↑` | Scroll up by line |
+| `Ctrl+j` | Jump to next file in directory |
+| `Ctrl+k` | Jump to previous file in directory |
+| `Page Down` | Scroll down by page |
+| `Page Up` | Scroll up by page |
+| `Home` | Switch to HEAD mode (first 10,000 lines) |
+| `End` | Switch to TAIL mode (last 10,000 lines) |
+| `l` | Toggle line numbers |
+| `/` | Enter file search mode |
+| `n` | Next search match (when results exist) |
+| `N` | Previous search match (Shift+n) |
+| `q` | Return to tree view (stay in program) |
+| `Esc` | Exit program (or clear search if active) |
+
+### Search (Tree Search)
+
+| Key | Action |
+|-----|--------|
+| `/` | Enter search mode |
+| Type | Add characters to search query |
+| `Backspace` | Remove last character |
+| `Enter` | Execute search and show results |
+| `Tab` | Switch focus between tree and results panel |
+| `j` or `↓` | Navigate down in results |
+| `k` or `↑` | Navigate up in results |
+| `Esc` | Close results and exit search mode |
+
+**Fuzzy Search**: Start query with `/` for fuzzy matching (e.g., `/fuz` finds "fuzzy.rs")
 
 ### Bookmarks
 
-```
-m             Create bookmark
-'             Open bookmark selection
-dt myproject  Jump to bookmark (from command line)
-dt -bm list   List all bookmarks
-```
+| Key | Action |
+|-----|--------|
+| `m` | Create bookmark (enter name) |
+| `'` | Open bookmark selection menu |
+| `j` or `↓` | Navigate bookmarks (in selection) |
+| `k` or `↑` | Navigate bookmarks (in selection) |
+| `d` | Delete bookmark (press twice to confirm) |
+| `Tab` | Toggle filter mode (type to filter) |
+| `Enter` | Jump to selected bookmark |
+| `Esc` | Close bookmark menu |
 
-### Other Features
+### File Operations
 
-```
-i             Toggle help screen
-c             Copy current path to clipboard
-z             Toggle directory size display
-```
+| Key | Action |
+|-----|--------|
+| `e` | Open file in external editor (or hex editor for binary) |
+| `o` | Open in file manager (dirs → self, files → parent) |
+| `c` | Copy current path to clipboard |
+
+### Other
+
+| Key | Action |
+|-----|--------|
+| `i` | Toggle help screen |
+| `z` | Toggle directory size display |
+
+### Mouse Support
+
+| Action | Effect |
+|--------|--------|
+| **Tree View** | |
+| Click | Select item under cursor |
+| Double-click | Expand/collapse directory |
+| Scroll wheel | Navigate tree up/down |
+| Drag divider | Resize panels |
+| **File Preview** | |
+| Scroll wheel | Scroll preview content |
+| **Fullscreen Viewer** | |
+| Scroll wheel | Scroll document |
+| Shift+Click+Drag | Select text for copying |
 
 ---
 
@@ -281,18 +415,61 @@ file_manager = "ranger"
 
 ---
 
+## Quick Reference Card
+
+Essential commands for daily use:
+
+### Command Line
+```bash
+dt                    # Open tree navigator
+dt /path              # Navigate to directory
+dt myproject          # Jump to bookmark
+dt -                  # Return to previous directory
+dt -v file.txt        # View file in fullscreen
+dt -bm list           # List bookmarks
+```
+
+### Inside dtree
+```
+Navigation:       j/k (down/up)   h/l (collapse/expand)   u (parent)
+File Viewing:     s (toggle)      v (fullscreen)          e (editor)
+Search:           / (search)      Enter (execute)         Tab (focus)
+Bookmarks:        m (create)      ' (select)              d (delete)
+Actions:          c (copy path)   o (file manager)        z (sizes)
+Help:             i (help)        q (exit+cd)             Esc (exit)
+```
+
+### Fullscreen Viewer
+```
+Navigate:         j/k (scroll)    Ctrl+j/k (next/prev file)
+Page:             PgUp/PgDn       Home/End (head/tail mode)
+Search:           / (search)      n/N (next/prev match)
+View:             l (line #)      q (back to tree)
+```
+
+For complete keybinding reference, see [docs/keybindings.md](./docs/keybindings.md).
+
+**📄 Printable Cheat Sheet**: [CHEATSHEET.md](./CHEATSHEET.md)
+
+---
+
 ## Documentation
 
 Complete documentation is available in the [docs](./docs) directory:
 
+### User Guides
 - **[Getting Started](./docs/getting-started.md)** - Quick start guide
 - **[Installation](./docs/installation.md)** - Installation instructions
 - **[Usage](./docs/usage.md)** - Basic usage guide
-- **[Configuration](./docs/configuration.md)** - Configuration reference
+- **[CLI Options](./docs/cli-options.md)** - Complete command-line reference
 - **[Key Bindings](./docs/keybindings.md)** - Complete keybinding reference
+- **[Configuration](./docs/configuration.md)** - Configuration reference
 - **[Features](./docs/features.md)** - Feature documentation
+
+### Developer Guides
 - **[Architecture](./docs/architecture.md)** - Internal architecture
 - **[Contributing](./docs/contributing.md)** - Contribution guide
+- **[Building](./docs/building.md)** - Build from source
 
 ---
 
