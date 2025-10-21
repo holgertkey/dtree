@@ -45,6 +45,7 @@ impl App {
         // Apply config to UI and file viewer
         ui.split_position = config.appearance.split_position;
         file_viewer.show_line_numbers = config.appearance.show_line_numbers;
+        file_viewer.wrap_lines = config.behavior.wrap_lines;
 
         Ok(App {
             nav,

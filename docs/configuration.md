@@ -71,6 +71,9 @@ follow_symlinks = false
 # Mouse double-click timeout in milliseconds
 double_click_timeout_ms = 500
 
+# Wrap long lines in file viewer (true = wrap, false = truncate)
+wrap_lines = true
+
 # External editor command (for 'e' key)
 editor = "nano"
 
@@ -228,6 +231,27 @@ double_click_timeout_ms = 300  # Faster double-click
 double_click_timeout_ms = 800  # Slower double-click
 ```
 
+### Line Wrapping
+
+Control how long lines are displayed in file viewer:
+
+```toml
+wrap_lines = true   # Wrap at word boundaries (default)
+wrap_lines = false  # Truncate with "..." indicator
+```
+
+**Wrap mode** (true):
+- Breaks long lines at word boundaries
+- Better for reading text files and documentation
+- Multiple visual lines per actual line
+
+**Truncate mode** (false):
+- Shows one visual line per actual line
+- Better for code with long lines
+- Adds "..." to indicate truncation
+
+You can toggle this at runtime with the `w` key in fullscreen viewer mode.
+
 ### External Programs
 
 #### Editor
@@ -303,6 +327,7 @@ split_position = 50
 
 [behavior]
 max_file_lines = 10000
+wrap_lines = true
 editor = "nano"
 file_manager = "mc"
 ```
@@ -326,6 +351,7 @@ highlight_color = "#FFFF00"
 
 [behavior]
 max_file_lines = 10000
+wrap_lines = true
 editor = "nvim"
 hex_editor = "hexyl"
 file_manager = "ranger"
@@ -357,6 +383,7 @@ enable_syntax_highlighting = false
 
 [behavior]
 max_file_lines = 5000
+wrap_lines = true
 show_hidden = false
 follow_symlinks = false
 ```

@@ -90,6 +90,10 @@ pub struct BehaviorConfig {
     /// External hex editor for viewing binary files
     #[serde(default = "default_hex_editor")]
     pub hex_editor: String,
+
+    /// Wrap long lines in file viewer (true = wrap, false = truncate)
+    #[serde(default = "default_wrap_lines")]
+    pub wrap_lines: bool,
 }
 
 impl Default for BehaviorConfig {
@@ -102,6 +106,7 @@ impl Default for BehaviorConfig {
             editor: default_editor(),
             file_manager: default_file_manager(),
             hex_editor: default_hex_editor(),
+            wrap_lines: default_wrap_lines(),
         }
     }
 }
@@ -113,6 +118,7 @@ fn default_double_click_timeout() -> u64 { 500 }
 fn default_editor() -> String { "nvim".to_string() }
 fn default_file_manager() -> String { "mc".to_string() }
 fn default_hex_editor() -> String { "mcview".to_string() }
+fn default_wrap_lines() -> bool { true }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -470,6 +476,11 @@ file_manager = "mc"
 #   - "hexdump" - Classic hex dump tool
 #   - "hd"      - Alias for hexdump -C
 hex_editor = "mcview"
+
+# Wrap long lines in file viewer (press 'w' to toggle in fullscreen mode)
+# true  = Wrap long lines at word boundaries (default, better for reading text)
+# false = Truncate long lines with "..." indicator (better for code with long lines)
+wrap_lines = true
 
 [keybindings]
 # Key bindings (each can have multiple keys)

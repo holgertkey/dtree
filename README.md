@@ -361,6 +361,7 @@ file_color = "white"
 
 [behavior]
 max_file_lines = 10000
+wrap_lines = true        # Wrap long lines (true) or truncate (false)
 editor = "nvim"
 hex_editor = "hexyl"
 file_manager = "ranger"
