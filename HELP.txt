@@ -120,8 +120,12 @@ FILE VIEWER MODE (press 's' to toggle)
     • Displays file information (size, lines, permissions)
 
   File Preview Navigation:
-    Ctrl+j       Scroll down in file preview
-    Ctrl+k       Scroll up in file preview
+    Ctrl+j       Scroll down in file preview by line
+    Ctrl+k       Scroll up in file preview by line
+    Page Down    Scroll down in file preview by page
+    Page Up      Scroll up in file preview by page
+    Home         Jump to start of file
+    End          Jump to end of file
     Scroll wheel Scroll file preview (when mouse over preview area)
 
 BINARY FILE SUPPORT
