@@ -7,6 +7,18 @@
 
 ---
 
+## Why dtree?
+
+**dtree** combines the simplicity of `tree` with the power of modern file managers, creating the perfect tool for developers who live in the terminal. Unlike traditional file managers that try to do everything, dtree focuses on what matters most: **fast navigation** and **intelligent file viewing**.
+
+**Navigate instantly.** Jump between projects with bookmarks, find files with fuzzy search, and preview code with syntax highlighting - all without leaving your keyboard. No more endless `cd` commands or opening heavy GUIs just to peek at a file.
+
+**Stay in flow.** Built with Rust for blazing-fast performance and zero-copy operations, dtree handles massive directory trees without breaking a sweat. Asynchronous search runs in the background while you keep working. Your terminal, your speed.
+
+**Your tool, your way.** Fully customizable themes, configurable keybindings, and seamless shell integration. Works beautifully with vim-style navigation, integrates with your favorite editor, and fits naturally into your existing workflow.
+
+---
+
 ## Features
 
 - 🌳 **Interactive Tree View** - Visual directory navigation with expand/collapse
