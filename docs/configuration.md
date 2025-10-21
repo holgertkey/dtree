@@ -84,14 +84,19 @@ hex_editor = "hexyl"
 file_manager = "mc"
 
 [keybindings]
-# Note: Custom keybindings not yet fully implemented
-# These are documentation of default bindings
-
+# Customizable key bindings
+# Each action accepts a list of keys that trigger it
 quit = ["q", "Esc"]
 search = ["/"]
 toggle_files = ["s"]
 toggle_help = ["i"]
 copy_path = ["c"]
+open_editor = ["e"]
+open_file_manager = ["o"]
+create_bookmark = ["m"]
+select_bookmark = ["'"]
+show_line_numbers = ["l"]
+toggle_wrap = ["w"]
 ```
 
 ## Appearance Settings

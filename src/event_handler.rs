@@ -290,7 +290,7 @@ impl EventHandler {
                     file_viewer.toggle_line_numbers();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('w') | KeyCode::Char('W') => {
+                _ if config.keybindings.is_toggle_wrap(key.code) => {
                     // Toggle line wrapping (only in fullscreen mode)
                     file_viewer.toggle_wrap();
                     // Save current scroll position

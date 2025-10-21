@@ -162,6 +162,10 @@ pub struct KeybindingsConfig {
     /// Keys to toggle line numbers in fullscreen viewer
     #[serde(default = "default_show_line_numbers_keys")]
     pub show_line_numbers: Vec<String>,
+
+    /// Keys to toggle line wrapping in fullscreen viewer
+    #[serde(default = "default_toggle_wrap_keys")]
+    pub toggle_wrap: Vec<String>,
 }
 
 impl Default for KeybindingsConfig {
@@ -177,6 +181,7 @@ impl Default for KeybindingsConfig {
             create_bookmark: default_create_bookmark_keys(),
             select_bookmark: default_select_bookmark_keys(),
             show_line_numbers: default_show_line_numbers_keys(),
+            toggle_wrap: default_toggle_wrap_keys(),
         }
     }
 }
@@ -191,6 +196,7 @@ fn default_open_file_manager_keys() -> Vec<String> { vec!["o".to_string()] }
 fn default_create_bookmark_keys() -> Vec<String> { vec!["m".to_string()] }
 fn default_select_bookmark_keys() -> Vec<String> { vec!["'".to_string()] }
 fn default_show_line_numbers_keys() -> Vec<String> { vec!["l".to_string()] }
+fn default_toggle_wrap_keys() -> Vec<String> { vec!["w".to_string()] }
 
 impl KeybindingsConfig {
     /// Check if a key matches any of the configured keys in the list
@@ -254,6 +260,10 @@ impl KeybindingsConfig {
 
     pub fn is_show_line_numbers(&self, key: KeyCode) -> bool {
         self.matches_key(key, &self.show_line_numbers)
+    }
+
+    pub fn is_toggle_wrap(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.toggle_wrap)
     }
 }
 
@@ -494,6 +504,7 @@ open_file_manager = ["o"]
 create_bookmark = ["m"]
 select_bookmark = ["'"]
 show_line_numbers = ["l"]
+toggle_wrap = ["w"]
 "#;
 
         // Create parent directory if it doesn't exist

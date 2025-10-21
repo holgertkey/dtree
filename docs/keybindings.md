@@ -321,9 +321,27 @@ If `Ctrl+j`/`Ctrl+k` don't work for scrolling:
 
 ## Keybinding Customization
 
-Currently, keybindings are **not fully customizable**. The `[keybindings]` section in `config.toml` is documentation only.
+Keybindings can be customized in `~/.config/dtree/config.toml` in the `[keybindings]` section:
 
-Custom keybinding support is planned for a future release.
+```toml
+[keybindings]
+quit = ["q", "Esc"]
+search = ["/"]
+toggle_files = ["s"]
+toggle_help = ["i"]
+copy_path = ["c"]
+open_editor = ["e"]
+open_file_manager = ["o"]
+create_bookmark = ["m"]
+select_bookmark = ["'"]
+show_line_numbers = ["l"]
+toggle_wrap = ["w"]
+```
+
+**Notes:**
+- Each binding accepts a list of keys
+- Multiple keys can trigger the same action
+- Some keys are hardcoded for navigation (arrow keys, j/k/h/l)
 
 ## Quick Reference Card
 
@@ -342,7 +360,7 @@ Exit:             q (exit+cd)    Esc (exit)
 
 ```
 Navigate:         j/k (scroll)   Ctrl+j/k (next/prev file)
-Modes:            Home (HEAD)    End (TAIL)  l (line #)
+Modes:            Home (HEAD)    End (TAIL)  l (line #)  w (wrap)
 Search:           / (search)     n/N (next/prev match)
 Exit:             q (tree)       Esc (quit)
 ```
