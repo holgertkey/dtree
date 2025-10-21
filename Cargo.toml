@@ -3,6 +3,13 @@
 name = "dtree"
 version = "0.1.0"
 edition = "2021"
+authors = ["holgertkey"]
+license = "MIT"
+description = "A fast, lightweight TUI for interactive directory tree navigation with file preview and fuzzy search"
+repository = "https://github.com/holgertkey/dtree"
+keywords = ["cli", "tui", "directory", "tree", "file-manager"]
+categories = ["command-line-utilities", "filesystem"]
+readme = "README.md"
 
 [dependencies]
 ratatui = "0.28"
