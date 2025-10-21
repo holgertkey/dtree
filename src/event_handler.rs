@@ -290,6 +290,15 @@ impl EventHandler {
                     file_viewer.toggle_line_numbers();
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char('w') | KeyCode::Char('W') => {
+                    // Toggle line wrapping (only in fullscreen mode)
+                    file_viewer.toggle_wrap();
+                    // Reload the current file to apply wrapping changes
+                    if let Some(node) = nav.get_selected_node() {
+                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                    }
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::Char('e') | KeyCode::Char('E') => {
                     // Open file in editor (or hex editor for binary files)
                     if let Some(node) = nav.get_selected_node() {

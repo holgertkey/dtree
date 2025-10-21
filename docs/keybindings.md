@@ -103,9 +103,10 @@ When viewing a file in fullscreen (press `v`):
 
 ### View Options
 
-| Key | Action                          |
-|-----|---------------------------------|
-| `l` | Toggle line numbers (show/hide) |
+| Key | Action                               |
+|-----|--------------------------------------|
+| `l` | Toggle line numbers (show/hide)      |
+| `w` | Toggle line wrapping (wrap/truncate) |
 
 ### File Search
 

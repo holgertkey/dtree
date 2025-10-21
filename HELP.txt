@@ -157,6 +157,7 @@ FULLSCREEN VIEWER (press 'v' on a file)
     q            Return to tree view (stay in program)
     Esc          Exit program completely (return to terminal)
     l            Toggle line numbers (show/hide)
+    w            Toggle line wrapping (wrap/truncate long lines)
 
   Navigation (fullscreen mode):
     j / ↓        Scroll down by line
@@ -196,6 +197,18 @@ FULLSCREEN VIEWER (press 'v' on a file)
   Text Selection (fullscreen mode):
     Shift+Mouse  Select text (bypasses mouse capture)
                  Copy with Ctrl+Shift+C or right-click menu
+
+  Line Wrapping (fullscreen mode):
+    w            Toggle line wrapping mode
+    • Wrap mode (default): Long lines are wrapped at word boundaries
+      - Lines break at spaces to fit the terminal width
+      - Very long words are split if needed
+      - Ideal for reading text files and documentation
+    • Truncate mode: Long lines are truncated with "..." indicator
+      - Shows maximum content on one line
+      - Better for viewing code with long lines
+      - Prevents horizontal scrolling confusion
+    • Current mode is shown in the title bar (w: wrap / w: truncate)
 
   Important notes:
     • In fullscreen mode, ONLY viewer keys work (see above)

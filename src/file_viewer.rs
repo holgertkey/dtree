@@ -27,6 +27,7 @@ pub struct FileViewer {
     pub current_size: u64,
     pub current_permissions: u32,
     pub show_line_numbers: bool,
+    pub wrap_lines: bool,  // true = wrap long lines, false = truncate
     pub syntax_name: Option<String>,
     pub is_binary: bool,
     pub tail_mode: bool,  // true = showing last N lines, false = showing first N lines
@@ -49,6 +50,7 @@ impl FileViewer {
             current_size: 0,
             current_permissions: 0,
             show_line_numbers: false,
+            wrap_lines: true,  // Default to wrapping enabled
             syntax_name: None,
             is_binary: false,
             tail_mode: false,
@@ -63,6 +65,11 @@ impl FileViewer {
     /// Toggle line numbers display
     pub fn toggle_line_numbers(&mut self) {
         self.show_line_numbers = !self.show_line_numbers;
+    }
+
+    /// Toggle line wrapping
+    pub fn toggle_wrap(&mut self) {
+        self.wrap_lines = !self.wrap_lines;
     }
 
     /// Read last N lines from a file (for tail mode)
@@ -235,13 +242,22 @@ impl FileViewer {
         // Store total lines for UI display
         self.total_lines = Some(total_lines);
 
-        // Process lines: replace tabs and truncate
+        // Process lines: replace tabs and wrap/truncate based on settings
         for content in raw_lines {
             // Replace tabs with spaces (4 spaces per tab)
             let content_no_tabs = content.replace('\t', "    ");
-            // Truncate line to prevent Unicode artifacts
-            let truncated = Self::truncate_line(&content_no_tabs, max_width);
-            self.content.push(truncated);
+
+            if self.wrap_lines {
+                // Wrap long lines
+                let wrapped_lines = Self::wrap_line(&content_no_tabs, max_width);
+                for wrapped in wrapped_lines {
+                    self.content.push(wrapped);
+                }
+            } else {
+                // Truncate line to prevent Unicode artifacts
+                let truncated = Self::truncate_line(&content_no_tabs, max_width);
+                self.content.push(truncated);
+            }
         }
 
         // Add truncation indicator if needed
@@ -325,6 +341,90 @@ impl FileViewer {
         } else {
             truncated.to_string()
         }
+    }
+
+    /// Wrap a line to max_width, returning a vector of wrapped lines
+    fn wrap_line(line: &str, max_width: usize) -> Vec<String> {
+        if max_width == 0 {
+            return vec![line.to_string()];
+        }
+
+        // If line fits, return it as-is
+        let line_width = line.width();
+        if line_width <= max_width {
+            return vec![line.to_string()];
+        }
+
+        let mut result = Vec::new();
+        let mut current_line = String::new();
+        let mut current_width = 0;
+
+        for word in line.split_whitespace() {
+            let word_width = word.width();
+
+            // If this is the first word in the line
+            if current_line.is_empty() {
+                // If word is longer than max_width, we must break it
+                if word_width > max_width {
+                    let mut remaining = word;
+                    while !remaining.is_empty() {
+                        let (chunk, byte_offset) = remaining.unicode_truncate(max_width);
+                        result.push(chunk.to_string());
+                        remaining = &remaining[byte_offset..];
+                    }
+                } else {
+                    current_line.push_str(word);
+                    current_width = word_width;
+                }
+            } else {
+                // Check if adding space + word would exceed max_width
+                let space_width = 1;
+                let new_width = current_width + space_width + word_width;
+
+                if new_width <= max_width {
+                    // Add space and word to current line
+                    current_line.push(' ');
+                    current_line.push_str(word);
+                    current_width = new_width;
+                } else {
+                    // Save current line and start new one
+                    result.push(current_line.clone());
+                    current_line.clear();
+
+                    // If word is longer than max_width, break it
+                    if word_width > max_width {
+                        let mut remaining = word;
+                        while !remaining.is_empty() {
+                            let remaining_width = remaining.width();
+                            if remaining_width <= max_width {
+                                current_line = remaining.to_string();
+                                current_width = remaining_width;
+                                break;
+                            } else {
+                                let (chunk, byte_offset) = remaining.unicode_truncate(max_width);
+                                result.push(chunk.to_string());
+                                remaining = &remaining[byte_offset..];
+                            }
+                        }
+                    } else {
+                        current_line.push_str(word);
+                        current_width = word_width;
+                    }
+                }
+            }
+        }
+
+        // Don't forget the last line
+        if !current_line.is_empty() {
+            result.push(current_line);
+        }
+
+        // If nothing was added (e.g., empty line), return empty string
+        if result.is_empty() {
+            result.push(String::new());
+        }
+
+        result
     }
 
     /// Scroll down in file content

@@ -251,6 +251,7 @@ When you run `dt <name>`, dtree resolves in this order:
 | `Home`      | Switch to HEAD mode (first 10,000 lines)   |
 | `End`       | Switch to TAIL mode (last 10,000 lines)    |
 | `l`         | Toggle line numbers                        |
+| `w`         | Toggle line wrapping (wrap/truncate)       |
 | `/`         | Enter file search mode                     |
 | `n`         | Next search match (when results exist)     |
 | `N`         | Previous search match (Shift+n)            |

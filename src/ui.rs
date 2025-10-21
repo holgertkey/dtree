@@ -682,8 +682,21 @@ impl UI {
                 String::new()
             };
 
-            format!(" File Viewer (Fullscreen{} - /: search | j/k: scroll | Ctrl+j/k: next/prev file | q: back | Esc: exit){}{} ",
-                mode_indicator, search_info, scroll_info)
+            // Add hints for toggles
+            let line_numbers_hint = if file_viewer.show_line_numbers {
+                " | l: hide lines"
+            } else {
+                " | l: show lines"
+            };
+
+            let wrap_hint = if file_viewer.wrap_lines {
+                " | w: truncate"
+            } else {
+                " | w: wrap"
+            };
+
+            format!(" File Viewer (Fullscreen{} - /: search | j/k: scroll | Ctrl+j/k: next/prev file{}{} | q: back | Esc: exit){}{} ",
+                mode_indicator, line_numbers_hint, wrap_hint, search_info, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };
