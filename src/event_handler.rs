@@ -409,6 +409,33 @@ impl EventHandler {
             }
         }
 
+        // Handle PageUp/PageDown/Home/End in file viewer mode (split view)
+        if *show_files || *show_help {
+            match key.code {
+                KeyCode::PageUp => {
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    file_viewer.scroll_page_up(visible_height);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::PageDown => {
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    let max_visible_lines = visible_height.saturating_sub(2);
+                    file_viewer.scroll_page_down(visible_height, max_visible_lines);
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::Home => {
+                    file_viewer.reset_scroll();
+                    return Ok(Some(PathBuf::new()));
+                }
+                KeyCode::End => {
+                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
+                    file_viewer.scroll_to_end(visible_height);
+                    return Ok(Some(PathBuf::new()));
+                }
+                _ => {}
+            }
+        }
+
         // Handle Esc key - always exits without directory change
         // (fullscreen mode already handled above)
         if matches!(key.code, KeyCode::Esc) {

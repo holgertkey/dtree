@@ -146,8 +146,12 @@ dt ~
 ### Scrolling File Preview
 
 ```
-Ctrl+j        Scroll down in preview
-Ctrl+k        Scroll up in preview
+Ctrl+j        Scroll down in preview by line
+Ctrl+k        Scroll up in preview by line
+Page Down     Scroll down in preview by page
+Page Up       Scroll up in preview by page
+Home          Jump to start of file
+End           Jump to end of file
 ```
 
 ### Fullscreen File View

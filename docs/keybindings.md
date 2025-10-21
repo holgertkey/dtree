@@ -75,8 +75,12 @@ When file viewer is enabled (press `s`):
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+j` | Scroll preview panel down |
-| `Ctrl+k` | Scroll preview panel up |
+| `Ctrl+j` | Scroll preview panel down by line |
+| `Ctrl+k` | Scroll preview panel up by line |
+| `Page Down` | Scroll preview panel down by page |
+| `Page Up` | Scroll preview panel up by page |
+| `Home` | Jump to start of file |
+| `End` | Jump to end of file |
 
 All tree navigation keys still work normally.
 
@@ -307,9 +311,10 @@ Some terminal emulators intercept certain key combinations. If a keybinding does
 
 ### Workarounds
 
-If `Ctrl+j`/`Ctrl+k` don't work:
+If `Ctrl+j`/`Ctrl+k` don't work for scrolling:
 
-- Use alternative keys: `Page Up`/`Page Down` for scrolling
+- Use alternative keys: `Page Up`/`Page Down` for page-based scrolling
+- Use `Home`/`End` to jump to start/end of file
 - Check terminal emulator settings
 - Try a different terminal (Alacritty, Kitty, WezTerm work well)
 
