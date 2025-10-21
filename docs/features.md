@@ -317,18 +317,18 @@ See [Roadmap](../CLAUDE.md) for planned features:
 
 ## Feature Comparison
 
-| Feature | dtree | tree | ranger | nnn | lf |
-|---------|-------|------|--------|-----|-----|
-| Tree View | ✅ | ✅ | ✅ | ✅ | ✅ |
-| File Preview | ✅ | ❌ | ✅ | ⚠️ | ✅ |
-| Syntax Highlighting | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Fuzzy Search | ✅ | ❌ | ❌ | ✅ | ⚠️ |
-| Async Search | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Bookmarks | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Directory Sizes | ✅ | ✅ | ❌ | ⚠️ | ❌ |
-| Mouse Support | ✅ | ❌ | ✅ | ❌ | ❌ |
-| File Operations | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Shell Integration | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Feature             | dtree | tree | ranger | nnn | lf  |
+|---------------------|-------|------|--------|-----|-----|
+| Tree View           | ✅    | ✅   | ✅     | ✅  | ✅  |
+| File Preview        | ✅    | ❌   | ✅     | ⚠️  | ✅  |
+| Syntax Highlighting | ✅    | ❌   | ✅     | ❌  | ❌  |
+| Fuzzy Search        | ✅    | ❌   | ❌     | ✅  | ⚠️  |
+| Async Search        | ✅    | ❌   | ❌     | ❌  | ❌  |
+| Bookmarks           | ✅    | ❌   | ✅     | ✅  | ✅  |
+| Directory Sizes     | ✅    | ✅   | ❌     | ⚠️  | ❌  |
+| Mouse Support       | ✅    | ❌   | ✅     | ❌  | ❌  |
+| File Operations     | ❌    | ❌   | ✅     | ✅  | ✅  |
+| Shell Integration   | ✅    | ❌   | ✅     | ✅  | ✅  |
 
 **Legend**: ✅ Full support, ⚠️ Partial support, ❌ Not supported
 

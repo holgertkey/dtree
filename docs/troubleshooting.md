@@ -554,16 +554,16 @@ See [Roadmap](../CLAUDE.md) for planned improvements.
 
 ## Quick Fixes Summary
 
-| Problem | Quick Fix |
-|---------|-----------|
-| Icons broken | Disable icons: `show_icons = false` |
-| Colors wrong | Use indexed colors in config |
-| Mouse not working | Use keyboard-only mode |
-| Clipboard broken | Install xclip (Linux) |
-| Editor won't open | Check editor in PATH |
-| Config not loaded | Restart dtree |
-| Terminal artifacts | Update to latest version |
-| Slow performance | Disable file viewer mode |
+| Problem            | Quick Fix                           |
+|--------------------|-------------------------------------|
+| Icons broken       | Disable icons: `show_icons = false` |
+| Colors wrong       | Use indexed colors in config        |
+| Mouse not working  | Use keyboard-only mode              |
+| Clipboard broken   | Install xclip (Linux)               |
+| Editor won't open  | Check editor in PATH                |
+| Config not loaded  | Restart dtree                       |
+| Terminal artifacts | Update to latest version            |
+| Slow performance   | Disable file viewer mode            |
 
 ## Still Having Issues?
 

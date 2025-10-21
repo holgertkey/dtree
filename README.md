@@ -202,106 +202,106 @@ When you run `dt <name>`, dtree resolves in this order:
 
 ### Tree Navigation
 
-| Key | Action |
-|-----|--------|
-| `j` or `↓` | Move down one item |
-| `k` or `↑` | Move up one item |
-| `l` or `→` | Expand directory (show children) |
-| `h` or `←` | Collapse directory (hide children) |
-| `Enter` | Change root to selected directory |
-| `u` or `Backspace` | Go to parent directory |
-| `q` | Exit and cd to selected directory |
-| `Esc` | Exit without changing directory |
+| Key                | Action                               |
+|--------------------|--------------------------------------|
+| `j` or `↓`         | Move down one item                   |
+| `k` or `↑`         | Move up one item                     |
+| `l` or `→`         | Expand directory (show children)     |
+| `h` or `←`         | Collapse directory (hide children)   |
+| `Enter`            | Change root to selected directory    |
+| `u` or `Backspace` | Go to parent directory               |
+| `q`                | Exit and cd to selected directory    |
+| `Esc`              | Exit without changing directory      |
 
 ### File Viewing (Split View)
 
-| Key | Action |
-|-----|--------|
-| `s` | Toggle file viewer mode (show/hide split view) |
-| `v` | Open file in fullscreen viewer |
-| `Ctrl+j` | Scroll preview down by line |
-| `Ctrl+k` | Scroll preview up by line |
-| `Page Down` | Scroll preview down by page |
-| `Page Up` | Scroll preview up by page |
-| `Home` | Jump to start of file |
-| `End` | Jump to end of file |
+| Key         | Action                                       |
+|-------------|----------------------------------------------|
+| `s`         | Toggle file viewer mode (show/hide split)    |
+| `v`         | Open file in fullscreen viewer               |
+| `Ctrl+j`    | Scroll preview down by line                  |
+| `Ctrl+k`    | Scroll preview up by line                    |
+| `Page Down` | Scroll preview down by page                  |
+| `Page Up`   | Scroll preview up by page                    |
+| `Home`      | Jump to start of file                        |
+| `End`       | Jump to end of file                          |
 
 ### Fullscreen Viewer
 
-| Key | Action |
-|-----|--------|
-| `j` or `↓` | Scroll down by line |
-| `k` or `↑` | Scroll up by line |
-| `Ctrl+j` | Jump to next file in directory |
-| `Ctrl+k` | Jump to previous file in directory |
-| `Page Down` | Scroll down by page |
-| `Page Up` | Scroll up by page |
-| `Home` | Switch to HEAD mode (first 10,000 lines) |
-| `End` | Switch to TAIL mode (last 10,000 lines) |
-| `l` | Toggle line numbers |
-| `/` | Enter file search mode |
-| `n` | Next search match (when results exist) |
-| `N` | Previous search match (Shift+n) |
-| `q` | Return to tree view (stay in program) |
-| `Esc` | Exit program (or clear search if active) |
+| Key         | Action                                     |
+|-------------|--------------------------------------------|
+| `j` or `↓`  | Scroll down by line                        |
+| `k` or `↑`  | Scroll up by line                          |
+| `Ctrl+j`    | Jump to next file in directory             |
+| `Ctrl+k`    | Jump to previous file in directory         |
+| `Page Down` | Scroll down by page                        |
+| `Page Up`   | Scroll up by page                          |
+| `Home`      | Switch to HEAD mode (first 10,000 lines)   |
+| `End`       | Switch to TAIL mode (last 10,000 lines)    |
+| `l`         | Toggle line numbers                        |
+| `/`         | Enter file search mode                     |
+| `n`         | Next search match (when results exist)     |
+| `N`         | Previous search match (Shift+n)            |
+| `q`         | Return to tree view (stay in program)      |
+| `Esc`       | Exit program (or clear search if active)   |
 
 ### Search (Tree Search)
 
-| Key | Action |
-|-----|--------|
-| `/` | Enter search mode |
-| Type | Add characters to search query |
-| `Backspace` | Remove last character |
-| `Enter` | Execute search and show results |
-| `Tab` | Switch focus between tree and results panel |
-| `j` or `↓` | Navigate down in results |
-| `k` or `↑` | Navigate up in results |
-| `Esc` | Close results and exit search mode |
+| Key          | Action                                       |
+|--------------|----------------------------------------------|
+| `/`          | Enter search mode                            |
+| Type         | Add characters to search query               |
+| `Backspace`  | Remove last character                        |
+| `Enter`      | Execute search and show results              |
+| `Tab`        | Switch focus between tree and results panel  |
+| `j` or `↓`   | Navigate down in results                     |
+| `k` or `↑`   | Navigate up in results                       |
+| `Esc`        | Close results and exit search mode           |
 
 **Fuzzy Search**: Start query with `/` for fuzzy matching (e.g., `/fuz` finds "fuzzy.rs")
 
 ### Bookmarks
 
-| Key | Action |
-|-----|--------|
-| `m` | Create bookmark (enter name) |
-| `'` | Open bookmark selection menu |
-| `j` or `↓` | Navigate bookmarks (in selection) |
-| `k` or `↑` | Navigate bookmarks (in selection) |
-| `d` | Delete bookmark (press twice to confirm) |
-| `Tab` | Toggle filter mode (type to filter) |
-| `Enter` | Jump to selected bookmark |
-| `Esc` | Close bookmark menu |
+| Key        | Action                                   |
+|------------|------------------------------------------|
+| `m`        | Create bookmark (enter name)             |
+| `'`        | Open bookmark selection menu             |
+| `j` or `↓` | Navigate bookmarks (in selection)        |
+| `k` or `↑` | Navigate bookmarks (in selection)        |
+| `d`        | Delete bookmark (press twice to confirm) |
+| `Tab`      | Toggle filter mode (type to filter)      |
+| `Enter`    | Jump to selected bookmark                |
+| `Esc`      | Close bookmark menu                      |
 
 ### File Operations
 
-| Key | Action |
-|-----|--------|
-| `e` | Open file in external editor (or hex editor for binary) |
-| `o` | Open in file manager (dirs → self, files → parent) |
-| `c` | Copy current path to clipboard |
+| Key | Action                                                   |
+|-----|----------------------------------------------------------|
+| `e` | Open file in external editor (or hex editor for binary)  |
+| `o` | Open in file manager (dirs → self, files → parent)       |
+| `c` | Copy current path to clipboard                           |
 
 ### Other
 
-| Key | Action |
-|-----|--------|
-| `i` | Toggle help screen |
+| Key | Action                        |
+|-----|-------------------------------|
+| `i` | Toggle help screen            |
 | `z` | Toggle directory size display |
 
 ### Mouse Support
 
-| Action | Effect |
-|--------|--------|
-| **Tree View** | |
-| Click | Select item under cursor |
-| Double-click | Expand/collapse directory |
-| Scroll wheel | Navigate tree up/down |
-| Drag divider | Resize panels |
-| **File Preview** | |
-| Scroll wheel | Scroll preview content |
-| **Fullscreen Viewer** | |
-| Scroll wheel | Scroll document |
-| Shift+Click+Drag | Select text for copying |
+| Action               | Effect                    |
+|----------------------|---------------------------|
+| **Tree View**        |                           |
+| Click                | Select item under cursor  |
+| Double-click         | Expand/collapse directory |
+| Scroll wheel         | Navigate tree up/down     |
+| Drag divider         | Resize panels             |
+| **File Preview**     |                           |
+| Scroll wheel         | Scroll preview content    |
+| **Fullscreen Viewer** |                          |
+| Scroll wheel         | Scroll document           |
+| Shift+Click+Drag     | Select text for copying   |
 
 ---
 
@@ -365,7 +365,7 @@ file_manager = "ranger"
 
 ### Tree View
 ```
-┌─ /home/user/projects ──────────────────────────┐
+┌─ /home/user/projects ───────────────────────────┐
 │ 📁 dtree/                                       │
 │ ├─ 📁 src/                                      │
 │ │  ├─ 📄 main.rs                                │
@@ -382,7 +382,7 @@ file_manager = "ranger"
 
 ### Split View with File Preview
 ```
-┌─ Tree ────────┬─ File Preview ──────────────────┐
+┌─ Tree ────────┬─ File Preview ───────────────────┐
 │ dtree/        │ # Architecture                   │
 │ ├─ src/       │                                  │
 │ │  main.rs    │ This document describes the      │
@@ -392,7 +392,7 @@ file_manager = "ranger"
 │ └─ README.md  │                                  │
 │               │ dtree is built with a modular... │
 │               │                                  │
-│ Rust | 128 lines | 4.2K                        │
+│ Rust | 128 lines | 4.2K                          │
 └───────────────┴──────────────────────────────────┘
 ```
 
@@ -409,8 +409,8 @@ file_manager = "ranger"
 │   8 │ dtree is built with a modular             │
 │   9 │ architecture that separates concerns...   │
 │     │                                           │
-│ l: line# | /: search | q: back | Esc: exit     │
-└──────────────────────────────────────────────────┘
+│ l: line# | /: search | q: back | Esc: exit      │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
@@ -567,6 +567,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Discussions**: Ask questions on [GitHub Discussions](https://github.com/holgertkey/dtree/discussions)
 - **Documentation**: Full docs in [docs](./docs) directory
 
----
-
-**Made with ❤️ in Rust**

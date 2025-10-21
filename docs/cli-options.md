@@ -296,11 +296,11 @@ dt ~/projects/myapp
 
 dtree uses standard UNIX exit codes:
 
-| Code | Meaning |
-|------|---------|
-| `0` | Success - Normal exit |
-| `1` | Error - General error (invalid arguments, file not found, etc.) |
-| `2` | Error - Invalid usage (wrong arguments) |
+| Code | Meaning                                                        |
+|------|----------------------------------------------------------------|
+| `0`  | Success - Normal exit                                          |
+| `1`  | Error - General error (invalid arguments, file not found, etc.)|
+| `2`  | Error - Invalid usage (wrong arguments)                        |
 
 **Examples**:
 ```bash

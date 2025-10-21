@@ -40,16 +40,16 @@ dtree --version             # Show version
 
 ## Tree Navigation
 
-| Key | Action |
-|-----|--------|
-| `j` `↓` | Move down |
-| `k` `↑` | Move up |
-| `l` `→` | Expand directory |
-| `h` `←` | Collapse directory |
-| `Enter` | Enter directory (change root) |
-| `u` `Backspace` | Go to parent directory |
-| `q` | Exit and cd to selected directory |
-| `Esc` | Exit without cd |
+| Key             | Action                           |
+|-----------------|----------------------------------|
+| `j` `↓`         | Move down                        |
+| `k` `↑`         | Move up                          |
+| `l` `→`         | Expand directory                 |
+| `h` `←`         | Collapse directory               |
+| `Enter`         | Enter directory (change root)    |
+| `u` `Backspace` | Go to parent directory           |
+| `q`             | Exit and cd to selected directory|
+| `Esc`           | Exit without cd                  |
 
 ---
 
@@ -57,31 +57,31 @@ dtree --version             # Show version
 
 ### Split View Mode
 
-| Key | Action |
-|-----|--------|
-| `s` | Toggle split view on/off |
-| `Ctrl+j` | Scroll down by line |
-| `Ctrl+k` | Scroll up by line |
-| `PgDn` | Scroll down by page |
-| `PgUp` | Scroll up by page |
-| `Home` | Jump to start of file |
-| `End` | Jump to end of file |
+| Key      | Action                   |
+|----------|--------------------------|
+| `s`      | Toggle split view on/off |
+| `Ctrl+j` | Scroll down by line      |
+| `Ctrl+k` | Scroll up by line        |
+| `PgDn`   | Scroll down by page      |
+| `PgUp`   | Scroll up by page        |
+| `Home`   | Jump to start of file    |
+| `End`    | Jump to end of file      |
 
 ### Fullscreen Mode
 
-| Key | Action |
-|-----|--------|
-| `v` | Enter fullscreen (from tree) |
-| `j` `k` `↓` `↑` | Scroll by line |
-| `Ctrl+j` `Ctrl+k` | Next/previous file |
-| `PgDn` `PgUp` | Scroll by page |
-| `Home` | HEAD mode (first 10K lines) |
-| `End` | TAIL mode (last 10K lines) |
-| `l` | Toggle line numbers |
-| `/` | Search within file |
-| `n` `N` | Next/previous match |
-| `q` | Back to tree view |
-| `Esc` | Exit program |
+| Key                 | Action                      |
+|---------------------|-----------------------------|
+| `v`                 | Enter fullscreen (from tree)|
+| `j` `k` `↓` `↑`     | Scroll by line              |
+| `Ctrl+j` `Ctrl+k`   | Next/previous file          |
+| `PgDn` `PgUp`       | Scroll by page              |
+| `Home`              | HEAD mode (first 10K lines) |
+| `End`               | TAIL mode (last 10K lines)  |
+| `l`                 | Toggle line numbers         |
+| `/`                 | Search within file          |
+| `n` `N`             | Next/previous match         |
+| `q`                 | Back to tree view           |
+| `Esc`               | Exit program                |
 
 ---
 
@@ -89,28 +89,28 @@ dtree --version             # Show version
 
 ### Tree Search
 
-| Key | Action |
-|-----|--------|
-| `/` | Enter search mode |
-| `Type` | Add to query |
-| `Backspace` | Delete character |
-| `Enter` | Execute search |
-| `Tab` | Switch tree ↔ results |
-| `j` `k` | Navigate results |
-| `Enter` | Jump to result |
-| `Esc` | Close search |
+| Key         | Action                 |
+|-------------|------------------------|
+| `/`         | Enter search mode      |
+| `Type`      | Add to query           |
+| `Backspace` | Delete character       |
+| `Enter`     | Execute search         |
+| `Tab`       | Switch tree ↔ results  |
+| `j` `k`     | Navigate results       |
+| `Enter`     | Jump to result         |
+| `Esc`       | Close search           |
 
 **Fuzzy**: Start with `/` (e.g., `/fuz` finds `fuzzy.rs`)
 
 ### File Search (Fullscreen)
 
-| Key | Action |
-|-----|--------|
-| `/` | Enter search |
-| `Enter` | Execute → jump to first |
-| `n` | Next match |
-| `N` | Previous match |
-| `Esc` | Clear search |
+| Key     | Action                   |
+|---------|--------------------------|
+| `/`     | Enter search             |
+| `Enter` | Execute → jump to first  |
+| `n`     | Next match               |
+| `N`     | Previous match           |
+| `Esc`   | Clear search             |
 
 ---
 
@@ -118,15 +118,15 @@ dtree --version             # Show version
 
 ### Interactive Mode
 
-| Key | Action |
-|-----|--------|
-| `m` | Create bookmark |
-| `'` | Open bookmark menu |
-| `j` `k` | Navigate list |
-| `Tab` | Toggle filter mode |
-| `d` | Delete (press twice) |
-| `Enter` | Jump to bookmark |
-| `Esc` | Close menu |
+| Key     | Action               |
+|---------|----------------------|
+| `m`     | Create bookmark      |
+| `'`     | Open bookmark menu   |
+| `j` `k` | Navigate list        |
+| `Tab`   | Toggle filter mode   |
+| `d`     | Delete (press twice) |
+| `Enter` | Jump to bookmark     |
+| `Esc`   | Close menu           |
 
 ### CLI Mode
 
@@ -142,32 +142,32 @@ dt work                     # Jump to bookmark
 
 ## File Operations
 
-| Key | Action |
-|-----|--------|
-| `e` | Open in editor (text) or hex editor (binary) |
-| `o` | Open in file manager |
-| `c` | Copy path to clipboard |
+| Key | Action                                        |
+|-----|-----------------------------------------------|
+| `e` | Open in editor (text) or hex editor (binary)  |
+| `o` | Open in file manager                          |
+| `c` | Copy path to clipboard                        |
 
 ---
 
 ## Other
 
-| Key | Action |
-|-----|--------|
-| `i` | Toggle help screen |
-| `z` | Toggle directory sizes |
+| Key | Action                   |
+|-----|--------------------------|
+| `i` | Toggle help screen       |
+| `z` | Toggle directory sizes   |
 
 ---
 
 ## Mouse
 
-| Action | Effect |
-|--------|--------|
-| **Click** | Select item |
-| **Double-click** | Expand/collapse |
-| **Scroll** | Navigate/scroll |
-| **Drag divider** | Resize panels |
-| **Shift+Drag** | Select text (fullscreen) |
+| Action           | Effect                  |
+|------------------|-------------------------|
+| **Click**        | Select item             |
+| **Double-click** | Expand/collapse         |
+| **Scroll**       | Navigate/scroll         |
+| **Drag divider** | Resize panels           |
+| **Shift+Drag**   | Select text (fullscreen)|
 
 ---
 

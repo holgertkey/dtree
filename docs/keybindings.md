@@ -6,10 +6,10 @@ Complete reference of all keyboard shortcuts in dtree.
 
 These keys work in most modes:
 
-| Key | Action |
-|-----|--------|
-| `i` | Toggle help screen |
-| `Esc` | Exit dtree (or cancel current operation) |
+| Key   | Action                                  |
+|-------|-----------------------------------------|
+| `i`   | Toggle help screen                      |
+| `Esc` | Exit dtree (or cancel current operation)|
 
 ## Tree Navigation Mode
 
@@ -17,55 +17,55 @@ This is the default mode when you first launch dtree.
 
 ### Movement
 
-| Key | Action |
-|-----|--------|
-| `j` or `↓` | Move down one item |
-| `k` or `↑` | Move up one item |
-| `Ctrl+d` | Jump down half page |
-| `Ctrl+u` | Jump up half page |
-| `Home` | Jump to first item |
-| `End` | Jump to last item |
+| Key        | Action              |
+|------------|---------------------|
+| `j` or `↓` | Move down one item  |
+| `k` or `↑` | Move up one item    |
+| `Ctrl+d`   | Jump down half page |
+| `Ctrl+u`   | Jump up half page   |
+| `Home`     | Jump to first item  |
+| `End`      | Jump to last item   |
 
 ### Directory Operations
 
-| Key | Action |
-|-----|--------|
-| `l` or `→` | Expand directory (show children) |
-| `h` or `←` | Collapse directory (hide children) |
-| `Enter` | Change root to selected directory |
-| `u` or `Backspace` | Go to parent directory (change root) |
+| Key                | Action                                    |
+|--------------------|-------------------------------------------|
+| `l` or `→`         | Expand directory (show children)          |
+| `h` or `←`         | Collapse directory (hide children)        |
+| `Enter`            | Change root to selected directory         |
+| `u` or `Backspace` | Go to parent directory (change root)      |
 
 ### View Toggles
 
-| Key | Action |
-|-----|--------|
-| `s` | Toggle file viewer mode (show/hide files in split view) |
-| `v` | Open file in fullscreen viewer (files only) |
-| `i` | Toggle help screen |
-| `z` | Toggle directory size display |
+| Key | Action                                             |
+|-----|----------------------------------------------------|
+| `s` | Toggle file viewer mode (show/hide files in split) |
+| `v` | Open file in fullscreen viewer (files only)        |
+| `i` | Toggle help screen                                 |
+| `z` | Toggle directory size display                      |
 
 ### File Operations
 
-| Key | Action |
-|-----|--------|
-| `e` | Open file/directory in external editor |
-| `o` | Open in file manager (files → parent dir, dirs → self) |
-| `c` | Copy current path to clipboard |
+| Key | Action                                            |
+|-----|---------------------------------------------------|
+| `e` | Open file/directory in external editor            |
+| `o` | Open in file manager (files → parent, dirs → self)|
+| `c` | Copy current path to clipboard                    |
 
 ### Search and Bookmarks
 
-| Key | Action |
-|-----|--------|
-| `/` | Enter search mode (tree search) |
-| `m` | Create bookmark (mark current location) |
-| `'` | Open bookmark selection menu (apostrophe/tick) |
+| Key | Action                                       |
+|-----|----------------------------------------------|
+| `/` | Enter search mode (tree search)              |
+| `m` | Create bookmark (mark current location)      |
+| `'` | Open bookmark selection menu (apostrophe)    |
 
 ### Exit
 
-| Key | Action |
-|-----|--------|
-| `q` | Exit and cd to selected directory (with bash wrapper) |
-| `Esc` | Exit without directory change |
+| Key   | Action                                        |
+|-------|-----------------------------------------------|
+| `q`   | Exit and cd to selected directory (with bash) |
+| `Esc` | Exit without directory change                 |
 
 ## File Viewer Mode
 
@@ -73,14 +73,14 @@ When file viewer is enabled (press `s`):
 
 ### Preview Scrolling
 
-| Key | Action |
-|-----|--------|
-| `Ctrl+j` | Scroll preview panel down by line |
-| `Ctrl+k` | Scroll preview panel up by line |
+| Key         | Action                            |
+|-------------|-----------------------------------|
+| `Ctrl+j`    | Scroll preview panel down by line |
+| `Ctrl+k`    | Scroll preview panel up by line   |
 | `Page Down` | Scroll preview panel down by page |
-| `Page Up` | Scroll preview panel up by page |
-| `Home` | Jump to start of file |
-| `End` | Jump to end of file |
+| `Page Up`   | Scroll preview panel up by page   |
+| `Home`      | Jump to start of file             |
+| `End`       | Jump to end of file               |
 
 All tree navigation keys still work normally.
 
@@ -90,38 +90,38 @@ When viewing a file in fullscreen (press `v`):
 
 ### Navigation
 
-| Key | Action |
-|-----|--------|
-| `j` or `↓` | Scroll down by line |
-| `k` or `↑` | Scroll up by line |
-| `Ctrl+j` | Jump to next file in directory |
-| `Ctrl+k` | Jump to previous file in directory |
-| `Page Down` | Scroll down by page |
-| `Page Up` | Scroll up by page |
-| `Home` | Switch to HEAD mode (first 10,000 lines) |
-| `End` | Switch to TAIL mode (last 10,000 lines) |
+| Key         | Action                                   |
+|-------------|------------------------------------------|
+| `j` or `↓`  | Scroll down by line                      |
+| `k` or `↑`  | Scroll up by line                        |
+| `Ctrl+j`    | Jump to next file in directory           |
+| `Ctrl+k`    | Jump to previous file in directory       |
+| `Page Down` | Scroll down by page                      |
+| `Page Up`   | Scroll up by page                        |
+| `Home`      | Switch to HEAD mode (first 10,000 lines) |
+| `End`       | Switch to TAIL mode (last 10,000 lines)  |
 
 ### View Options
 
-| Key | Action |
-|-----|--------|
+| Key | Action                          |
+|-----|---------------------------------|
 | `l` | Toggle line numbers (show/hide) |
 
 ### File Search
 
-| Key | Action |
-|-----|--------|
-| `/` | Enter file search mode (search within current file) |
-| `n` | Next search match (when results exist) |
-| `N` | Previous search match (Shift+n) |
-| `Esc` | Clear search (or exit if no search active) |
+| Key   | Action                                              |
+|-------|-----------------------------------------------------|
+| `/`   | Enter file search mode (search within current file) |
+| `n`   | Next search match (when results exist)              |
+| `N`   | Previous search match (Shift+n)                     |
+| `Esc` | Clear search (or exit if no search active)          |
 
 ### Exit
 
-| Key | Action |
-|-----|--------|
-| `q` | Return to tree view (stay in program) |
-| `Esc` | Exit program completely (or clear search if active) |
+| Key   | Action                                             |
+|-------|----------------------------------------------------|
+| `q`   | Return to tree view (stay in program)              |
+| `Esc` | Exit program completely (or clear search if active)|
 
 **Note**: In fullscreen mode, most tree keys are disabled. Only the keys listed above work.
 
@@ -131,12 +131,12 @@ When you press `/` to enter search mode:
 
 ### Input
 
-| Key | Action |
-|-----|--------|
-| Type characters | Add to search query |
-| `Backspace` | Remove last character |
-| `Enter` | Execute search and show results |
-| `Esc` | Cancel search (exit search mode) |
+| Key             | Action                            |
+|-----------------|-----------------------------------|
+| Type characters | Add to search query               |
+| `Backspace`     | Remove last character             |
+| `Enter`         | Execute search and show results   |
+| `Esc`           | Cancel search (exit search mode)  |
 
 ### Fuzzy Search
 
@@ -153,13 +153,13 @@ Results are ranked by relevance score.
 
 After executing a search:
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Switch focus between tree and results panel |
-| `j` or `↓` | Navigate down in results |
-| `k` or `↑` | Navigate up in results |
-| `Enter` | Jump to selected result in tree |
-| `Esc` | Close results panel and exit search mode |
+| Key        | Action                                      |
+|------------|---------------------------------------------|
+| `Tab`      | Switch focus between tree and results panel |
+| `j` or `↓` | Navigate down in results                    |
+| `k` or `↑` | Navigate up in results                      |
+| `Enter`    | Jump to selected result in tree             |
+| `Esc`      | Close results panel and exit search mode    |
 
 ## Bookmark Creation Mode
 
@@ -167,14 +167,14 @@ When you press `m` to create a bookmark:
 
 ### Input
 
-| Key | Action |
-|-----|--------|
-| Type characters | Add to bookmark name |
-| `Backspace` | Remove last character |
-| `Enter` | Save bookmark |
-| `Esc` | Cancel bookmark creation |
+| Key                  | Action                                      |
+|----------------------|---------------------------------------------|
+| Type characters      | Add to bookmark name                        |
+| `Backspace`          | Remove last character                       |
+| `Enter`              | Save bookmark                               |
+| `Esc`                | Cancel bookmark creation                    |
 | `Ctrl+j` or `Ctrl+↓` | Scroll down through existing bookmarks list |
-| `Ctrl+k` or `Ctrl+↑` | Scroll up through existing bookmarks list |
+| `Ctrl+k` or `Ctrl+↑` | Scroll up through existing bookmarks list   |
 
 ### Naming Rules
 
@@ -189,28 +189,28 @@ When you press `'` to open bookmark selection:
 
 ### Navigation Mode (Default)
 
-| Key | Action |
-|-----|--------|
-| `j` or `↓` | Move selection down |
-| `k` or `↑` | Move selection up |
-| `Ctrl+j` | Scroll down in list |
-| `Ctrl+k` | Scroll up in list |
-| `Enter` | Jump to selected bookmark |
-| `d` | Mark bookmark for deletion (press twice to confirm) |
-| `Tab` | Switch to filter mode |
-| `Esc` | Close bookmark selection |
+| Key        | Action                                             |
+|------------|----------------------------------------------------|
+| `j` or `↓` | Move selection down                                |
+| `k` or `↑` | Move selection up                                  |
+| `Ctrl+j`   | Scroll down in list                                |
+| `Ctrl+k`   | Scroll up in list                                  |
+| `Enter`    | Jump to selected bookmark                          |
+| `d`        | Mark bookmark for deletion (press twice to confirm)|
+| `Tab`      | Switch to filter mode                              |
+| `Esc`      | Close bookmark selection                           |
 
 ### Filter Mode
 
-| Key | Action |
-|-----|--------|
-| Type characters | Filter bookmarks by name/path |
-| `Backspace` | Remove last character from filter |
-| `Tab` | Switch back to navigation mode (keeps filter) |
-| `j` or `↓` | Navigate filtered results (in navigation mode) |
-| `k` or `↑` | Navigate filtered results (in navigation mode) |
-| `Enter` | Jump to selected bookmark |
-| `Esc` | Close bookmark selection |
+| Key             | Action                                        |
+|-----------------|-----------------------------------------------|
+| Type characters | Filter bookmarks by name/path                 |
+| `Backspace`     | Remove last character from filter             |
+| `Tab`           | Switch back to navigation mode (keeps filter) |
+| `j` or `↓`      | Navigate filtered results (in navigation mode)|
+| `k` or `↑`      | Navigate filtered results (in navigation mode)|
+| `Enter`         | Jump to selected bookmark                     |
+| `Esc`           | Close bookmark selection                      |
 
 ### Deletion Workflow
 
@@ -226,20 +226,20 @@ When you press `/` in fullscreen viewer:
 
 ### Input
 
-| Key | Action |
-|-----|--------|
-| Type characters | Add to search query |
-| `Backspace` | Remove last character |
-| `Enter` | Execute search and jump to first match |
-| `Esc` | Cancel and exit file search mode |
+| Key             | Action                                 |
+|-----------------|----------------------------------------|
+| Type characters | Add to search query                    |
+| `Backspace`     | Remove last character                  |
+| `Enter`         | Execute search and jump to first match |
+| `Esc`           | Cancel and exit file search mode       |
 
 ### After Search
 
-| Key | Action |
-|-----|--------|
-| `n` | Next match (cycles to first after last) |
-| `N` | Previous match (cycles to last after first) |
-| `Esc` | Clear search results |
+| Key   | Action                                     |
+|-------|--------------------------------------------|
+| `n`   | Next match (cycles to first after last)    |
+| `N`   | Previous match (cycles to last after first)|
+| `Esc` | Clear search results                       |
 
 Match counter appears in title: "Match 3/15"
 
@@ -247,27 +247,27 @@ Match counter appears in title: "Match 3/15"
 
 ### Tree View
 
-| Action | Effect |
-|--------|--------|
-| Click | Select item under cursor |
-| Double-click | Expand/collapse directory |
-| Scroll wheel | Navigate tree up/down |
-| Drag vertical divider | Resize tree/preview panels |
-| Drag horizontal divider | Resize bottom panel (search/bookmarks) |
+| Action                  | Effect                                |
+|-------------------------|---------------------------------------|
+| Click                   | Select item under cursor              |
+| Double-click            | Expand/collapse directory             |
+| Scroll wheel            | Navigate tree up/down                 |
+| Drag vertical divider   | Resize tree/preview panels            |
+| Drag horizontal divider | Resize bottom panel (search/bookmarks)|
 
 ### File Preview
 
-| Action | Effect |
-|--------|--------|
+| Action       | Effect                 |
+|--------------|------------------------|
 | Scroll wheel | Scroll preview content |
 
 ### Fullscreen Viewer
 
-| Action | Effect |
-|--------|--------|
-| Scroll wheel | Scroll document |
-| Shift+Click+Drag | Select text for copying |
-| Ctrl+Shift+C | Copy selected text (terminal shortcut) |
+| Action           | Effect                                 |
+|------------------|----------------------------------------|
+| Scroll wheel     | Scroll document                        |
+| Shift+Click+Drag | Select text for copying                |
+| Ctrl+Shift+C     | Copy selected text (terminal shortcut) |
 
 **Note**: Regular clicks are ignored in fullscreen mode (view-only).
 
@@ -277,27 +277,27 @@ Match counter appears in title: "Match 3/15"
 
 The `Esc` key has context-aware behavior:
 
-| Context | Action |
-|---------|--------|
-| Tree mode | Exit dtree |
-| Search mode | Cancel search |
-| Search results | Close results panel |
-| File search mode (fullscreen) | Cancel search input |
+| Context                          | Action               |
+|----------------------------------|----------------------|
+| Tree mode                        | Exit dtree           |
+| Search mode                      | Cancel search        |
+| Search results                   | Close results panel  |
+| File search mode (fullscreen)    | Cancel search input  |
 | File search results (fullscreen) | Clear search results |
-| No search results (fullscreen) | Exit dtree |
-| Bookmark creation | Cancel creation |
-| Bookmark selection | Close selection |
+| No search results (fullscreen)   | Exit dtree           |
+| Bookmark creation                | Cancel creation      |
+| Bookmark selection               | Close selection      |
 
 ### `Enter` Key Behavior
 
-| Context | Action |
-|---------|--------|
-| Tree mode, on directory | Change root to directory |
-| Search mode | Execute search |
-| Search results | Jump to selected result |
-| File search mode | Execute search and jump to first match |
-| Bookmark creation | Save bookmark |
-| Bookmark selection | Jump to selected bookmark |
+| Context                 | Action                                 |
+|-------------------------|----------------------------------------|
+| Tree mode, on directory | Change root to directory               |
+| Search mode             | Execute search                         |
+| Search results          | Jump to selected result                |
+| File search mode        | Execute search and jump to first match |
+| Bookmark creation       | Save bookmark                          |
+| Bookmark selection      | Jump to selected bookmark              |
 
 ## Keybinding Conflicts
 
@@ -368,20 +368,20 @@ Delete:           d d            (press twice)
 
 If you're familiar with Vim, these mappings feel natural:
 
-| Vim | dtree | Action |
-|-----|-------|--------|
-| `j` | `j` | Down |
-| `k` | `k` | Up |
-| `h` | `h` | Left/Collapse |
-| `l` | `l` | Right/Expand (or line numbers in fullscreen) |
-| `Ctrl+d` | `Ctrl+d` | Half page down |
-| `Ctrl+u` | `Ctrl+u` | Half page up |
-| `/` | `/` | Search |
-| `n` | `n` | Next search result |
-| `N` | `N` | Previous search result |
-| `gg` | `Home` | Go to top |
-| `G` | `End` | Go to bottom |
-| `:e` | `e` | Open in editor |
+| Vim      | dtree      | Action                                      |
+|----------|------------|---------------------------------------------|
+| `j`      | `j`        | Down                                        |
+| `k`      | `k`        | Up                                          |
+| `h`      | `h`        | Left/Collapse                               |
+| `l`      | `l`        | Right/Expand (or line numbers in fullscreen)|
+| `Ctrl+d` | `Ctrl+d`   | Half page down                              |
+| `Ctrl+u` | `Ctrl+u`   | Half page up                                |
+| `/`      | `/`        | Search                                      |
+| `n`      | `n`        | Next search result                          |
+| `N`      | `N`        | Previous search result                      |
+| `gg`     | `Home`     | Go to top                                   |
+| `G`      | `End`      | Go to bottom                                |
+| `:e`     | `e`        | Open in editor                              |
 
 ## Next Steps
 
