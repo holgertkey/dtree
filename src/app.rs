@@ -147,10 +147,36 @@ impl App {
         }
 
         // Load file with very large width for fullscreen (terminal width unknown at this point)
+        // This will be reloaded with correct width in run_app before first render
         let max_lines = self.config.behavior.max_file_lines;
         let enable_highlighting = self.config.appearance.enable_syntax_highlighting;
         let theme = &self.config.appearance.syntax_theme.clone();
         self.file_viewer.load_file_with_width(file_path, None, max_lines, enable_highlighting, theme)?;
+        Ok(())
+    }
+
+    /// Check if app is in fullscreen viewer mode
+    pub fn is_fullscreen_viewer(&self) -> bool {
+        self.fullscreen_viewer
+    }
+
+    /// Reload file in fullscreen mode with correct terminal width
+    pub fn reload_fullscreen_file(&mut self, terminal_width: u16) -> Result<()> {
+        if let Some(node) = self.nav.get_selected_node() {
+            let path = node.borrow().path.clone();
+
+            // Update UI terminal width so load_file_for_viewer can use it
+            self.ui.terminal_width = terminal_width;
+
+            // Reload file with correct width
+            self.ui.load_file_for_viewer(
+                &mut self.file_viewer,
+                &path,
+                self.config.behavior.max_file_lines,
+                true, // fullscreen
+                &self.config
+            )?;
+        }
         Ok(())
     }
 

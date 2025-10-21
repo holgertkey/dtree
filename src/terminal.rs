@@ -38,6 +38,12 @@ pub fn cleanup_terminal() -> Result<()> {
 }
 
 pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: &mut App) -> Result<Option<PathBuf>> {
+    // If in fullscreen mode and file loaded with unknown width, reload with correct terminal width
+    if app.is_fullscreen_viewer() {
+        let terminal_size = terminal.size()?;
+        app.reload_fullscreen_file(terminal_size.width)?;
+    }
+
     loop {
         // Check if terminal needs to be cleared (e.g., after exiting fullscreen mode)
         if app.should_clear_terminal() {
