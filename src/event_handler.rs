@@ -19,8 +19,6 @@ pub struct EventHandler {
     pub last_click_time: Option<(Instant, usize)>,
     pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
     pub last_search_click_time: Option<(Instant, usize)>, // For search results double-click
-    pub visual_selecting: bool, // Shift+Mouse drag for visual selection
-    pub last_auto_scroll: Option<Instant>, // Last time we auto-scrolled during selection
 }
 
 impl EventHandler {
@@ -31,8 +29,6 @@ impl EventHandler {
             last_click_time: None,
             last_bookmark_click_time: None,
             last_search_click_time: None,
-            visual_selecting: false,
-            last_auto_scroll: None,
         }
     }
 

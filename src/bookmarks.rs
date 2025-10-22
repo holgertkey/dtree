@@ -203,11 +203,6 @@ impl Bookmarks {
         bookmarks
     }
 
-    /// Check if a key is already used
-    pub fn has_key(&self, key: &str) -> bool {
-        self.bookmarks.contains_key(key)
-    }
-
     /// Enter bookmark selection mode
     pub fn enter_selection_mode(&mut self) {
         self.is_selecting = true;

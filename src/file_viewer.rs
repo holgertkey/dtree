@@ -106,7 +106,6 @@ impl FileViewer {
         const CHUNK_SIZE: u64 = 64 * 1024;  // 64KB chunks
         let mut buffer = Vec::new();
         let mut current_pos = file_size;
-        let mut lines_found = 0;
 
         loop {
             // Calculate chunk position
@@ -125,7 +124,7 @@ impl FileViewer {
             buffer = chunk;
 
             // Count lines in buffer
-            lines_found = buffer.iter().filter(|&&b| b == b'\n').count();
+            let lines_found = buffer.iter().filter(|&&b| b == b'\n').count();
 
             // If we have enough lines or reached start, stop
             if lines_found >= max_lines || chunk_start == 0 {
@@ -498,11 +497,6 @@ impl FileViewer {
     /// Switch to head mode (show first N lines)
     pub fn enable_head_mode(&mut self) {
         self.tail_mode = false;
-    }
-
-    /// Toggle between head and tail mode
-    pub fn toggle_tail_mode(&mut self) {
-        self.tail_mode = !self.tail_mode;
     }
 
     /// Check if file can use tail mode (is a text file and has path set)

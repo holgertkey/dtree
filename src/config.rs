@@ -234,10 +234,6 @@ impl KeybindingsConfig {
         configured_keys.iter().any(|k| k.eq_ignore_ascii_case(&key_str))
     }
 
-    pub fn is_quit(&self, key: KeyCode) -> bool {
-        self.matches_key(key, &self.quit)
-    }
-
     pub fn is_search(&self, key: KeyCode) -> bool {
         self.matches_key(key, &self.search)
     }

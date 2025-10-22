@@ -65,11 +65,6 @@ impl App {
         })
     }
 
-    /// Get reference to the configuration
-    pub fn config(&self) -> &Config {
-        &self.config
-    }
-
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<Option<PathBuf>> {
         self.event_handler.handle_key(
             key,

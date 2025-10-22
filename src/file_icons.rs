@@ -114,15 +114,6 @@ pub fn get_icon(path: &Path, is_dir: bool, use_nerd_fonts: bool) -> &'static str
     }
 }
 
-/// Get fallback icon for terminals without nerd-fonts support
-pub fn get_fallback_icon(is_dir: bool) -> &'static str {
-    if is_dir {
-        "📁"
-    } else {
-        "📄"
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
