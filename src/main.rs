@@ -304,20 +304,17 @@ fn main() -> Result<()> {
             let result = run_app(&mut terminal, &mut app);
             cleanup_terminal()?;
 
-            match result? {
-                Some(path) => {
-                    let path_str = path.to_string_lossy();
-                    if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-                        open_in_editor(file_path, &config)?;
-                    } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
-                        open_in_hex_editor(file_path, &config)?;
-                    } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-                        open_in_file_manager(dir_path, &config)?;
-                    } else {
-                        println!("{}", path.display());
-                    }
+            if let Some(path) = result? {
+                let path_str = path.to_string_lossy();
+                if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
+                    open_in_editor(file_path, &config)?;
+                } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
+                    open_in_hex_editor(file_path, &config)?;
+                } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
+                    open_in_file_manager(dir_path, &config)?;
+                } else {
+                    println!("{}", path.display());
                 }
-                None => {}
             }
             return Ok(());
         }
@@ -339,20 +336,17 @@ fn main() -> Result<()> {
 
     cleanup_terminal()?;
 
-    match result? {
-        Some(path) => {
-            let path_str = path.to_string_lossy();
-            if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-                open_in_editor(file_path, &config)?;
-            } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
-                open_in_hex_editor(file_path, &config)?;
-            } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-                open_in_file_manager(dir_path, &config)?;
-            } else {
-                println!("{}", path.display());
-            }
+    if let Some(path) = result? {
+        let path_str = path.to_string_lossy();
+        if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
+            open_in_editor(file_path, &config)?;
+        } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
+            open_in_hex_editor(file_path, &config)?;
+        } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
+            open_in_file_manager(dir_path, &config)?;
+        } else {
+            println!("{}", path.display());
         }
-        None => {}
     }
 
     Ok(())

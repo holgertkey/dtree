@@ -13,10 +13,10 @@ use syntect::highlighting::ThemeSet;
 use syntect::easy::HighlightLines;
 
 /// Lazy-loaded syntax set (loaded once on first use)
-static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(|| SyntaxSet::load_defaults_newlines());
+static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(SyntaxSet::load_defaults_newlines);
 
 /// Lazy-loaded theme set (loaded once on first use)
-static THEME_SET: Lazy<ThemeSet> = Lazy::new(|| ThemeSet::load_defaults());
+static THEME_SET: Lazy<ThemeSet> = Lazy::new(ThemeSet::load_defaults);
 
 /// File viewer state and logic for displaying file contents
 pub struct FileViewer {
@@ -43,6 +43,12 @@ pub struct FileViewer {
     pub visual_mode: bool,
     pub visual_start: Option<usize>,  // Start line of selection (0-indexed)
     pub visual_cursor: usize,  // Current cursor position in visual mode (0-indexed)
+}
+
+impl Default for FileViewer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FileViewer {
@@ -90,7 +96,7 @@ impl FileViewer {
         // If file is small, just read all lines
         if file_size < 1024 * 1024 {  // < 1MB
             let reader = BufReader::new(file);
-            let all_lines: Vec<String> = reader.lines().filter_map(|l| l.ok()).collect();
+            let all_lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
             let total = all_lines.len();
 
             if total <= max_lines {

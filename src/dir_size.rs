@@ -47,6 +47,12 @@ pub struct DirSizeCache {
     worker_handle: Option<thread::JoinHandle<()>>,
 }
 
+impl Default for DirSizeCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DirSizeCache {
     pub fn new() -> Self {
         Self {
@@ -259,7 +265,7 @@ fn calculate_dir_size_limited(
     if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
             // Periodic checks
-            if *file_count % 100 == 0 {
+            if (*file_count).is_multiple_of(100) {
                 // Check timeout every 100 files
                 if start_time.elapsed() > CALCULATION_TIMEOUT {
                     return CalculationResult {

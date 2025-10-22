@@ -1,3 +1,6 @@
+// Allow many arguments for UI render functions - they need access to multiple UI components
+#![allow(clippy::too_many_arguments)]
+
 use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     style::{Color, Modifier, Style},
@@ -31,6 +34,12 @@ pub struct UI {
     pub bottom_panel_split_position: u16, // Percentage from top (default 70)
     pub bottom_panel_top: u16,
     pub bottom_panel_height: u16,
+}
+
+impl Default for UI {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl UI {
@@ -830,7 +839,7 @@ impl UI {
                     ListItem::new(text).style(Style::default().fg(file_color))
                 }).collect();
 
-                let count_text = if all_bookmarks.len() > 0 {
+                let count_text = if !all_bookmarks.is_empty() {
                     format!(" Existing Bookmarks ({}) ", all_bookmarks.len())
                 } else {
                     " Existing Bookmarks ".to_string()

@@ -1,3 +1,6 @@
+// Allow many arguments for recursive search function - it needs context for deep traversal
+#![allow(clippy::too_many_arguments)]
+
 use std::path::PathBuf;
 use std::thread::{self, JoinHandle};
 use crossbeam_channel::{bounded, unbounded, Sender, Receiver};
@@ -39,6 +42,12 @@ pub struct Search {
     search_thread: Option<JoinHandle<()>>,
     cancel_sender: Option<Sender<()>>,
     result_receiver: Option<Receiver<SearchMessage>>,
+}
+
+impl Default for Search {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Search {
@@ -283,7 +292,7 @@ impl Search {
             *scanned += 1;
 
             // Send progress update every 100 directories
-            if *scanned % 100 == 0 {
+            if (*scanned).is_multiple_of(100) {
                 let _ = result_tx.send(SearchMessage::Progress(*scanned));
             }
 

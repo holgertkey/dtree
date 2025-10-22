@@ -51,7 +51,7 @@ impl Navigation {
 
     /// Get currently selected node
     pub fn get_selected_node(&self) -> Option<TreeNodeRef> {
-        self.flat_list.get(self.selected).map(|n| Rc::clone(n))
+        self.flat_list.get(self.selected).map(Rc::clone)
     }
 
     /// Move selection down

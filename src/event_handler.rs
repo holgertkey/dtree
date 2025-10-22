@@ -1,3 +1,6 @@
+// Allow many arguments for event handler functions - they need direct access to app state
+#![allow(clippy::too_many_arguments)]
+
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
@@ -19,6 +22,12 @@ pub struct EventHandler {
     pub last_click_time: Option<(Instant, usize)>,
     pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
     pub last_search_click_time: Option<(Instant, usize)>, // For search results double-click
+}
+
+impl Default for EventHandler {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EventHandler {
@@ -773,21 +782,21 @@ impl EventHandler {
         match key.code {
             KeyCode::Esc => {
                 search.exit_mode();
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Enter => {
                 search.perform_search(&nav.root, show_files, nav.show_hidden, nav.follow_symlinks);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Char(c) => {
                 search.add_char(c);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Backspace => {
                 search.backspace();
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
-            _ => return Ok(Some(PathBuf::new())),
+            _ => Ok(Some(PathBuf::new())),
         }
     }
 
@@ -799,22 +808,22 @@ impl EventHandler {
         match key.code {
             KeyCode::Esc => {
                 file_viewer.clear_search();  // Clear everything
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Enter => {
                 file_viewer.perform_search();  // This will scroll to first match
                 file_viewer.exit_search_mode();  // Exit input mode but keep results
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Char(c) => {
                 file_viewer.add_search_char(c);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Backspace => {
                 file_viewer.search_backspace();
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
-            _ => return Ok(Some(PathBuf::new())),
+            _ => Ok(Some(PathBuf::new())),
         }
     }
 
@@ -831,29 +840,29 @@ impl EventHandler {
             KeyCode::Esc => {
                 // Exit visual mode without copying (Esc always exits)
                 file_viewer.exit_visual_mode();
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             _ if config.keybindings.is_visual_mode(key.code) => {
                 // Exit visual mode without copying (toggle key)
                 file_viewer.exit_visual_mode();
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             _ if config.keybindings.is_visual_copy(key.code) => {
                 // Copy selection and exit visual mode
                 let _ = file_viewer.copy_selection();
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Char('j') | KeyCode::Down => {
                 // Move cursor down (expand selection)
                 file_viewer.visual_move_down();
                 file_viewer.ensure_visual_cursor_visible(visible_height);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 // Move cursor up (expand selection)
                 file_viewer.visual_move_up();
                 file_viewer.ensure_visual_cursor_visible(visible_height);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::PageDown => {
                 // Jump down by page
@@ -861,7 +870,7 @@ impl EventHandler {
                     file_viewer.visual_move_down();
                 }
                 file_viewer.ensure_visual_cursor_visible(visible_height);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::PageUp => {
                 // Jump up by page
@@ -869,21 +878,21 @@ impl EventHandler {
                     file_viewer.visual_move_up();
                 }
                 file_viewer.ensure_visual_cursor_visible(visible_height);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::Home => {
                 // Jump to start of file
                 file_viewer.visual_cursor = 0;
                 file_viewer.ensure_visual_cursor_visible(visible_height);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
             KeyCode::End => {
                 // Jump to end of file
                 file_viewer.visual_cursor = file_viewer.content.len().saturating_sub(1);
                 file_viewer.ensure_visual_cursor_visible(visible_height);
-                return Ok(Some(PathBuf::new()));
+                Ok(Some(PathBuf::new()))
             }
-            _ => return Ok(Some(PathBuf::new())),
+            _ => Ok(Some(PathBuf::new())),
         }
     }
 
@@ -910,11 +919,11 @@ impl EventHandler {
                 if !fullscreen_viewer {
                     if self.dragging && ui.terminal_width > 0 {
                         // Horizontal drag - adjust split position
-                        let new_pos = (mouse.column as u16 * 100) / ui.terminal_width;
+                        let new_pos = (mouse.column * 100) / ui.terminal_width;
                         ui.adjust_split(new_pos);
                     } else if self.dragging_vertical && ui.terminal_height > 0 {
                         // Vertical drag - adjust bottom panel split position
-                        let new_pos = (mouse.row as u16 * 100) / ui.terminal_height;
+                        let new_pos = (mouse.row * 100) / ui.terminal_height;
                         ui.adjust_bottom_split(new_pos);
                     }
                 }
@@ -955,8 +964,8 @@ impl EventHandler {
         }
 
         // Check click in search results panel
-        if search.show_results && ui.bottom_panel_height > 0 {
-            if mouse.row >= ui.bottom_panel_top + 1 && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
+        if search.show_results && ui.bottom_panel_height > 0
+            && mouse.row > ui.bottom_panel_top && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
                 let results_count = search.get_results_count();
                 if results_count > 0 {
                     let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
@@ -989,11 +998,10 @@ impl EventHandler {
                 }
                 return Ok(());
             }
-        }
 
         // Check click in bookmarks panel (selection mode only, not creation mode)
-        if bookmarks.is_selecting && ui.bottom_panel_height > 0 {
-            if mouse.row >= ui.bottom_panel_top + 1 && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
+        if bookmarks.is_selecting && ui.bottom_panel_height > 0
+            && mouse.row > ui.bottom_panel_top && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
                 let filtered = bookmarks.get_filtered_bookmarks();
                 if !filtered.is_empty() {
                     let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
@@ -1054,7 +1062,6 @@ impl EventHandler {
                 }
                 return Ok(());
             }
-        }
 
         // Check click in tree area
         if mouse.column >= ui.tree_area_start && mouse.column < ui.tree_area_end
@@ -1170,12 +1177,10 @@ impl EventHandler {
             let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
             file_viewer.visual_move_up();
             file_viewer.ensure_visual_cursor_visible(visible_height);
-        // In fullscreen mode, always scroll the file viewer
-        } else if fullscreen_viewer {
-            file_viewer.scroll_up();
-        } else if (*show_files || *show_help) && mouse.column >= ui.viewer_area_start
+        // In fullscreen mode or in split view over file viewer area, scroll the file viewer
+        } else if fullscreen_viewer || ((*show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
-            && mouse.row < ui.viewer_area_top + ui.viewer_area_height {
+            && mouse.row < ui.viewer_area_top + ui.viewer_area_height) {
             file_viewer.scroll_up();
         } else {
             nav.move_up();
@@ -1225,24 +1230,18 @@ impl EventHandler {
             let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
             file_viewer.visual_move_down();
             file_viewer.ensure_visual_cursor_visible(visible_height);
-        // In fullscreen mode, always scroll the file viewer
-        } else if fullscreen_viewer {
-            let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
-            let lines_to_show = content_height.saturating_sub(2);
-            file_viewer.scroll_down(lines_to_show);
-        } else if (*show_files || *show_help) && mouse.column >= ui.viewer_area_start
+        // In fullscreen mode or in split view over file viewer area, scroll the file viewer
+        } else if fullscreen_viewer || ((*show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
-            && mouse.row < ui.viewer_area_top + ui.viewer_area_height {
+            && mouse.row < ui.viewer_area_top + ui.viewer_area_height) {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
             let lines_to_show = content_height.saturating_sub(2);
             file_viewer.scroll_down(lines_to_show);
-        } else {
-            if nav.selected < nav.flat_list.len().saturating_sub(1) {
-                nav.move_down();
-                if (*show_files || fullscreen_viewer) && !*show_help {
-                    if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, fullscreen_viewer, config);
-                    }
+        } else if nav.selected < nav.flat_list.len().saturating_sub(1) {
+            nav.move_down();
+            if (*show_files || fullscreen_viewer) && !*show_help {
+                if let Some(node) = nav.get_selected_node() {
+                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, fullscreen_viewer, config);
                 }
             }
         }

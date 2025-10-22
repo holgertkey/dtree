@@ -8,6 +8,7 @@ pub mod presets;
 /// - None means the color is not set (use preset theme value)
 /// - Some(value) means the color is explicitly set (override preset)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ThemeConfig {
     /// Color for selected items
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -62,25 +63,6 @@ pub struct ThemeConfig {
     pub background_color: Option<String>,
 }
 
-impl Default for ThemeConfig {
-    fn default() -> Self {
-        Self {
-            selected_color: None,
-            directory_color: None,
-            file_color: None,
-            border_color: None,
-            error_color: None,
-            highlight_color: None,
-            file_search_highlight_color: None,
-            cursor_color: None,
-            tree_cursor_color: None,
-            tree_cursor_bg_color: None,
-            main_border_color: None,
-            panel_border_color: None,
-            background_color: None,
-        }
-    }
-}
 
 impl ThemeConfig {
     /// Parse a color string to ratatui Color
