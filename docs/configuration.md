@@ -14,7 +14,7 @@ The configuration file has three main sections:
 
 1. **`[appearance]`** - Visual settings (colors, icons, layout)
 2. **`[behavior]`** - Functional settings (limits, external programs)
-3. **`[keybindings]`** - Keyboard shortcuts (currently not fully customizable)
+3. **`[keybindings]`** - Keyboard shortcuts (fully customizable)
 
 ## Default Configuration
 
@@ -97,6 +97,10 @@ create_bookmark = ["m"]
 select_bookmark = ["'"]
 show_line_numbers = ["l"]
 toggle_wrap = ["w"]
+
+# Visual selection mode (fullscreen viewer only)
+visual_mode = ["V"]          # Enter/exit visual selection mode
+visual_copy = ["y", "Y"]     # Copy selected lines to clipboard
 ```
 
 ## Appearance Settings
@@ -299,6 +303,104 @@ file_manager = "vifm"    # Vifm
 ```
 
 Used when pressing `o` on a file or directory.
+
+## Keybinding Configuration
+
+dtree allows full customization of keyboard shortcuts through the `[keybindings]` section:
+
+```toml
+[keybindings]
+# Core actions
+quit = ["q", "Esc"]
+search = ["/"]
+toggle_files = ["s"]
+toggle_help = ["i"]
+copy_path = ["c"]
+
+# External programs
+open_editor = ["e"]
+open_file_manager = ["o"]
+
+# Bookmarks
+create_bookmark = ["m"]
+select_bookmark = ["'"]
+
+# Fullscreen viewer options
+show_line_numbers = ["l"]
+toggle_wrap = ["w"]
+
+# Visual selection mode (fullscreen only)
+visual_mode = ["V"]          # Enter/exit visual selection
+visual_copy = ["y", "Y"]     # Copy selected lines
+```
+
+### Key Format
+
+Each binding accepts a list of keys. Supported key formats:
+
+- **Single characters**: `"a"`, `"/"`, `"'"` (case-sensitive)
+- **Special keys**: `"Esc"`, `"Enter"`, `"Backspace"`, `"Tab"`
+- **Arrow keys**: `"Up"`, `"Down"`, `"Left"`, `"Right"`
+- **Page keys**: `"PageUp"`, `"PageDown"`
+- **Position keys**: `"Home"`, `"End"`
+- **Delete**: `"Delete"`
+
+**Note**: Uppercase letters like `"V"` represent Shift+key combinations.
+
+### Customization Examples
+
+#### Multiple Keys for Same Action
+
+```toml
+quit = ["q", "Esc", "Q"]  # Three ways to quit
+```
+
+#### Alternative Keys
+
+```toml
+# Use lowercase 'v' for visual mode instead of Shift+V
+visual_mode = ["v"]
+
+# Use Space to copy instead of 'y'
+visual_copy = ["Space", "y"]
+```
+
+#### Non-conflicting Changes
+
+```toml
+# Change bookmark key from m to b
+create_bookmark = ["b"]
+
+# Change search from / to ?
+search = ["?"]
+```
+
+### Hardcoded Keys
+
+Some keys are hardcoded for navigation and cannot be customized:
+
+- **Navigation**: `j`, `k`, `h`, `l`, arrow keys
+- **Movement**: `Ctrl+d`, `Ctrl+u`, `Ctrl+j`, `Ctrl+k`
+- **Search navigation**: `n`, `N` (in file search mode)
+- **Bookmark navigation**: `j`, `k`, `d` (in bookmark mode)
+- **Visual mode navigation**: `j`, `k` (in visual mode)
+
+These ensure consistent behavior across the application.
+
+### Mode-Specific Keys
+
+Some keybindings only work in specific modes:
+
+| Keybinding          | Available In                    |
+|---------------------|---------------------------------|
+| `visual_mode`       | Fullscreen viewer only          |
+| `visual_copy`       | Visual mode only                |
+| `show_line_numbers` | Fullscreen viewer only          |
+| `toggle_wrap`       | Fullscreen viewer only          |
+| `toggle_files`      | Tree view only                  |
+| `search`            | Tree view or fullscreen viewer  |
+
+See [Key Bindings](./keybindings.md) for complete keybinding reference.
 
 ## Resetting Configuration
 

@@ -220,9 +220,39 @@ When viewing a file with `v`:
 
 ### Text Selection
 
+#### Visual Selection Mode (Vim-style)
+
+Interactive line-based text selection with keyboard or mouse.
+
+**Key bindings**: `V` (enter mode), `j`/`k` (expand), `y` (copy), `Esc` (cancel)
+
+**Features**:
+- Vim-style line selection with keyboard navigation
+- Select large blocks spanning multiple pages
+- Auto-scroll when cursor reaches screen edge
+- Visual feedback: gray background (selection), blue (cursor)
+- Status bar shows selection size (e.g., "VISUAL: 25 lines")
+- Copy entire selection to clipboard with `y`
+- Bidirectional selection (up or down from start)
+- Mouse wheel support for expanding selection
+
+**Navigation in Visual Mode**:
+- `j`/`k` or `↓`/`↑`: Expand selection
+- `Page Up`/`Down`: Jump by page
+- `Home`/`End`: Jump to file start/end
+- `Mouse Scroll`: Move cursor with auto-scroll
+
+**Use cases**:
+- Copying log file sections for analysis
+- Extracting large code blocks
+- Selecting configuration sections
+- Multi-page text selection
+
+#### Mouse Selection (Traditional)
+
 - **Select**: Shift+Click+Drag
 - **Copy**: Ctrl+Shift+C (terminal shortcut)
-- **Works in fullscreen only** (tree mode doesn't support selection)
+- **Limited to visible area** (use Visual Mode for large selections)
 
 ### Binary File Handling
 
