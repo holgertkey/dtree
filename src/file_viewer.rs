@@ -267,9 +267,8 @@ impl FileViewer {
                     self.content.push(wrapped);
                 }
             } else {
-                // Truncate line to prevent Unicode artifacts
-                let truncated = Self::truncate_line(&content_no_tabs, max_width);
-                self.content.push(truncated);
+                // Don't truncate - keep full line content for copying
+                self.content.push(content_no_tabs);
             }
         }
 
@@ -336,24 +335,6 @@ impl FileViewer {
     /// Convert syntect color to ratatui color
     fn syntect_color_to_ratatui(color: syntect::highlighting::Color) -> Color {
         Color::Rgb(color.r, color.g, color.b)
-    }
-
-    /// Truncate a line to max_width using Unicode-aware truncation
-    fn truncate_line(line: &str, max_width: usize) -> String {
-        // Use visual width, not byte length
-        let line_width = line.width();
-
-        if line_width <= max_width {
-            return line.to_string();
-        }
-
-        // Use unicode-aware truncation
-        let (truncated, _) = line.unicode_truncate(max_width.saturating_sub(3));
-        if truncated.len() < line.len() {
-            format!("{}...", truncated)
-        } else {
-            truncated.to_string()
-        }
     }
 
     /// Wrap a line to max_width, returning a vector of wrapped lines
