@@ -198,6 +198,41 @@ FULLSCREEN VIEWER (press 'v' on a file)
     Shift+Mouse  Select text (bypasses mouse capture)
                  Copy with Ctrl+Shift+C or right-click menu
 
+  Visual Selection Mode (fullscreen mode):
+    V            Enter visual selection mode (Vim-style line selection)
+                 Default key: Shift+V (configurable in config.toml)
+
+    In Visual Mode:
+      j / ↓      Expand selection downward (move cursor down)
+      k / ↑      Expand selection upward (move cursor up)
+      Page Down  Jump selection down by page
+      Page Up    Jump selection up by page
+      Home       Jump to start of file
+      End        Jump to end of file
+      y          Copy selected lines to clipboard and exit visual mode
+      Esc / V    Exit visual mode without copying
+      Scroll     Move selection cursor with mouse wheel (auto-scroll)
+
+    Visual feedback:
+      • Selected lines highlighted with gray background
+      • Current cursor position highlighted with blue background
+      • Status bar shows selection size (e.g., "VISUAL: 25 lines")
+      • Title bar displays [VISUAL MODE] indicator
+
+    Features:
+      • Select large blocks of text spanning multiple pages
+      • Keyboard-driven selection (no need for mouse)
+      • Auto-scroll when cursor reaches screen edge
+      • Copy entire selection to system clipboard with 'y'
+      • Works seamlessly with syntax highlighting
+      • Bidirectional selection (select up or down from start point)
+
+    Use cases:
+      • Copying log file sections for analysis
+      • Extracting large code blocks
+      • Selecting configuration file sections
+      • Any scenario requiring multi-page text selection
+
   Line Wrapping (fullscreen mode):
     w            Toggle line wrapping mode
     • Wrap mode (default): Long lines are wrapped at word boundaries

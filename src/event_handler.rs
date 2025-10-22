@@ -220,7 +220,7 @@ impl EventHandler {
 
             // Visual selection mode in fullscreen viewer
             if file_viewer.visual_mode {
-                return self.handle_visual_mode_input(key, file_viewer, ui);
+                return self.handle_visual_mode_input(key, file_viewer, ui, config);
             }
 
             // Handle Esc key - clear search if active, otherwise exit
@@ -267,8 +267,8 @@ impl EventHandler {
 
             // Handle fullscreen-specific keys
             match key.code {
-                KeyCode::Char('V') => {
-                    // Enter visual selection mode (Shift+V)
+                _ if config.keybindings.is_visual_mode(key.code) => {
+                    // Enter visual selection mode (default: Shift+V)
                     file_viewer.enter_visual_mode();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -827,16 +827,22 @@ impl EventHandler {
         key: KeyEvent,
         file_viewer: &mut FileViewer,
         ui: &UI,
+        config: &Config,
     ) -> Result<Option<PathBuf>> {
         let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
 
         match key.code {
-            KeyCode::Esc | KeyCode::Char('V') => {
-                // Exit visual mode without copying
+            KeyCode::Esc => {
+                // Exit visual mode without copying (Esc always exits)
                 file_viewer.exit_visual_mode();
                 return Ok(Some(PathBuf::new()));
             }
-            KeyCode::Char('y') | KeyCode::Char('Y') => {
+            _ if config.keybindings.is_visual_mode(key.code) => {
+                // Exit visual mode without copying (toggle key)
+                file_viewer.exit_visual_mode();
+                return Ok(Some(PathBuf::new()));
+            }
+            _ if config.keybindings.is_visual_copy(key.code) => {
                 // Copy selection and exit visual mode
                 let _ = file_viewer.copy_selection();
                 return Ok(Some(PathBuf::new()));
