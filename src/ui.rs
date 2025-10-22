@@ -1,6 +1,6 @@
 use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     layout::{Layout, Constraint, Direction, Rect},
     text::{Line, Span},
     Frame,
@@ -510,13 +510,19 @@ impl UI {
                     let line_num = line_idx + 1;  // 1-indexed for display
                     let is_match = file_viewer.line_has_match(line_idx);
                     let is_current = file_viewer.is_current_match(line_idx);
+                    let is_selected = file_viewer.is_line_selected(line_idx);
+                    let is_visual_cursor = file_viewer.visual_mode && file_viewer.visual_cursor == line_idx;
 
                     let mut spans = Vec::new();
 
                     // Add line numbers if enabled
                     if show_numbers {
                         let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
-                        let num_style = if is_current {
+                        let num_style = if is_visual_cursor {
+                            Style::default().fg(Color::White).bg(Color::Blue).add_modifier(Modifier::BOLD)
+                        } else if is_selected {
+                            Style::default().fg(Color::White).bg(Color::DarkGray)
+                        } else if is_current {
                             Style::default().fg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                         } else if is_match {
                             Style::default().fg(file_search_highlight_color)
@@ -541,32 +547,55 @@ impl UI {
                                 let matched = &text[match_pos..match_pos + file_viewer.search_query.len()];
                                 let after = &text[match_pos + file_viewer.search_query.len()..];
 
+                                // Apply visual selection style if needed
+                                let base_style = if is_visual_cursor {
+                                    span.style.bg(Color::Blue)
+                                } else if is_selected {
+                                    span.style.bg(Color::DarkGray)
+                                } else {
+                                    span.style
+                                };
+
                                 // Before match
                                 if !before.is_empty() {
-                                    spans.push(Span::styled(before.to_string(), span.style));
+                                    spans.push(Span::styled(before.to_string(), base_style));
                                 }
 
                                 // Matched text
                                 let match_style = if is_current {
-                                    span.style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
+                                    base_style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
                                 } else {
-                                    span.style.bg(file_search_highlight_color).add_modifier(Modifier::BOLD)
+                                    base_style.bg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                                 };
                                 spans.push(Span::styled(matched.to_string(), match_style));
 
                                 // After match
                                 if !after.is_empty() {
-                                    spans.push(Span::styled(after.to_string(), span.style));
+                                    spans.push(Span::styled(after.to_string(), base_style));
                                 }
                             } else {
-                                // No match in this span, use original style
-                                spans.push(Span::styled(span.content.clone(), span.style));
+                                // No match in this span, use original style with visual selection
+                                let base_style = if is_visual_cursor {
+                                    span.style.bg(Color::Blue)
+                                } else if is_selected {
+                                    span.style.bg(Color::DarkGray)
+                                } else {
+                                    span.style
+                                };
+                                spans.push(Span::styled(span.content.clone(), base_style));
                             }
                         }
                     } else {
-                        // No match or no query - use original styling
+                        // No match or no query - use original styling with visual selection
                         for span in &line.spans {
-                            spans.push(Span::styled(span.content.clone(), span.style));
+                            let base_style = if is_visual_cursor {
+                                span.style.bg(Color::Blue)
+                            } else if is_selected {
+                                span.style.bg(Color::DarkGray)
+                            } else {
+                                span.style
+                            };
+                            spans.push(Span::styled(span.content.clone(), base_style));
                         }
                     }
 
@@ -586,13 +615,19 @@ impl UI {
                     let line_num = line_idx + 1;  // 1-indexed for display
                     let is_match = file_viewer.line_has_match(line_idx);
                     let is_current = file_viewer.is_current_match(line_idx);
+                    let is_selected = file_viewer.is_line_selected(line_idx);
+                    let is_visual_cursor = file_viewer.visual_mode && file_viewer.visual_cursor == line_idx;
 
                     let mut spans = Vec::new();
 
                     // Add line numbers if enabled
                     if show_numbers {
                         let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
-                        let num_style = if is_current {
+                        let num_style = if is_visual_cursor {
+                            Style::default().fg(Color::White).bg(Color::Blue).add_modifier(Modifier::BOLD)
+                        } else if is_selected {
+                            Style::default().fg(Color::White).bg(Color::DarkGray)
+                        } else if is_current {
                             Style::default().fg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                         } else if is_match {
                             Style::default().fg(file_search_highlight_color)
@@ -601,6 +636,15 @@ impl UI {
                         };
                         spans.push(Span::styled(format!("{:4} ", line_num), num_style));
                     }
+
+                    // Determine base style for visual selection
+                    let base_style = if is_visual_cursor {
+                        Style::default().bg(Color::Blue)
+                    } else if is_selected {
+                        Style::default().bg(Color::DarkGray)
+                    } else {
+                        Style::default()
+                    };
 
                     // Add line content with search query highlighting
                     if is_match && !file_viewer.search_query.is_empty() {
@@ -617,28 +661,28 @@ impl UI {
 
                             // Before match
                             if !before.is_empty() {
-                                spans.push(Span::styled(before.to_string(), Style::default()));
+                                spans.push(Span::styled(before.to_string(), base_style));
                             }
 
                             // Matched text
                             let match_style = if is_current {
-                                Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD)
+                                base_style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
                             } else {
-                                Style::default().bg(file_search_highlight_color).add_modifier(Modifier::BOLD)
+                                base_style.bg(file_search_highlight_color).add_modifier(Modifier::BOLD)
                             };
                             spans.push(Span::styled(matched.to_string(), match_style));
 
                             // After match
                             if !after.is_empty() {
-                                spans.push(Span::styled(after.to_string(), Style::default()));
+                                spans.push(Span::styled(after.to_string(), base_style));
                             }
                         } else {
                             // Shouldn't happen, but fallback to normal
-                            spans.push(Span::styled(line.as_str(), Style::default()));
+                            spans.push(Span::styled(line.as_str(), base_style));
                         }
                     } else {
-                        // No match or no query - normal text
-                        spans.push(Span::styled(line.as_str(), Style::default()));
+                        // No match or no query - normal text with visual selection style
+                        spans.push(Span::styled(line.as_str(), base_style));
                     }
 
                     Line::from(spans)
@@ -671,7 +715,9 @@ impl UI {
             format!(" Help{} ", scroll_info)
         } else if is_fullscreen {
             // Fullscreen mode - simplified title
-            let mode_indicator = if file_viewer.tail_mode {
+            let mode_indicator = if file_viewer.visual_mode {
+                " [VISUAL MODE]"
+            } else if file_viewer.tail_mode {
                 " [TAIL MODE]"
             } else if file_viewer.total_lines.is_some() && file_viewer.total_lines.unwrap() > file_viewer.content.len() {
                 " [HEAD MODE]"
@@ -688,21 +734,27 @@ impl UI {
                 String::new()
             };
 
-            // Add hints for toggles
-            let line_numbers_hint = if file_viewer.show_line_numbers {
-                " | l: hide lines"
+            // Add hints for toggles (hide in visual mode)
+            let hints = if file_viewer.visual_mode {
+                " - j/k: select | y: copy | Esc: cancel"
             } else {
-                " | l: show lines"
+                let line_numbers_hint = if file_viewer.show_line_numbers {
+                    " | l: hide lines"
+                } else {
+                    " | l: show lines"
+                };
+
+                let wrap_hint = if file_viewer.wrap_lines {
+                    " | w: truncate"
+                } else {
+                    " | w: wrap"
+                };
+
+                &format!(" - V: visual | /: search | j/k: scroll | Ctrl+j/k: next/prev file{}{} | q: back | Esc: exit", line_numbers_hint, wrap_hint)
             };
 
-            let wrap_hint = if file_viewer.wrap_lines {
-                " | w: truncate"
-            } else {
-                " | w: wrap"
-            };
-
-            format!(" File Viewer (Fullscreen{} - /: search | j/k: scroll | Ctrl+j/k: next/prev file{}{} | q: back | Esc: exit){}{} ",
-                mode_indicator, line_numbers_hint, wrap_hint, search_info, scroll_info)
+            format!(" File Viewer (Fullscreen{}{}){}{}",
+                mode_indicator, hints, search_info, scroll_info)
         } else {
             format!(" File Viewer{} ", scroll_info)
         };

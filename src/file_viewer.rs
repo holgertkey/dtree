@@ -38,6 +38,11 @@ pub struct FileViewer {
     pub search_query: String,
     pub search_results: Vec<usize>,  // Line numbers with matches (0-indexed)
     pub current_match: usize,  // Current match index in search_results
+
+    // Visual selection mode
+    pub visual_mode: bool,
+    pub visual_start: Option<usize>,  // Start line of selection (0-indexed)
+    pub visual_cursor: usize,  // Current cursor position in visual mode (0-indexed)
 }
 
 impl FileViewer {
@@ -59,6 +64,9 @@ impl FileViewer {
             search_query: String::new(),
             search_results: Vec::new(),
             current_match: 0,
+            visual_mode: false,
+            visual_start: None,
+            visual_cursor: 0,
         }
     }
 
@@ -745,7 +753,116 @@ impl FileViewer {
             String::new()
         };
 
-        format!(" {} | {} | {} | {}{}", file_name, size_str, lines_info, permissions_str, search_info)
+        // Add visual mode indicator
+        let visual_info = if self.visual_mode {
+            let (start, end) = self.get_selection_range();
+            format!(" | VISUAL: {} lines", end.saturating_sub(start) + 1)
+        } else {
+            String::new()
+        };
+
+        format!(" {} | {} | {} | {}{}{}", file_name, size_str, lines_info, permissions_str, search_info, visual_info)
+    }
+
+    // ===== Visual selection functionality =====
+
+    /// Enter visual selection mode
+    pub fn enter_visual_mode(&mut self) {
+        self.visual_mode = true;
+        // Start selection at current scroll position (top visible line)
+        self.visual_start = Some(self.scroll);
+        self.visual_cursor = self.scroll;
+    }
+
+    /// Exit visual selection mode
+    pub fn exit_visual_mode(&mut self) {
+        self.visual_mode = false;
+        self.visual_start = None;
+    }
+
+    /// Move cursor down in visual mode
+    pub fn visual_move_down(&mut self) {
+        if self.visual_cursor < self.content.len().saturating_sub(1) {
+            self.visual_cursor += 1;
+        }
+    }
+
+    /// Move cursor up in visual mode
+    pub fn visual_move_up(&mut self) {
+        self.visual_cursor = self.visual_cursor.saturating_sub(1);
+    }
+
+    /// Get selection range (start, end) inclusive, always in ascending order
+    pub fn get_selection_range(&self) -> (usize, usize) {
+        if let Some(start) = self.visual_start {
+            let end = self.visual_cursor;
+            if start <= end {
+                (start, end)
+            } else {
+                (end, start)
+            }
+        } else {
+            (0, 0)
+        }
+    }
+
+    /// Check if a line is within the visual selection
+    pub fn is_line_selected(&self, line_idx: usize) -> bool {
+        if !self.visual_mode {
+            return false;
+        }
+        let (start, end) = self.get_selection_range();
+        line_idx >= start && line_idx <= end
+    }
+
+    /// Get selected text as a string
+    pub fn get_selected_text(&self) -> String {
+        if !self.visual_mode {
+            return String::new();
+        }
+
+        let (start, end) = self.get_selection_range();
+        self.content
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| *idx >= start && *idx <= end)
+            .map(|(_, line)| line.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// Copy selected text to clipboard and exit visual mode
+    pub fn copy_selection(&mut self) -> anyhow::Result<()> {
+        if !self.visual_mode {
+            return Ok(());
+        }
+
+        let text = self.get_selected_text();
+        if !text.is_empty() {
+            let mut clipboard = arboard::Clipboard::new()?;
+            clipboard.set_text(text)?;
+        }
+
+        self.exit_visual_mode();
+        Ok(())
+    }
+
+    /// Update scroll to keep cursor visible in visual mode
+    pub fn ensure_visual_cursor_visible(&mut self, visible_height: usize) {
+        if !self.visual_mode {
+            return;
+        }
+
+        let max_scroll = self.content.len().saturating_sub(visible_height);
+
+        // If cursor is above visible area, scroll up
+        if self.visual_cursor < self.scroll {
+            self.scroll = self.visual_cursor;
+        }
+        // If cursor is below visible area, scroll down
+        else if self.visual_cursor >= self.scroll + visible_height {
+            self.scroll = self.visual_cursor.saturating_sub(visible_height - 1).min(max_scroll);
+        }
     }
 }
 

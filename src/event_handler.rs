@@ -19,6 +19,8 @@ pub struct EventHandler {
     pub last_click_time: Option<(Instant, usize)>,
     pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
     pub last_search_click_time: Option<(Instant, usize)>, // For search results double-click
+    pub visual_selecting: bool, // Shift+Mouse drag for visual selection
+    pub last_auto_scroll: Option<Instant>, // Last time we auto-scrolled during selection
 }
 
 impl EventHandler {
@@ -29,6 +31,8 @@ impl EventHandler {
             last_click_time: None,
             last_bookmark_click_time: None,
             last_search_click_time: None,
+            visual_selecting: false,
+            last_auto_scroll: None,
         }
     }
 
@@ -214,6 +218,11 @@ impl EventHandler {
                 return self.handle_file_search_input(key, file_viewer);
             }
 
+            // Visual selection mode in fullscreen viewer
+            if file_viewer.visual_mode {
+                return self.handle_visual_mode_input(key, file_viewer, ui);
+            }
+
             // Handle Esc key - clear search if active, otherwise exit
             if matches!(key.code, KeyCode::Esc) {
                 if !file_viewer.search_results.is_empty() {
@@ -258,6 +267,11 @@ impl EventHandler {
 
             // Handle fullscreen-specific keys
             match key.code {
+                KeyCode::Char('V') => {
+                    // Enter visual selection mode (Shift+V)
+                    file_viewer.enter_visual_mode();
+                    return Ok(Some(PathBuf::new()));
+                }
                 KeyCode::Char('/') => {
                     // Enter file search mode
                     file_viewer.enter_search_mode();
@@ -808,6 +822,69 @@ impl EventHandler {
         }
     }
 
+    fn handle_visual_mode_input(
+        &mut self,
+        key: KeyEvent,
+        file_viewer: &mut FileViewer,
+        ui: &UI,
+    ) -> Result<Option<PathBuf>> {
+        let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
+
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('V') => {
+                // Exit visual mode without copying
+                file_viewer.exit_visual_mode();
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                // Copy selection and exit visual mode
+                let _ = file_viewer.copy_selection();
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Char('j') | KeyCode::Down => {
+                // Move cursor down (expand selection)
+                file_viewer.visual_move_down();
+                file_viewer.ensure_visual_cursor_visible(visible_height);
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                // Move cursor up (expand selection)
+                file_viewer.visual_move_up();
+                file_viewer.ensure_visual_cursor_visible(visible_height);
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::PageDown => {
+                // Jump down by page
+                for _ in 0..visible_height {
+                    file_viewer.visual_move_down();
+                }
+                file_viewer.ensure_visual_cursor_visible(visible_height);
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::PageUp => {
+                // Jump up by page
+                for _ in 0..visible_height {
+                    file_viewer.visual_move_up();
+                }
+                file_viewer.ensure_visual_cursor_visible(visible_height);
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::Home => {
+                // Jump to start of file
+                file_viewer.visual_cursor = 0;
+                file_viewer.ensure_visual_cursor_visible(visible_height);
+                return Ok(Some(PathBuf::new()));
+            }
+            KeyCode::End => {
+                // Jump to end of file
+                file_viewer.visual_cursor = file_viewer.content.len().saturating_sub(1);
+                file_viewer.ensure_visual_cursor_visible(visible_height);
+                return Ok(Some(PathBuf::new()));
+            }
+            _ => return Ok(Some(PathBuf::new())),
+        }
+    }
+
     /// Handle mouse events
     pub fn handle_mouse(
         &mut self,
@@ -1086,8 +1163,13 @@ impl EventHandler {
             }
         }
 
+        // In fullscreen mode with visual selection, move cursor up
+        if fullscreen_viewer && file_viewer.visual_mode {
+            let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
+            file_viewer.visual_move_up();
+            file_viewer.ensure_visual_cursor_visible(visible_height);
         // In fullscreen mode, always scroll the file viewer
-        if fullscreen_viewer {
+        } else if fullscreen_viewer {
             file_viewer.scroll_up();
         } else if (*show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
@@ -1136,8 +1218,13 @@ impl EventHandler {
             }
         }
 
+        // In fullscreen mode with visual selection, move cursor down
+        if fullscreen_viewer && file_viewer.visual_mode {
+            let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
+            file_viewer.visual_move_down();
+            file_viewer.ensure_visual_cursor_visible(visible_height);
         // In fullscreen mode, always scroll the file viewer
-        if fullscreen_viewer {
+        } else if fullscreen_viewer {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
             let lines_to_show = content_height.saturating_sub(2);
             file_viewer.scroll_down(lines_to_show);
