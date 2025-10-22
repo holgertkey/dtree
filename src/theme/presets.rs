@@ -8,6 +8,7 @@ pub fn get_preset(theme_name: &str) -> Option<ThemeConfig> {
         "nord" => Some(nord_theme()),
         "tokyonight" => Some(tokyonight_theme()),
         "dracula" => Some(dracula_theme()),
+        "obsidian" => Some(obsidian_theme()),
         _ => None,
     }
 }
@@ -104,5 +105,24 @@ fn dracula_theme() -> ThemeConfig {
         main_border_color: Some("#6272a4".to_string()), // comment gray border
         panel_border_color: Some("#ff79c6".to_string()), // pink panel borders (search, bookmarks)
         background_color: Some("#282a36".to_string()), // dracula dark bg
+    }
+}
+
+/// Obsidian theme - Dark theme inspired by Obsidian app with subtle cursor
+fn obsidian_theme() -> ThemeConfig {
+    ThemeConfig {
+        selected_color: Some("#a88bfa".to_string()),  // soft purple
+        directory_color: Some("#8b9dff".to_string()), // light blue
+        file_color: Some("#dcddde".to_string()),      // light gray
+        border_color: Some("#3e4044".to_string()),    // dark gray
+        error_color: Some("#f14c4c".to_string()),     // soft red
+        highlight_color: Some("#c792ea".to_string()), // violet
+        file_search_highlight_color: Some("#c792ea".to_string()), // violet for file search
+        cursor_color: Some("#a88bfa".to_string()),    // purple for search & bookmarks
+        tree_cursor_color: Some("#dcddde".to_string()), // light gray text
+        tree_cursor_bg_color: Some("#1e1e21".to_string()), // barely visible dark background
+        main_border_color: Some("#3e4044".to_string()), // dark gray border
+        panel_border_color: Some("#7c6baf".to_string()), // muted purple panel borders
+        background_color: Some("#1a1a1d".to_string()), // obsidian dark bg
     }
 }

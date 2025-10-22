@@ -414,6 +414,7 @@ impl Config {
 #   "nord"       - Cold, muted colors inspired by Nord theme
 #   "tokyonight" - Modern dark theme with vibrant colors
 #   "dracula"    - Popular dark theme with high contrast
+#   "obsidian"   - Dark theme inspired by Obsidian app with subtle cursor
 #
 # You can override individual colors in [appearance.colors] section below
 # Preset themes provide a good starting point with harmonious color palettes
