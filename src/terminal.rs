@@ -27,16 +27,29 @@ pub fn cleanup_terminal() -> Result<()> {
     use std::io::Write;
     use crossterm::terminal::{Clear, ClearType};
 
-    // Clear screen and flush before cleanup to remove any mouse tracking artifacts
+    // Step 1: Disable mouse capture first and flush to ensure it's processed
+    std::io::stderr().execute(DisableMouseCapture)?;
+    std::io::stderr().flush()?;
+
+    // Step 2: Small delay to let any pending mouse events drain
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    // Step 3: Clear alternate screen before leaving it
     std::io::stderr().execute(Clear(ClearType::All))?;
     std::io::stderr().flush()?;
 
-    // Clean up in reverse order of setup
-    std::io::stderr().execute(DisableMouseCapture)?;
+    // Step 4: Leave alternate screen and flush
     std::io::stderr().execute(LeaveAlternateScreen)?;
+    std::io::stderr().flush()?;
+
+    // Step 5: Clear main screen to remove any leaked mouse events
+    std::io::stderr().execute(Clear(ClearType::Purge))?;
+    std::io::stderr().flush()?;
+
+    // Step 6: Disable raw mode
     disable_raw_mode()?;
 
-    // Ensure all terminal commands are flushed
+    // Step 7: Final flush to ensure all commands are processed
     std::io::stderr().flush()?;
 
     Ok(())
