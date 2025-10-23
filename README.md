@@ -401,7 +401,46 @@ file_manager = "ranger"
 
 ---
 
-## Screenshots
+## Screenshots & Demos
+
+### Tree Navigation
+Navigate through directories with vim-style keybindings. Expand/collapse with `l`/`h`, move with `j`/`k`, enter directories with `Enter`.
+
+![Tree Navigation Demo](docs/assets/tree_navigation.gif)
+
+*Demo: Basic tree navigation and directory exploration*
+
+### File Viewer with Syntax Highlighting
+Split view with syntax-highlighted file preview. Toggle with `s`, scroll with `Ctrl+j`/`Ctrl+k`, enter fullscreen with `v`.
+
+![File Viewer Demo](docs/assets/file_viewer.gif)
+
+*Demo: File preview with syntax highlighting and fullscreen mode*
+
+### Visual Selection Mode
+Vim-style line selection with keyboard (`V` + `j`/`k`) or mouse. Copy selected lines to clipboard with `y`.
+
+![Visual Selection Demo](docs/assets/visual_selection.gif)
+
+*Demo: Visual selection mode for copying text*
+
+### Fuzzy Search
+Two-phase search: quick local + deep background. Normal (`/query`) and fuzzy (`//query`) modes with ranked results.
+
+![Search Demo](docs/assets/search.gif)
+
+*Demo: Search functionality with fuzzy matching*
+
+### Bookmarks
+Create bookmarks with `m`, manage with CLI (`dt -bm`), jump instantly with `dt bookmarkname`.
+
+![Bookmarks Demo](docs/assets/bookmarks.gif)
+
+*Demo: Creating and using bookmarks*
+
+---
+
+## ASCII Previews
 
 ### Tree View
 ```
