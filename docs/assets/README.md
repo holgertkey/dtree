@@ -1,10 +1,15 @@
 # Demo Assets
 
-This directory contains animated GIF demonstrations for the README.
+This directory contains animated GIF demonstrations and screenshots.
+
+**📺 [View All Demos in Gallery →](../DEMOS.md)**
 
 ## Files
 
-Generated GIFs:
+### Screenshots
+- `dtree_screenshot.png` - Main screenshot (used in README)
+
+### Animated Demos
 - `tree_navigation.gif` - Tree navigation demo
 - `file_viewer.gif` - File viewer and syntax highlighting demo
 - `visual_selection.gif` - Visual selection mode demo

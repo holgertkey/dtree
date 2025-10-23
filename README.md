@@ -403,102 +403,18 @@ file_manager = "ranger"
 
 ## Screenshots & Demos
 
-### Overview
-
 ![dtree Screenshot](docs/assets/dtree_screenshot.png)
 
 *dtree in action: interactive tree view with file preview and syntax highlighting*
 
----
+**📺 [View All Demos & Animations →](docs/DEMOS.md)**
 
-### Tree Navigation
-Navigate through directories with vim-style keybindings. Expand/collapse with `l`/`h`, move with `j`/`k`, enter directories with `Enter`.
-
-![Tree Navigation Demo](docs/assets/tree_navigation.gif)
-
-*Demo: Basic tree navigation and directory exploration*
-
-### File Viewer with Syntax Highlighting
-Split view with syntax-highlighted file preview. Toggle with `s`, scroll with `Ctrl+j`/`Ctrl+k`, enter fullscreen with `v`.
-
-![File Viewer Demo](docs/assets/file_viewer.gif)
-
-*Demo: File preview with syntax highlighting and fullscreen mode*
-
-### Visual Selection Mode
-Vim-style line selection with keyboard (`V` + `j`/`k`) or mouse. Copy selected lines to clipboard with `y`.
-
-![Visual Selection Demo](docs/assets/visual_selection.gif)
-
-*Demo: Visual selection mode for copying text*
-
-### Fuzzy Search
-Two-phase search: quick local + deep background. Normal (`/query`) and fuzzy (`//query`) modes with ranked results.
-
-![Search Demo](docs/assets/search.gif)
-
-*Demo: Search functionality with fuzzy matching*
-
-### Bookmarks
-Create bookmarks with `m`, manage with CLI (`dt -bm`), jump instantly with `dt bookmarkname`.
-
-![Bookmarks Demo](docs/assets/bookmarks.gif)
-
-*Demo: Creating and using bookmarks*
-
----
-
-## ASCII Previews
-
-### Tree View
-```
-┌─ /home/user/projects ───────────────────────────┐
-│ 📁 dtree/                                       │
-│ ├─ 📁 src/                                      │
-│ │  ├─ 📄 main.rs                                │
-│ │  ├─ 📄 app.rs                                 │
-│ │  ├─ 📄 navigation.rs                          │
-│ │  ├─ 📄 file_viewer.rs                         │
-│ │  └─ 📄 search.rs                              │
-│ ├─ 📄 Cargo.toml                                │
-│ ├─ 📄 README.md                                 │
-│ └─ 📁 docs/                                     │
-│    └─ 📄 architecture.md                        │
-└─────────────────────────────────────────────────┘
-```
-
-### Split View with File Preview
-```
-┌─ Tree ────────┬─ File Preview ───────────────────┐
-│ dtree/        │ # Architecture                   │
-│ ├─ src/       │                                  │
-│ │  main.rs    │ This document describes the      │
-│ │  app.rs     │ internal architecture of dtree.  │
-│ ├─ docs/      │                                  │
-│ │  arch.md ◄──┼─ ## Overview                     │
-│ └─ README.md  │                                  │
-│               │ dtree is built with a modular... │
-│               │                                  │
-│ Rust | 128 lines | 4.2K                          │
-└───────────────┴──────────────────────────────────┘
-```
-
-### Fullscreen Viewer
-```
-┌─ docs/architecture.md ──────────────────────────┐
-│   1 │ # Architecture                            │
-│   2 │                                           │
-│   3 │ This document describes the internal      │
-│   4 │ architecture of dtree.                    │
-│   5 │                                           │
-│   6 │ ## Overview                               │
-│   7 │                                           │
-│   8 │ dtree is built with a modular             │
-│   9 │ architecture that separates concerns...   │
-│     │                                           │
-│ l: line# | /: search | q: back | Esc: exit      │
-└─────────────────────────────────────────────────┘
-```
+See animated demonstrations of:
+- 🌳 Tree navigation with vim-style keybindings
+- 📄 File viewer with syntax highlighting
+- ✂️ Visual selection mode for copying text
+- 🔍 Fuzzy search functionality
+- 🔖 Bookmark management
 
 ---
 
@@ -547,6 +463,7 @@ For complete keybinding reference, see [docs/keybindings.md](./docs/keybindings.
 Complete documentation is available in the [docs](./docs) directory:
 
 ### User Guides
+- **[Demo Gallery](./docs/DEMOS.md)** - Visual demonstrations and animated GIFs
 - **[Getting Started](./docs/getting-started.md)** - Quick start guide
 - **[Installation](./docs/installation.md)** - Installation instructions
 - **[Usage](./docs/usage.md)** - Basic usage guide
