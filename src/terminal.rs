@@ -25,6 +25,11 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 
 pub fn cleanup_terminal() -> Result<()> {
     use std::io::Write;
+    use crossterm::terminal::{Clear, ClearType};
+
+    // Clear screen and flush before cleanup to remove any mouse tracking artifacts
+    std::io::stderr().execute(Clear(ClearType::All))?;
+    std::io::stderr().flush()?;
 
     // Clean up in reverse order of setup
     std::io::stderr().execute(DisableMouseCapture)?;
