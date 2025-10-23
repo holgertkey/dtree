@@ -523,12 +523,12 @@ mod tests {
         // Add bookmark
         bookmarks.add("x".to_string(), PathBuf::from("/tmp/testx"), Some("TestX".to_string())).unwrap();
         assert_eq!(bookmarks.list().len(), 1);
-        assert!(bookmarks.has_key("x"));
+        assert!(bookmarks.get("x").is_some());
 
         // Remove bookmark
         bookmarks.remove("x").unwrap();
         assert_eq!(bookmarks.list().len(), 0);
-        assert!(!bookmarks.has_key("x"));
+        assert!(bookmarks.get("x").is_none());
     }
 
     #[test]

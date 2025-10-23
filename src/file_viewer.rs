@@ -364,7 +364,23 @@ impl FileViewer {
                     while !remaining.is_empty() {
                         let (chunk, byte_offset) = remaining.unicode_truncate(max_width);
                         result.push(chunk.to_string());
-                        remaining = &remaining[byte_offset..];
+
+                        // Safely advance to next char boundary
+                        if byte_offset >= remaining.len() {
+                            break;
+                        }
+
+                        // Find the next valid char boundary if byte_offset is not on one
+                        let next_offset = if remaining.is_char_boundary(byte_offset) {
+                            byte_offset
+                        } else {
+                            // Find the next char boundary after byte_offset
+                            (byte_offset..remaining.len())
+                                .find(|&i| remaining.is_char_boundary(i))
+                                .unwrap_or(remaining.len())
+                        };
+
+                        remaining = &remaining[next_offset..];
                     }
                 } else {
                     current_line.push_str(word);
@@ -397,7 +413,23 @@ impl FileViewer {
                             } else {
                                 let (chunk, byte_offset) = remaining.unicode_truncate(max_width);
                                 result.push(chunk.to_string());
-                                remaining = &remaining[byte_offset..];
+
+                                // Safely advance to next char boundary
+                                if byte_offset >= remaining.len() {
+                                    break;
+                                }
+
+                                // Find the next valid char boundary if byte_offset is not on one
+                                let next_offset = if remaining.is_char_boundary(byte_offset) {
+                                    byte_offset
+                                } else {
+                                    // Find the next char boundary after byte_offset
+                                    (byte_offset..remaining.len())
+                                        .find(|&i| remaining.is_char_boundary(i))
+                                        .unwrap_or(remaining.len())
+                                };
+
+                                remaining = &remaining[next_offset..];
                             }
                         }
                     } else {
@@ -539,13 +571,11 @@ impl FileViewer {
             "  This is a binary file and cannot be displayed as text.".to_string(),
             "".to_string(),
             "  Available Actions:".to_string(),
-            "    e  -  Open in hex editor (configured in config.toml)".to_string(),
+            "    e  -  Open in hex editor".to_string(),
             "    o  -  Open in file manager".to_string(),
             "    c  -  Copy path to clipboard".to_string(),
-            "    q  -  Return to tree view".to_string(),
             "".to_string(),
             "  Tip: Configure your preferred hex editor in ~/.config/dtree/config.toml".to_string(),
-            "       Default: hexyl (install with: cargo install hexyl)".to_string(),
             "".to_string(),
         ];
     }
@@ -891,4 +921,59 @@ fn format_permission_triplet(triplet: u32) -> String {
     let w = if triplet & 0o2 != 0 { 'w' } else { '-' };
     let x = if triplet & 0o1 != 0 { 'x' } else { '-' };
     format!("{}{}{}", r, w, x)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wrap_line_with_multibyte_chars() {
+        // Test string with multibyte Unicode characters (▶ is 3 bytes)
+        let line = "▶ folder ▶ another";
+        let result = FileViewer::wrap_line(line, 10);
+
+        // Should not panic and should produce some output
+        assert!(!result.is_empty());
+        assert!(result[0].len() <= 30); // Rough check - line shouldn't be empty
+    }
+
+    #[test]
+    fn test_wrap_line_with_long_multibyte_word() {
+        // Test with a very long word containing multibyte characters
+        let line = "▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶";
+        let result = FileViewer::wrap_line(line, 5);
+
+        // Should not panic
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_wrap_line_with_ansi_like_sequences() {
+        // Simulate ANSI escape sequences mixed with Unicode
+        let line = "[9;7H▶[9;9H.dotnet[9;125H│[10;1H│[10;7H▶[10;9H.fltk";
+        let result = FileViewer::wrap_line(line, 20);
+
+        // Should not panic
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_wrap_line_normal_text() {
+        // Test normal ASCII text to ensure we didn't break existing functionality
+        let line = "This is a normal line of text";
+        let result = FileViewer::wrap_line(line, 10);
+
+        assert!(result.len() >= 3); // Should wrap into multiple lines
+    }
+
+    #[test]
+    fn test_wrap_line_fits_in_width() {
+        // Test line that fits within max_width
+        let line = "Short";
+        let result = FileViewer::wrap_line(line, 100);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Short");
+    }
 }
