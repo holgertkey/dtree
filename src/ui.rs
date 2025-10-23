@@ -192,7 +192,7 @@ impl UI {
                         "  ".to_string()
                     }
                 } else {
-                    format!("{} ", file_icon)
+                    format!("{}  ", file_icon)  // Two spaces after icon for better readability
                 }
             } else {
                 // Default arrows/markers (original behavior)
