@@ -403,6 +403,14 @@ file_manager = "ranger"
 
 ## Screenshots & Demos
 
+### Overview
+
+![dtree Screenshot](docs/assets/dtree_screenshot.png)
+
+*dtree in action: interactive tree view with file preview and syntax highlighting*
+
+---
+
 ### Tree Navigation
 Navigate through directories with vim-style keybindings. Expand/collapse with `l`/`h`, move with `j`/`k`, enter directories with `Enter`.
 
