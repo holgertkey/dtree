@@ -27,6 +27,7 @@
 - 🔖 **Bookmarks** - Save and quickly jump to favorite directories
 - 📏 **Directory Sizes** - Async calculation with visual indicators
 - 🖥️ **Fullscreen Viewer** - Dedicated file viewer with search and tail mode
+- ✂️ **Visual Selection** - Vim-style line selection with keyboard and mouse
 - 🔧 **Binary File Support** - Automatic detection with hex editor integration
 - 🎨 **Customizable** - TOML configuration with full theme support
 - 🖱️ **Mouse Support** - Click, drag, scroll, and resize
@@ -61,6 +62,8 @@ dt myproject          # Jump to bookmark instantly
 # Basic navigation inside dtree:
 # j/k - move up/down
 # l/h - expand/collapse
+# v - fullscreen viewer
+# V - visual selection mode (in fullscreen)
 # s - toggle file preview
 # / - search
 # i - help
@@ -255,8 +258,24 @@ When you run `dt <name>`, dtree resolves in this order:
 | `/`         | Enter file search mode                     |
 | `n`         | Next search match (when results exist)     |
 | `N`         | Previous search match (Shift+n)            |
+| `V`         | Enter visual selection mode                |
 | `q`         | Return to tree view (stay in program)      |
 | `Esc`       | Exit program (or clear search if active)   |
+
+### Visual Selection Mode (Fullscreen Viewer)
+
+| Key             | Action                                       |
+|-----------------|----------------------------------------------|
+| `V`             | Enter visual mode (Vim-style selection)      |
+| `j` or `↓`      | Expand selection downward                    |
+| `k` or `↑`      | Expand selection upward                      |
+| `Page Down`     | Jump selection down by page                  |
+| `Page Up`       | Jump selection up by page                    |
+| `Home`          | Jump to start of file                        |
+| `End`           | Jump to end of file                          |
+| `Mouse Scroll`  | Move selection cursor (auto-scroll)          |
+| `y`             | Copy selected lines and exit visual mode     |
+| `Esc` or `V`    | Exit visual mode without copying             |
 
 ### Search (Tree Search)
 
@@ -303,18 +322,20 @@ When you run `dt <name>`, dtree resolves in this order:
 
 ### Mouse Support
 
-| Action               | Effect                    |
-|----------------------|---------------------------|
-| **Tree View**        |                           |
-| Click                | Select item under cursor  |
-| Double-click         | Expand/collapse directory |
-| Scroll wheel         | Navigate tree up/down     |
-| Drag divider         | Resize panels             |
-| **File Preview**     |                           |
-| Scroll wheel         | Scroll preview content    |
-| **Fullscreen Viewer** |                          |
-| Scroll wheel         | Scroll document           |
-| Shift+Click+Drag     | Select text for copying   |
+| Action               | Effect                              |
+|----------------------|-------------------------------------|
+| **Tree View**        |                                     |
+| Click                | Select item under cursor            |
+| Double-click         | Expand/collapse directory           |
+| Scroll wheel         | Navigate tree up/down               |
+| Drag divider         | Resize panels                       |
+| **File Preview**     |                                     |
+| Scroll wheel         | Scroll preview content              |
+| **Fullscreen Viewer** |                                    |
+| Scroll wheel         | Scroll document                     |
+| Shift+Click+Drag     | Select text for copying             |
+| **Visual Mode**      |                                     |
+| Scroll wheel         | Move selection cursor (auto-scroll) |
 
 ---
 
@@ -339,9 +360,14 @@ When you run `dt <name>`, dtree resolves in this order:
 
 - **Syntax highlighting**: 100+ languages supported
 - **Line numbers**: Toggle with `l` key
-- **Search within files**: Press `/` in fullscreen mode
+- **Search within files**: Press `/` in fullscreen mode, navigate with `n`/`N`
 - **Tail mode**: View last 10,000 lines of large files (perfect for logs)
-- **Text selection**: Shift+Mouse to select and copy
+- **Visual selection mode**: Vim-style line selection with `V` key
+  - Select lines with `j`/`k` keyboard navigation
+  - Use mouse scroll to expand selection
+  - Copy to clipboard with `y`
+  - Visual feedback with highlighted selection and cursor
+- **Text selection**: Shift+Mouse drag for quick selection
 
 ### 🎨 Customization
 
@@ -458,7 +484,9 @@ Help:             i (help)        q (exit+cd)             Esc (exit)
 Navigate:         j/k (scroll)    Ctrl+j/k (next/prev file)
 Page:             PgUp/PgDn       Home/End (head/tail mode)
 Search:           / (search)      n/N (next/prev match)
-View:             l (line #)      q (back to tree)
+View:             l (line #)      w (wrap)            V (visual mode)
+Visual Mode:      j/k (select)    y (copy)            Esc (exit)
+Exit:             q (back to tree)
 ```
 
 For complete keybinding reference, see [docs/keybindings.md](./docs/keybindings.md).

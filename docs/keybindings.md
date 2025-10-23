@@ -369,7 +369,6 @@ Some terminal emulators intercept certain key combinations. If a keybinding does
 ### Common Conflicts
 
 - **`Ctrl+j`/`Ctrl+k`**: Some terminals map these to Enter/other keys
-- **`Ctrl+d`/`Ctrl+u`**: Shells may intercept for EOF/clear line
 - **Mouse support**: Enable mouse reporting in terminal settings
 
 ### Workarounds

@@ -78,10 +78,25 @@ dtree --version             # Show version
 | `Home`              | HEAD mode (first 10K lines) |
 | `End`               | TAIL mode (last 10K lines)  |
 | `l`                 | Toggle line numbers         |
+| `w`                 | Toggle line wrapping        |
 | `/`                 | Search within file          |
 | `n` `N`             | Next/previous match         |
+| `V`                 | Enter visual selection mode |
 | `q`                 | Back to tree view           |
 | `Esc`               | Exit program                |
+
+### Visual Selection Mode (Fullscreen)
+
+| Key              | Action                        |
+|------------------|-------------------------------|
+| `V`              | Enter visual mode             |
+| `j` `↓`          | Expand selection downward     |
+| `k` `↑`          | Expand selection upward       |
+| `PgDn` `PgUp`    | Jump by page                  |
+| `Home` `End`     | Jump to start/end             |
+| `Mouse Scroll`   | Move cursor (auto-scroll)     |
+| `y`              | Copy selection + exit         |
+| `Esc` / `V`      | Exit without copying          |
 
 ---
 
@@ -161,13 +176,14 @@ dt work                     # Jump to bookmark
 
 ## Mouse
 
-| Action           | Effect                  |
-|------------------|-------------------------|
-| **Click**        | Select item             |
-| **Double-click** | Expand/collapse         |
-| **Scroll**       | Navigate/scroll         |
-| **Drag divider** | Resize panels           |
-| **Shift+Drag**   | Select text (fullscreen)|
+| Action           | Effect                        |
+|------------------|-------------------------------|
+| **Click**        | Select item                   |
+| **Double-click** | Expand/collapse               |
+| **Scroll**       | Navigate/scroll               |
+| **Drag divider** | Resize panels                 |
+| **Shift+Drag**   | Select text (fullscreen)      |
+| **Scroll** (V)   | Move cursor in visual mode    |
 
 ---
 
@@ -241,6 +257,16 @@ dt ~/projects           # Open tree
 # Press e to open in editor
 ```
 
+### Visual Selection (Copy Lines)
+```bash
+dt -v file.txt          # Open file in fullscreen
+# Press V to enter visual mode
+# Press j/k to select lines
+# Or use mouse scroll
+# Press y to copy to clipboard
+# Selection copied!
+```
+
 ---
 
 ## Tips & Tricks
@@ -254,6 +280,12 @@ dt ~/projects           # Open tree
 - Use `End` for tail mode on logs
 - Use `Home` to return to head mode
 - Search with `/` to find specific content
+
+**Text Selection**
+- Use `V` for Vim-style line selection
+- Navigate with `j`/`k` or mouse scroll
+- Copy with `y` - no mouse needed!
+- Or use Shift+Mouse for quick text grab
 
 **Binary Files**
 - Automatically detected
