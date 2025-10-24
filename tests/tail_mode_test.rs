@@ -30,7 +30,7 @@ fn test_tail_mode_toggle() {
 
     // Verify we loaded first N lines (head mode)
     assert!(!file_viewer.tail_mode, "tail_mode should still be false after loading in head mode");
-    assert!(file_viewer.content.len() > 0, "Content should not be empty");
+    assert!(!file_viewer.content.is_empty(), "Content should not be empty");
     // First line should be "Line 1"
     assert!(file_viewer.content[0].starts_with("Line 1"), "First line should be 'Line 1' in head mode");
 
