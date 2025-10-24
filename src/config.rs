@@ -328,8 +328,8 @@ impl Config {
     /// 2. Default config (if file is missing or has errors)
     ///
     /// If config file doesn't exist, it will be created automatically with default values.
-    /// If config file has parse errors, detailed error is shown and default config is loaded.
-    pub fn load() -> Self {
+    /// If config file has parse errors, returns an error with details.
+    pub fn load() -> anyhow::Result<Self> {
         let mut config = Config::default();
 
         // Get global config path
@@ -347,22 +347,24 @@ impl Config {
                         config = global_config;
                     }
                     Err(e) => {
-                        // Show detailed error and exit
-                        eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                        eprintln!("⚠  Configuration file error!");
-                        eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                        eprintln!();
-                        eprintln!("Config file: {}", global_path.display());
-                        eprintln!();
-                        eprintln!("Error details:");
-                        eprintln!("{:#}", e);
-                        eprintln!();
-                        eprintln!("To fix:");
-                        eprintln!("  1. Edit the config file and fix the syntax error");
-                        eprintln!("  2. Or delete the file - it will be recreated with defaults");
-                        eprintln!();
-                        eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                        std::process::exit(1);
+                        // Return error with detailed message
+                        anyhow::bail!(
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\
+                            ⚠  Configuration file error!\n\
+                            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\
+                            \n\
+                            Config file: {}\n\
+                            \n\
+                            Error details:\n\
+                            {:#}\n\
+                            \n\
+                            To fix:\n\
+                              1. Edit the config file and fix the syntax error\n\
+                              2. Or delete the file - it will be recreated with defaults\n\
+                            \n\
+                            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                            global_path.display(), e
+                        );
                     }
                 }
             }
@@ -398,7 +400,7 @@ impl Config {
         resolve_color!(panel_border_color);
         resolve_color!(background_color);
 
-        config
+        Ok(config)
     }
 
     /// Create a default config file with comments

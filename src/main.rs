@@ -150,21 +150,13 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
 }
 
 fn main() -> Result<()> {
-    // Set up panic hook to ensure terminal is always cleaned up
-    let original_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |panic_info| {
-        // Try to clean up terminal before panicking
-        let _ = cleanup_terminal();
-        original_hook(panic_info);
-    }));
-
     // Preprocess arguments: convert -bm to --bm for clap compatibility
     let args: Vec<String> = std::env::args()
         .map(|arg| if arg == "-bm" { "--bm".to_string() } else { arg })
         .collect();
 
     // Ensure config file exists (create if missing)
-    let config = Config::load();
+    let config = Config::load()?;
 
     let args = Args::parse_from(args);
 
@@ -209,9 +201,7 @@ fn main() -> Result<()> {
         match subcommand.as_str() {
             "add" => {
                 if args.args.len() < 2 {
-                    eprintln!("Error: Missing bookmark name");
-                    eprintln!("Usage: dt -bm add <name> [path]");
-                    std::process::exit(1);
+                    anyhow::bail!("Missing bookmark name\nUsage: dt -bm add <name> [path]");
                 }
                 let name = &args.args[1];
                 let path = if args.args.len() >= 3 {
@@ -221,8 +211,7 @@ fn main() -> Result<()> {
                 };
 
                 if !path.exists() {
-                    eprintln!("Error: Path does not exist: {}", path.display());
-                    std::process::exit(1);
+                    anyhow::bail!("Path does not exist: {}", path.display());
                 }
 
                 let mut path = path.canonicalize()?;
@@ -233,8 +222,7 @@ fn main() -> Result<()> {
                         path = parent.to_path_buf();
                         eprintln!("Note: File provided, using parent directory instead");
                     } else {
-                        eprintln!("Error: Cannot determine parent directory");
-                        std::process::exit(1);
+                        anyhow::bail!("Cannot determine parent directory");
                     }
                 }
 
@@ -247,9 +235,7 @@ fn main() -> Result<()> {
             }
             "remove" => {
                 if args.args.len() < 2 {
-                    eprintln!("Error: Missing bookmark name");
-                    eprintln!("Usage: dt -bm remove <name>");
-                    std::process::exit(1);
+                    anyhow::bail!("Missing bookmark name\nUsage: dt -bm remove <name>");
                 }
                 let name = &args.args[1];
                 bookmarks.remove(name)?;
@@ -267,13 +253,15 @@ fn main() -> Result<()> {
                 }
             }
             _ => {
-                eprintln!("Error: Unknown bookmark command '{}'", subcommand);
-                eprintln!("\nAvailable commands:");
-                eprintln!("  dt -bm              List all bookmarks");
-                eprintln!("  dt -bm add <name> [path]");
-                eprintln!("  dt -bm remove <name>");
-                eprintln!("  dt -bm list");
-                std::process::exit(1);
+                anyhow::bail!(
+                    "Unknown bookmark command '{}'\n\n\
+                    Available commands:\n\
+                      dt -bm              List all bookmarks\n\
+                      dt -bm add <name> [path]\n\
+                      dt -bm remove <name>\n\
+                      dt -bm list",
+                    subcommand
+                );
             }
         }
         return Ok(());
@@ -289,8 +277,7 @@ fn main() -> Result<()> {
             let start_path = resolve_path_or_bookmark(input, &bookmarks)?;
 
             if !start_path.is_file() {
-                eprintln!("Error: --view requires a file path, got: {}", start_path.display());
-                std::process::exit(1);
+                anyhow::bail!("--view requires a file path, got: {}", start_path.display());
             }
 
             // Start app in fullscreen viewer mode

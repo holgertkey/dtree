@@ -33,7 +33,7 @@ pub struct App {
 impl App {
     pub fn new(start_path: PathBuf) -> Result<Self> {
         // Load configuration from global config file
-        let config = Config::load();
+        let config = Config::load()?;
 
         let nav = Navigation::new(start_path, false, config.behavior.show_hidden, config.behavior.follow_symlinks)?;
         let mut file_viewer = FileViewer::new();

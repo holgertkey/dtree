@@ -12,7 +12,20 @@ use anyhow::Result;
 
 use crate::app::App;
 
+/// Install panic hook to ensure terminal is always cleaned up
+pub fn install_panic_hook() {
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        // Try to clean up terminal before panicking
+        let _ = cleanup_terminal();
+        original_hook(panic_info);
+    }));
+}
+
 pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
+    // Install panic hook before any terminal modifications
+    install_panic_hook();
+
     enable_raw_mode()?;
     std::io::stderr().execute(EnterAlternateScreen)?;
     std::io::stderr().execute(EnableMouseCapture)?;
@@ -25,32 +38,19 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 
 pub fn cleanup_terminal() -> Result<()> {
     use std::io::Write;
-    use crossterm::terminal::{Clear, ClearType};
 
-    // Step 1: Disable mouse capture first and flush to ensure it's processed
-    std::io::stderr().execute(DisableMouseCapture)?;
-    std::io::stderr().flush()?;
+    // Restore terminal state in reverse order of setup
+    // 1. Disable mouse capture
+    let _ = std::io::stderr().execute(DisableMouseCapture);
 
-    // Step 2: Small delay to let any pending mouse events drain
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    // 2. Leave alternate screen
+    let _ = std::io::stderr().execute(LeaveAlternateScreen);
 
-    // Step 3: Clear alternate screen before leaving it
-    std::io::stderr().execute(Clear(ClearType::All))?;
-    std::io::stderr().flush()?;
+    // 3. Disable raw mode
+    let _ = disable_raw_mode();
 
-    // Step 4: Leave alternate screen and flush
-    std::io::stderr().execute(LeaveAlternateScreen)?;
-    std::io::stderr().flush()?;
-
-    // Step 5: Clear main screen to remove any leaked mouse events
-    std::io::stderr().execute(Clear(ClearType::Purge))?;
-    std::io::stderr().flush()?;
-
-    // Step 6: Disable raw mode
-    disable_raw_mode()?;
-
-    // Step 7: Final flush to ensure all commands are processed
-    std::io::stderr().flush()?;
+    // 4. Final flush to ensure all commands are sent
+    let _ = std::io::stderr().flush();
 
     Ok(())
 }
