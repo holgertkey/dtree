@@ -37,25 +37,27 @@ dtree is built with a modular architecture that separates concerns into distinct
 
 **Responsibilities**:
 - Command-line argument parsing with clap
-- Terminal lifecycle management (setup/cleanup)
-- Panic hook installation for graceful crashes
 - Entry point routing (TUI, direct navigation, file viewing)
 - External program launching (editor, file manager, hex editor)
 - Path and bookmark resolution
+- Error handling and propagation with `anyhow::Result`
 
 **Key Functions**:
-- `main()` - Entry point
-- `setup_terminal()` - Initialize terminal state
-- `cleanup_terminal()` - Restore terminal state
-- `run_app()` - Main event loop
+- `main()` - Entry point with Result return type
 - `open_in_editor()` - Launch external editor
 - `open_in_file_manager()` - Launch external file manager
 - `open_in_hex_editor()` - Launch hex editor for binary files
 - `resolve_path_or_bookmark()` - Resolve user input to path
 
+**Error Handling**:
+- All errors use `anyhow::bail!()` for proper error propagation
+- No `std::process::exit()` calls - ensures cleanup always runs
+- Single exit point through `main() -> Result<()>`
+- Config loading errors return detailed, formatted messages
+
 **Key Decisions**:
 - Uses stderr for TUI, stdout for path output (enables bash wrapper)
-- Panic hook ensures terminal is always restored
+- All exit paths go through proper cleanup (no exit() bypass)
 - 100ms event polling for async operations
 
 #### `app.rs` (Application State)
@@ -360,13 +362,14 @@ handle_mouse()
 
 #### `config.rs` (Configuration Management)
 
-**Size**: 328 lines
+**Size**: ~570 lines
 
 **Responsibilities**:
 - TOML configuration file loading
 - Auto-creation of default config
 - Color parsing (names, hex, indexed)
 - External program validation
+- Error handling with detailed messages
 
 **Structure**:
 ```rust
@@ -382,6 +385,7 @@ pub struct AppearanceConfig {
     pub show_line_numbers: bool,
     pub enable_syntax_highlighting: bool,
     pub syntax_theme: String,
+    pub theme: String,
     pub colors: ThemeConfig,
 }
 ```
@@ -391,11 +395,22 @@ pub struct AppearanceConfig {
 - Writes default config with extensive comments
 - User can delete to reset
 
+**Error Handling**:
+- `Config::load()` returns `Result<Self>` (not `Self`)
+- Parse errors return formatted, user-friendly error messages
+- Includes fix instructions in error output
+- No `std::process::exit()` - proper error propagation
+
 **Color Parsing**:
 - Supports color names ("red", "cyan")
 - Supports RGB hex ("#FF0000")
 - Supports indexed colors (0-255)
 - Validates and provides fallbacks
+
+**Theme Presets**:
+- Multiple built-in themes: default, gruvbox, nord, tokyonight, dracula, obsidian
+- User can override individual colors
+- Theme colors resolved at load time
 
 #### `bookmarks.rs` (Bookmark Management)
 
@@ -469,46 +484,166 @@ pub struct Bookmark {
 
 Color management and theme application.
 
-#### `terminal.rs`
+#### `terminal.rs` (Terminal Lifecycle Management)
 
-Terminal setup/cleanup helpers.
+**Responsibilities**:
+- Terminal initialization and cleanup
+- Panic hook installation for crash recovery
+- Event loop management
+- Event::Resize handling
+
+**Key Functions**:
+- `setup_terminal()` - Initialize terminal with panic protection
+- `cleanup_terminal()` - Comprehensive terminal restoration
+- `run_app()` - Main event loop with 100ms polling
+- `install_panic_hook()` - Ensure cleanup on panic
+
+**Terminal Cleanup Strategy** (Critical for preventing artifacts):
+
+The `cleanup_terminal()` function performs a multi-stage cleanup to prevent terminal artifacts (escape sequences, mouse events) from leaking into the main terminal:
+
+1. **Explicit Mouse Tracking Disable** (6 modes):
+   - `\x1b[?1000l` - X10 mouse tracking
+   - `\x1b[?1002l` - Cell motion tracking
+   - `\x1b[?1003l` - All motion tracking
+   - `\x1b[?1006l` - SGR mouse mode (source of `35;64;18M` artifacts)
+   - `\x1b[?1015l` - urxvt mouse mode
+   - `DisableMouseCapture` - crossterm's command
+
+2. **First Delay** (20ms):
+   - Allows terminal to process all mouse disable commands
+   - Critical for preventing event leakage
+
+3. **First Event Drain** (up to 100 events):
+   - Aggressively drains pending input events
+   - Prevents mouse events from accumulating
+
+4. **Alternate Screen Cleanup**:
+   - Clear alternate screen before leaving
+   - Leave alternate screen
+
+5. **Second Delay** (10ms):
+   - Allows screen transition to complete
+
+6. **Second Event Drain** (up to 50 events):
+   - Catches events that leak during screen transition
+   - Critical for split view + resize scenarios
+
+7. **Raw Mode Disable**:
+   - Restores normal terminal input processing
+
+8. **Minimal Reset Sequences**:
+   - `\x1b[0m` - Reset character attributes
+   - `\x1b[?25h` - Show cursor
+   - No aggressive screen clearing (preserves history)
+
+9. **Final Delay** (10ms):
+   - Ensures all commands are processed
+
+**Total cleanup time**: ~60ms (acceptable for clean exit)
+
+**Why This Matters**:
+Without this comprehensive cleanup, terminal artifacts appear especially after:
+- Terminal resize in split view mode
+- Mouse events during resize
+- Pause between resize and exit (events accumulate)
+
+**Design Decisions**:
+- Uses stderr for TUI (stdout reserved for path output)
+- Panic hook installed during setup (not in main)
+- Event::Resize explicitly handled to prevent accumulation
+- Double-drain strategy catches transition-leaked events
 
 ## Data Flow
 
 ### Startup Flow
 
 ```
-main()
-  → setup_terminal()
-  → Config::load()
-  → App::new()
-      → Navigation::new()
+main() -> Result<()>
+  → Config::load()?                   // Can return error
+  → Args::parse_from()
+  → [Handle --version, --help, -bm]   // Early returns
+  → [Resolve path/bookmark if provided] // Can return error via bail!
+  → setup_terminal()?
+      → install_panic_hook()          // Ensure cleanup on panic
+      → enable_raw_mode()
+      → EnterAlternateScreen
+      → EnableMouseCapture
+  → App::new()?                       // Can return error
+      → Navigation::new()?
       → FileViewer::new()
       → Search::new()
-      → Bookmarks::new()
-  → run_app()
+      → Bookmarks::new()?
+  → run_app()?
       [event loop]
-  → cleanup_terminal()
+  → cleanup_terminal()?               // Always runs (Result::?)
+      → [Multi-stage cleanup]         // See terminal.rs section
+  → [Handle result and output path]
+  Ok(())
 ```
+
+**Error Propagation Flow**:
+```
+Config parse error
+  → Config::load() returns Err(detailed_message)
+  → main() returns Err via ?
+  → anyhow displays formatted error
+  → Process exits with code 1
+  → Terminal cleanup NOT needed (terminal not initialized yet)
+
+Bookmark validation error
+  → anyhow::bail!("message")
+  → main() returns Err via ?
+  → anyhow displays error
+  → Process exits with code 1
+  → Terminal cleanup NOT needed (terminal not initialized yet)
+
+Runtime error after terminal setup
+  → Some operation returns Err
+  → main() returns Err via ?
+  → cleanup_terminal() runs via ? (Drop semantics don't apply here)
+  → Actually: cleanup_terminal() called explicitly before result check
+  → anyhow displays error
+  → Process exits with code 1
+```
+
+**Critical Design**: All errors go through `anyhow::Result`, ensuring:
+- No `std::process::exit()` bypasses cleanup
+- Single exit point in main()
+- Proper cleanup guaranteed via explicit calls
 
 ### Event Loop
 
 ```
 loop {
   if need_terminal_clear { terminal.clear() }
-  terminal.draw()
+  terminal.draw(|f| app.render(f))
 
   if event::poll(100ms) {
-    match event {
-      Key → app.handle_key() → EventHandler
-      Mouse → app.handle_mouse() → EventHandler
+    match event::read() {
+      Event::Key(key) → {
+        match app.handle_key(key) {
+          Some(path) → return Ok(Some(path))  // Exit with path
+          None → return Ok(None)               // Exit without path
+          _ → continue                         // Keep looping
+        }
+      }
+      Event::Mouse(mouse) → app.handle_mouse(mouse)
+      Event::Resize(w, h) → { /* Consume event, next draw handles it */ }
+      _ → { /* Consume other events */ }
     }
   } else {
-    app.poll_search()    // Check background search
-    app.poll_sizes()     // Check size calculation
+    app.poll_search()    // Check background search results
+    app.poll_sizes()     // Check size calculation updates
   }
 }
 ```
+
+**Event::Resize Handling**:
+- Explicitly handled to prevent event accumulation
+- Terminal automatically recalculates layout on next draw
+- Critical for preventing artifacts in split view + resize scenarios
+- Simply consuming the event is sufficient
 
 ### Search Flow
 

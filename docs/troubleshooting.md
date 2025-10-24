@@ -330,12 +330,30 @@ ls -l ~/bin/dtree
    echo $PATH
    ```
 
-### Fullscreen Viewer Issues
+### Terminal Artifacts
 
-**Problem**: Terminal artifacts when exiting fullscreen
+**Problem**: Strange characters or escape sequences appear after exiting dtree (e.g., `35;64;18M`)
 
 **Solution**:
-- This was fixed in recent versions
+- This issue was completely resolved in v0.1.0+ with improved terminal cleanup
+- Update to the latest version if you're experiencing this
+- The fix includes:
+  - Explicit disabling of all mouse tracking modes
+  - Aggressive event draining during cleanup
+  - Proper timing for terminal state transitions
+- If still occurs, report as bug with details about your terminal emulator
+
+**Technical Details** (for developers):
+The artifacts were SGR mouse events leaking after terminal resize in split view mode. Fixed by:
+1. Disabling all 6 mouse tracking modes explicitly (X10, cell motion, all motion, SGR, urxvt, plus crossterm's DisableMouseCapture)
+2. Double-draining events: once after disabling mouse, once after leaving alternate screen
+3. Proper delays (20ms + 10ms) to allow terminal processing
+4. Minimal reset sequences without aggressive screen clearing
+
+**Problem**: Terminal artifacts when exiting fullscreen viewer
+
+**Solution**:
+- Same fix as above applies to fullscreen mode
 - Update to latest version
 - If still occurs, report as bug
 

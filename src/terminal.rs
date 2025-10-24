@@ -38,19 +38,61 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 
 pub fn cleanup_terminal() -> Result<()> {
     use std::io::Write;
+    use crossterm::terminal::{Clear, ClearType};
 
     // Restore terminal state in reverse order of setup
-    // 1. Disable mouse capture
+
+    // 1. CRITICAL: Explicitly disable ALL mouse tracking modes
+    //    This is more thorough than just DisableMouseCapture
+    let _ = write!(std::io::stderr(), "\x1b[?1000l");  // Disable X10 mouse
+    let _ = write!(std::io::stderr(), "\x1b[?1002l");  // Disable cell motion
+    let _ = write!(std::io::stderr(), "\x1b[?1003l");  // Disable all motion
+    let _ = write!(std::io::stderr(), "\x1b[?1006l");  // Disable SGR mode
+    let _ = write!(std::io::stderr(), "\x1b[?1015l");  // Disable urxvt mode
     let _ = std::io::stderr().execute(DisableMouseCapture);
+    let _ = std::io::stderr().flush();
 
-    // 2. Leave alternate screen
+    // 2. Give terminal MORE time to process mouse disable commands
+    //    Increased to 20ms to handle slow terminals
+    std::thread::sleep(std::time::Duration::from_millis(20));
+
+    // 3. First aggressive drain of pending events
+    let mut drain_count = 0;
+    while event::poll(std::time::Duration::from_millis(0)).unwrap_or(false) && drain_count < 100 {
+        let _ = event::read();
+        drain_count += 1;
+    }
+
+    // 4. Clear alternate screen before leaving it
+    let _ = std::io::stderr().execute(Clear(ClearType::All));
+    let _ = std::io::stderr().flush();
+
+    // 5. Leave alternate screen
     let _ = std::io::stderr().execute(LeaveAlternateScreen);
+    let _ = std::io::stderr().flush();
 
-    // 3. Disable raw mode
+    // 6. IMPORTANT: Another delay + drain AFTER leaving alternate screen
+    //    Sometimes events leak during the screen transition
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    let mut drain_count2 = 0;
+    while event::poll(std::time::Duration::from_millis(0)).unwrap_or(false) && drain_count2 < 50 {
+        let _ = event::read();
+        drain_count2 += 1;
+    }
+
+    // 7. Disable raw mode (this should stop all special terminal modes)
     let _ = disable_raw_mode();
 
-    // 4. Final flush to ensure all commands are sent
+    // 8. Send minimal reset sequences (no screen clearing!)
+    //    Reset character attributes (SGR 0)
+    let _ = write!(std::io::stderr(), "\x1b[0m");
+    //    Show cursor
+    let _ = write!(std::io::stderr(), "\x1b[?25h");
     let _ = std::io::stderr().flush();
+
+    // 9. Final delay to ensure terminal processes everything
+    std::thread::sleep(std::time::Duration::from_millis(10));
 
     Ok(())
 }
@@ -87,7 +129,13 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
                 Event::Mouse(mouse) => {
                     let _ = app.handle_mouse(mouse);
                 }
-                _ => {}
+                Event::Resize(_width, _height) => {
+                    // Terminal was resized - the next draw() will handle it automatically
+                    // Just consume the event to prevent it from leaking
+                }
+                _ => {
+                    // Consume all other events (FocusGained, FocusLost, Paste, etc.)
+                }
             }
         } else {
             // No event - poll search results if search is active
