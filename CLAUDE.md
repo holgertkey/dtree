@@ -183,27 +183,43 @@ cargo build --release
 sudo cp target/release/dtree /usr/local/bin/
 ```
 
-#### Windows (for testing/porting)
+#### Windows
 
-**IMPORTANT: User installation location is `C:\Users\Holger\.cargo\bin\dtree.exe`**
+**Recommended installation location: `C:\Users\Holger\bin\dtree.exe`**
 
+**Automated installation (recommended):**
+```powershell
+# One-step installation with PowerShell wrapper
+.\install-windows-binary.ps1
+```
+
+This script will:
+- Build the release binary
+- Copy to `C:\Users\Holger\bin\dtree.exe`
+- Add directory to PATH
+- Install PowerShell wrapper function
+- Test the installation
+
+**Manual installation:**
 ```powershell
 # Build the project
 cargo build --release
 
-# Run installation script (copies binary and sets up wrapper)
-.\install-windows-binary.ps1
+# Create bin directory and copy binary
+New-Item -Path "$env:USERPROFILE\bin" -ItemType Directory -Force
+Copy-Item target\release\dtree.exe "$env:USERPROFILE\bin\"
 
-# Or manually copy to a directory in PATH
-Copy-Item target\release\dtree.exe $env:USERPROFILE\bin\
+# Add to PATH (restart terminal after this)
+[Environment]::SetEnvironmentVariable("Path", $env:PATH + ";$env:USERPROFILE\bin", "User")
+
+# Install PowerShell wrapper
+.\install-windows.ps1
 ```
 
-Alternative installation (cargo install):
+**Alternative (cargo install):**
 ```powershell
-# Install directly via cargo (recommended)
 cargo install --path .
-
-# This places the binary in: C:\Users\Holger\.cargo\bin\dtree.exe
+# Places binary in: C:\Users\Holger\.cargo\bin\dtree.exe
 ```
 
 #### Shell Integration
@@ -259,7 +275,15 @@ dt() {
 }
 ```
 
-**Windows**: Add PowerShell wrapper to `$PROFILE` (see `install-windows.ps1` for automatic setup):
+**Windows**: PowerShell integration (automatically installed by `install-windows-binary.ps1`)
+
+**Automatic setup:**
+```powershell
+# Run this to install the wrapper
+.\install-windows.ps1
+```
+
+**Manual setup** - Add to your PowerShell profile (`notepad $PROFILE`):
 
 ```powershell
 function dt {
@@ -294,6 +318,24 @@ function dt {
         $env:DTREE_PREV_DIR = $prevDir
     }
 }
+```
+
+**Testing PowerShell integration:**
+```powershell
+# Restart PowerShell or reload profile
+. $PROFILE
+
+# Test basic commands
+dt --version        # Should work (calls dtree.exe directly)
+dt -bm list         # Should work (calls dtree.exe directly)
+
+# Test navigation
+dt C:\Windows       # Should change directory to C:\Windows
+dt -                # Should return to previous directory
+
+# Test bookmarks
+dt -bm add test     # Create bookmark
+dt test             # Navigate to bookmark
 ```
 
 ### Usage
