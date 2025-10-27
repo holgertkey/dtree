@@ -185,6 +185,8 @@ sudo cp target/release/dtree /usr/local/bin/
 
 #### Windows (for testing/porting)
 
+**IMPORTANT: User installation location is `C:\Users\Holger\.cargo\bin\dtree.exe`**
+
 ```powershell
 # Build the project
 cargo build --release
@@ -194,6 +196,14 @@ cargo build --release
 
 # Or manually copy to a directory in PATH
 Copy-Item target\release\dtree.exe $env:USERPROFILE\bin\
+```
+
+Alternative installation (cargo install):
+```powershell
+# Install directly via cargo (recommended)
+cargo install --path .
+
+# This places the binary in: C:\Users\Holger\.cargo\bin\dtree.exe
 ```
 
 #### Shell Integration

@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use anyhow::Result;
 use unicode_truncate::UnicodeTruncateStr;
@@ -187,7 +188,19 @@ impl FileViewer {
         match std::fs::metadata(path) {
             Ok(metadata) => {
                 self.current_size = metadata.len();
-                self.current_permissions = metadata.permissions().mode();
+                #[cfg(unix)]
+                {
+                    self.current_permissions = metadata.permissions().mode();
+                }
+                #[cfg(windows)]
+                {
+                    // On Windows, permissions are simpler - just check if file is readonly
+                    self.current_permissions = if metadata.permissions().readonly() {
+                        0o444 // read-only
+                    } else {
+                        0o644 // read-write
+                    };
+                }
             }
             Err(e) => {
                 self.content.push(format!("[Cannot read metadata: {}]", e));
@@ -894,28 +907,42 @@ pub fn format_file_size(size: u64) -> String {
     }
 }
 
-/// Format Unix permissions as string
+/// Format permissions as string (cross-platform)
 pub fn format_permissions(mode: u32) -> String {
-    // Extract permission bits (last 9 bits)
-    let perms = mode & 0o777;
+    #[cfg(unix)]
+    {
+        // Unix: Full permission bits
+        let perms = mode & 0o777;
 
-    // Determine file type
-    let file_type = if mode & 0o170000 == 0o040000 {
-        'd' // directory
-    } else if mode & 0o170000 == 0o120000 {
-        'l' // symbolic link
-    } else {
-        '-' // regular file
-    };
+        // Determine file type
+        let file_type = if mode & 0o170000 == 0o040000 {
+            'd' // directory
+        } else if mode & 0o170000 == 0o120000 {
+            'l' // symbolic link
+        } else {
+            '-' // regular file
+        };
 
-    // Format permissions for owner, group, and others
-    let user = format_permission_triplet((perms >> 6) & 0o7);
-    let group = format_permission_triplet((perms >> 3) & 0o7);
-    let other = format_permission_triplet(perms & 0o7);
+        // Format permissions for owner, group, and others
+        let user = format_permission_triplet((perms >> 6) & 0o7);
+        let group = format_permission_triplet((perms >> 3) & 0o7);
+        let other = format_permission_triplet(perms & 0o7);
 
-    format!("{}{}{}{} ({:04o})", file_type, user, group, other, perms)
+        format!("{}{}{}{} ({:04o})", file_type, user, group, other, perms)
+    }
+
+    #[cfg(windows)]
+    {
+        // Windows: Simple read-only/read-write display
+        if mode == 0o444 {
+            "read-only".to_string()
+        } else {
+            "read-write".to_string()
+        }
+    }
 }
 
+#[cfg(unix)]
 fn format_permission_triplet(triplet: u32) -> String {
     let r = if triplet & 0o4 != 0 { 'r' } else { '-' };
     let w = if triplet & 0o2 != 0 { 'w' } else { '-' };

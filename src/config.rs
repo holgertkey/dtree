@@ -115,9 +115,45 @@ fn default_max_file_lines() -> usize { 10000 }
 fn default_show_hidden() -> bool { true }
 fn default_follow_symlinks() -> bool { true }
 fn default_double_click_timeout() -> u64 { 500 }
-fn default_editor() -> String { "nvim".to_string() }
-fn default_file_manager() -> String { "mc".to_string() }
-fn default_hex_editor() -> String { "mcview".to_string() }
+#[cfg(unix)]
+fn default_editor() -> String {
+    std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string())
+}
+
+#[cfg(windows)]
+fn default_editor() -> String {
+    // Try to find VS Code first, fallback to notepad
+    if which::which("code").is_ok() {
+        "code".to_string()
+    } else {
+        "notepad.exe".to_string()
+    }
+}
+
+#[cfg(unix)]
+fn default_file_manager() -> String {
+    "xdg-open".to_string()
+}
+
+#[cfg(windows)]
+fn default_file_manager() -> String {
+    "explorer.exe".to_string()
+}
+
+#[cfg(unix)]
+fn default_hex_editor() -> String {
+    "hexyl".to_string()
+}
+
+#[cfg(windows)]
+fn default_hex_editor() -> String {
+    // VS Code has hex editor extensions
+    if which::which("code").is_ok() {
+        "code".to_string()
+    } else {
+        "notepad.exe".to_string()
+    }
+}
 fn default_wrap_lines() -> bool { true }
 
 /// Keybindings configuration
@@ -318,13 +354,15 @@ impl Config {
         Ok(config)
     }
 
-    /// Get the global config file path (~/.config/dtree/config.toml)
+    /// Get the global config file path
+    /// Unix: ~/.config/dtree/config.toml
+    /// Windows: %APPDATA%\dtree\config.toml
     pub fn global_config_path() -> Option<PathBuf> {
         dirs::config_dir().map(|p| p.join("dtree").join("config.toml"))
     }
 
     /// Load configuration with fallback order:
-    /// 1. Global config (~/.config/dtree/config.toml)
+    /// 1. Global config (Unix: ~/.config/dtree/config.toml, Windows: %APPDATA%\dtree\config.toml)
     /// 2. Default config (if file is missing or has errors)
     ///
     /// If config file doesn't exist, it will be created automatically with default values.
@@ -405,7 +443,12 @@ impl Config {
 
     /// Create a default config file with comments
     pub fn create_default_file(path: &Path) -> Result<()> {
-        let default_config = r#"# dtree configuration file
+        // Get platform-specific defaults
+        let editor = default_editor();
+        let file_manager = default_file_manager();
+        let hex_editor = default_hex_editor();
+
+        let default_config = format!(r#"# dtree configuration file
 # This file uses TOML format: https://toml.io
 
 [appearance]
@@ -478,14 +521,14 @@ follow_symlinks = true
 double_click_timeout_ms = 500
 
 # External editor for opening files (press 'e' to open)
-# Default: nvim (if not installed, change to your preferred editor)
+# Platform-specific defaults: Unix: $EDITOR or nano, Windows: VS Code or Notepad
 # Popular options:
 #   - Terminal editors: "nvim", "vim", "nano", "emacs", "micro", "helix"
 #   - GUI editors (if terminal wrapper available): "code", "subl", "gedit"
-editor = "nvim"
+editor = "{}"
 
 # External file manager (press 'o' to open)
-# Default: mc (Midnight Commander)
+# Platform-specific defaults: Unix: xdg-open, Windows: explorer.exe
 # Popular terminal file managers:
 #   - "mc"      - Midnight Commander (classic two-panel interface)
 #   - "ranger"  - Vi-like file manager with image preview support
@@ -494,17 +537,17 @@ editor = "nvim"
 #   - "vifm"    - Vi-like file manager with two panels
 #   - "broot"   - Navigate directories with fuzzy search
 #   - "yazi"    - Modern terminal file manager
-file_manager = "mc"
+file_manager = "{}"
 
 # External hex editor for binary files (press 'e' on binary file in fullscreen mode)
-# Default: mcview (part of Midnight Commander)
+# Platform-specific defaults: Unix: hexyl, Windows: VS Code or Notepad
 # Popular hex viewers:
 #   - "mcview"  - Midnight Commander's internal viewer (recommended)
 #   - "hexyl"   - Modern, colorful hex viewer (install: cargo install hexyl)
 #   - "xxd"     - Standard hex dump utility (included with vim)
 #   - "hexdump" - Classic hex dump tool
 #   - "hd"      - Alias for hexdump -C
-hex_editor = "mcview"
+hex_editor = "{}"
 
 # Wrap long lines in file viewer (press 'w' to toggle in fullscreen mode)
 # true  = Wrap long lines at word boundaries (default, better for reading text)
@@ -529,7 +572,7 @@ toggle_wrap = ["w"]
 # Enter visual mode to select multiple lines with keyboard
 visual_mode = ["V"]          # Enter/exit visual selection mode (Shift+V)
 visual_copy = ["y", "Y"]     # Copy selected lines to clipboard and exit
-"#;
+"#, editor, file_manager, hex_editor);
 
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {

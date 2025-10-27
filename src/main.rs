@@ -11,15 +11,16 @@ mod theme;
 mod bookmarks;
 mod dir_size;
 mod file_icons;
+mod platform;
 
 use anyhow::Result;
 use app::App;
 use terminal::{setup_terminal, cleanup_terminal, run_app};
 use clap::Parser;
 use std::path::PathBuf;
-use std::process::Command;
 use config::Config;
 use bookmarks::Bookmarks;
+use platform::open_external_program;
 
 #[derive(Parser)]
 #[command(name = "dtree")]
@@ -50,71 +51,23 @@ struct Args {
 
 /// Open a file in the external editor specified in config
 fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
-    let editor = &config.behavior.editor;
-
-    // Use shell to execute editor with proper terminal handling
-    // Properly quote the file path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            editor,
-                            file_path.replace("'", "'\\''"));
-
-    let _status = Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
-
-    // Don't check exit status - many editors return non-zero codes for normal exit
-    // (e.g., when user presses Esc or q)
-
-    Ok(())
+    open_external_program(&config.behavior.editor, file_path)
 }
 
 /// Open a binary file in the external hex editor specified in config
 fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
-    let hex_editor = &config.behavior.hex_editor;
-
-    // Use shell to execute hex editor with proper terminal handling
-    // Properly quote the file path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            hex_editor,
-                            file_path.replace("'", "'\\''"));
-
-    let _status = Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
-
-    // Don't check exit status - many hex viewers return non-zero codes for normal exit
-    // (e.g., mcview returns 1 when user presses Esc or q)
-
-    Ok(())
+    open_external_program(&config.behavior.hex_editor, file_path)
 }
 
 /// Open a directory in the external file manager specified in config
 fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
-    let file_manager = &config.behavior.file_manager;
-
-    // Use shell to execute file manager with proper terminal handling
-    // Properly quote the directory path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            file_manager,
-                            dir_path.replace("'", "'\\''"));
-
-    let _status = Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
-
-    // Don't check exit status - many file managers return non-zero codes for normal exit
-    // (e.g., mc returns 1 when user presses Esc or q)
-
-    Ok(())
+    open_external_program(&config.behavior.file_manager, dir_path)
 }
 
 /// Resolve path or bookmark name to a PathBuf
 fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBuf> {
-    // 1. If starts with . or / or contains / → treat as path
-    if input.starts_with('.') || input.starts_with('/') || input.contains('/') {
+    // 1. If looks like absolute path or contains path separator → treat as path
+    if platform::is_absolute_path(input) || input.contains(std::path::MAIN_SEPARATOR) {
         let path = PathBuf::from(input);
         if !path.exists() {
             anyhow::bail!("Directory not found: {}", input);

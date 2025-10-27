@@ -40,7 +40,18 @@ Create a document analyzing problematic areas:
 
 ---
 
-## Phase 2: Cross-platform Architecture (3-5 days)
+## Phase 2: Cross-platform Architecture (3-5 days) ✅ COMPLETED
+
+**Status**: ✅ Successfully completed on 2025-10-27
+**Key achievements**:
+- Created `src/platform.rs` with Windows/Unix conditional compilation
+- Updated `main.rs` for cross-platform external program launching
+- Fixed Windows path resolution (C:\, UNC paths)
+- Applied Windows-specific defaults (VS Code, explorer.exe)
+- Fixed permissions handling for Windows
+- Release build optimized (2.0MB binary size)
+
+**Next**: Phase 3 - PowerShell wrapper integration
 
 ### 2.1 Create platform-specific module
 
@@ -217,6 +228,10 @@ Check:
 - [x] Config is created in correct directory (%APPDATA%\dtree\)
 - [x] Expand/collapse folders
 - [x] File viewer works
+- [x] Windows-specific defaults applied (VS Code, explorer.exe)
+- [x] Release build works (2.0MB binary size)
+- [x] Windows path resolution (C:\, UNC paths)
+- [x] Platform-specific external program launching
 
 ---
 
@@ -929,11 +944,11 @@ jobs:
 ## Timeline and Priorities
 
 ### Must-have (MVP for Windows release)
-1. ✅ Runs on Windows (paths, filesystem) - **Phase 2**
-2. ✅ External programs (notepad, explorer) - **Phase 2**
-3. ✅ Config in correct directory (%APPDATA%) - **Phase 2**
-4. ✅ PowerShell integration - **Phase 3**
-5. ✅ Basic testing - **Phase 4**
+1. ✅ Runs on Windows (paths, filesystem) - **Phase 2** ✅ COMPLETED
+2. ✅ External programs (VS Code, explorer) - **Phase 2** ✅ COMPLETED
+3. ✅ Config in correct directory (%APPDATA%) - **Phase 2** ✅ COMPLETED
+4. ⏳ PowerShell integration - **Phase 3** (Next)
+5. ⏳ Basic testing - **Phase 4**
 
 **Estimated time: 6-10 days**
 
@@ -1084,18 +1099,22 @@ git pull
 
 ## Success Criteria
 
-### Phase 2 (MVP)
+### Phase 2 (MVP) ✅ COMPLETED
 - [x] `cargo build` succeeds on Windows
 - [x] Application launches and shows tree
 - [x] Navigation works (j/k/h/l)
 - [x] File viewer works
 - [x] Config loads from %APPDATA%
+- [x] Windows-specific defaults applied (VS Code, explorer.exe)
+- [x] Release build optimized (2.0MB binary)
+- [x] Windows path resolution (C:\, UNC paths)
+- [x] Cross-platform external program launching
 
-### Phase 3 (Shell integration)
-- [x] PowerShell wrapper installs correctly
-- [x] `dt` command works in PowerShell
-- [x] `dt myproject` jumps to bookmark
-- [x] `dt -` returns to previous directory
+### Phase 3 (Shell integration) ⏳ IN PROGRESS
+- [ ] PowerShell wrapper installs correctly
+- [ ] `dt` command works in PowerShell
+- [ ] `dt myproject` jumps to bookmark
+- [ ] `dt -` returns to previous directory
 
 ### Phase 4 (Production ready)
 - [x] All automated tests pass
