@@ -20,7 +20,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use config::Config;
 use bookmarks::Bookmarks;
-use platform::open_external_program;
+use platform::{open_external_program, canonicalize_and_normalize};
 
 #[derive(Parser)]
 #[command(name = "dtree")]
@@ -72,7 +72,7 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
         if !path.exists() {
             anyhow::bail!("Directory not found: {}", input);
         }
-        return Ok(path.canonicalize()?);
+        return Ok(canonicalize_and_normalize(&path)?);
     }
 
     // 2. Check if it's a bookmark
@@ -91,7 +91,7 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
     // 3. Try as path
     let path = PathBuf::from(input);
     if path.exists() {
-        return Ok(path.canonicalize()?);
+        return Ok(canonicalize_and_normalize(&path)?);
     }
 
     // 4. Neither bookmark nor path found
@@ -167,7 +167,7 @@ fn main() -> Result<()> {
                     anyhow::bail!("Path does not exist: {}", path.display());
                 }
 
-                let mut path = path.canonicalize()?;
+                let mut path = canonicalize_and_normalize(&path)?;
 
                 // Bookmarks must be directories only
                 if path.is_file() {

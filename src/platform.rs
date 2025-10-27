@@ -70,6 +70,24 @@ pub fn normalize_path_separator(path: &str) -> String {
     path.replace('/', "\\")
 }
 
+/// Canonicalize path and normalize for display
+/// On Windows, removes the \\?\ prefix if present
+pub fn canonicalize_and_normalize(path: &std::path::Path) -> Result<std::path::PathBuf, std::io::Error> {
+    let canonical = path.canonicalize()?;
+
+    #[cfg(windows)]
+    {
+        // On Windows, remove the \\?\ prefix if present
+        let path_str = canonical.to_string_lossy();
+        if path_str.starts_with("\\\\?\\") {
+            let normalized = &path_str[4..]; // Remove \\?\ prefix
+            return Ok(std::path::PathBuf::from(normalized));
+        }
+    }
+
+    Ok(canonical)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
