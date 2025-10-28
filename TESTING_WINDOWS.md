@@ -17,11 +17,11 @@ Complete testing checklist for dtree on Windows platform.
 ## Basic Functionality
 
 ### Application Launch
-- [ ] Launch dtree from any directory: `cargo run`
-- [ ] Launch with path argument: `cargo run -- C:\Windows`
-- [ ] Launch compiled binary: `.\target\release\dtree.exe`
-- [ ] Help displays correctly: `dtree --help`
-- [ ] Version displays: `dtree --version`
+- [x] Launch dtree from any directory: `cargo run`
+- [x] Launch with path argument: `cargo run -- C:\Windows`
+- [x] Launch compiled binary: `.\target\release\dtree.exe`
+- [x] Help displays correctly: `dtree --help`
+- [x] Version displays: `dtree --version`
 
 ### Tree Navigation
 - [ ] Navigate down with `j` or `↓`
@@ -165,7 +165,7 @@ Complete testing checklist for dtree on Windows platform.
 - [ ] Press any other key to cancel deletion
 
 ### CLI Bookmark Management
-- [ ] List bookmarks: `dtree -bm` or `dtree -bm list`
+- [x] List bookmarks: `dtree -bm` or `dtree -bm list`
 - [ ] Add bookmark: `dtree -bm add work`
 - [ ] Add bookmark with path: `dtree -bm add work C:\Projects`
 - [ ] Remove bookmark: `dtree -bm remove work`
@@ -183,17 +183,17 @@ Complete testing checklist for dtree on Windows platform.
 ## Configuration
 
 ### Config File
-- [ ] Config created on first run
-- [ ] Config location: `%APPDATA%\dtree\config.toml`
+- [x] Config created on first run
+- [x] Config location: `%APPDATA%\dtree\config.toml`
   - Check: `echo %APPDATA%\dtree\config.toml`
-- [ ] Config loads correctly
-- [ ] Config has Windows defaults (notepad, explorer)
+- [x] Config loads correctly
+- [x] Config has Windows defaults (notepad, explorer)
 
 ### Bookmarks File
-- [ ] Bookmarks saved to: `%APPDATA%\dtree\bookmarks.json`
-- [ ] Bookmarks persist across sessions
-- [ ] Bookmarks load on startup
-- [ ] Bookmarks auto-save on changes
+- [x] Bookmarks saved to: `%APPDATA%\dtree\bookmarks.json`
+- [x] Bookmarks persist across sessions
+- [x] Bookmarks load on startup
+- [x] Bookmarks auto-save on changes
 
 ### Config Options
 - [ ] Change theme in config (e.g., colors)
@@ -217,13 +217,13 @@ Complete testing checklist for dtree on Windows platform.
 ## Shell Integration
 
 ### PowerShell Wrapper
-- [ ] Install wrapper: `.\install-windows.ps1`
-- [ ] Wrapper added to `$PROFILE`
-- [ ] Restart PowerShell or run `. $PROFILE`
-- [ ] `dt` command available
+- [x] Install wrapper: `.\install-windows.ps1`
+- [x] Wrapper added to `$PROFILE`
+- [x] Restart PowerShell or run `. $PROFILE`
+- [x] `dt` command available
 
 ### Navigation with Wrapper
-- [ ] `dt` (no args) → Opens TUI
+- [x] `dt` (no args) → Opens TUI ✅ Fixed on 2025-10-28
 - [ ] Select directory and press `Enter` → `cd` to directory
 - [ ] Exit with `Esc` → Stay in current directory
 - [ ] `dt C:\Windows` → `cd` directly (no TUI)
@@ -238,9 +238,9 @@ Complete testing checklist for dtree on Windows platform.
 - [ ] `dt -` without previous → Error message
 
 ### Flags with Wrapper
-- [ ] `dt --help` → Shows help (no cd)
-- [ ] `dt --version` → Shows version (no cd)
-- [ ] `dt -bm` → Lists bookmarks (no cd)
+- [x] `dt --help` → Shows help (no cd)
+- [x] `dt --version` → Shows version (no cd)
+- [x] `dt -bm` → Lists bookmarks (no cd)
 - [ ] `dt -bm add test` → Adds bookmark (no cd)
 - [ ] `dt -v file.txt` → Views file, then can cd
 

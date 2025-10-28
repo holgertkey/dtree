@@ -9,6 +9,18 @@ function dt {
 
     $prevDir = $PWD.Path
 
+    # Handle dt without arguments → open interactive TUI
+    if ($Arguments.Count -eq 0) {
+        # dtree.exe uses stderr for TUI and stdout for output path
+        # We capture only stdout (path) but let stderr (TUI) display normally
+        $result = & dtree.exe
+        if ($LASTEXITCODE -eq 0 -and $result -and (Test-Path $result)) {
+            Set-Location $result
+            $env:DTREE_PREV_DIR = $prevDir
+        }
+        return
+    }
+
     # Handle dt - (return to previous directory)
     if ($Arguments.Count -eq 1 -and $Arguments[0] -eq "-") {
         if ($env:DTREE_PREV_DIR -and (Test-Path $env:DTREE_PREV_DIR)) {
@@ -86,6 +98,18 @@ function dt {
     )
 
     `$prevDir = `$PWD.Path
+
+    # Handle dt without arguments → open interactive TUI
+    if (`$Arguments.Count -eq 0) {
+        # dtree.exe uses stderr for TUI and stdout for output path
+        # We capture only stdout (path) but let stderr (TUI) display normally
+        `$result = & dtree.exe
+        if (`$LASTEXITCODE -eq 0 -and `$result -and (Test-Path `$result)) {
+            Set-Location `$result
+            `$env:DTREE_PREV_DIR = `$prevDir
+        }
+        return
+    }
 
     # Handle dt - (return to previous directory)
     if (`$Arguments.Count -eq 1 -and `$Arguments[0] -eq "-") {

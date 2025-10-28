@@ -237,12 +237,19 @@ Check:
 
 ## Phase 3: Shell Integration for Windows (2-3 days) ✅ COMPLETED
 
-**Status**: ✅ Successfully completed on 2025-10-27
+**Status**: ✅ Successfully completed on 2025-10-28
 **Key achievements**:
 - Created PowerShell wrapper function `dt` for shell integration
 - Automated installation script with PATH management
-- Tested all major functionality (navigation, bookmarks, previous directory)
+- Fixed TUI display issue when running `dt` without arguments
+- Special handling for no-args case to allow stderr (TUI) to display while capturing stdout (path)
+- Tested all major functionality (navigation, bookmarks, previous directory, interactive TUI)
+- Created update/replacement scripts for wrapper maintenance
 - Updated documentation with installation and testing instructions
+
+**Issues resolved**:
+- Fixed: `dt` without arguments was capturing all output including TUI, preventing display
+- Solution: Added separate handling for no-args case to let TUI render to stderr
 
 **Next**: Phase 4 - Testing and debugging
 
