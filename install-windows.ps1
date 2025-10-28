@@ -3,11 +3,17 @@
 
 function dt {
     param(
+        [switch]$v,  # -v flag for view mode
         [Parameter(ValueFromRemainingArguments=$true)]
         [string[]]$Arguments
     )
 
     $prevDir = $PWD.Path
+
+    # Handle -v flag: rebuild arguments array to include it
+    if ($v) {
+        $Arguments = @('-v') + $Arguments
+    }
 
     # Handle dt without arguments → open interactive TUI
     if ($Arguments.Count -eq 0) {
@@ -44,20 +50,32 @@ function dt {
                 return
             }
             "-v" {
-                # View mode might return a path to cd into
-                $result = & dtree.exe $Arguments 2>&1
-                $exitCode = $LASTEXITCODE
+                # View mode: need to resolve relative path to absolute
+                if ($Arguments.Count -ge 2) {
+                    $filePath = $Arguments[1]
 
-                if ($exitCode -ne 0) {
-                    return
-                }
+                    # Convert relative path to absolute
+                    if (-not [System.IO.Path]::IsPathRooted($filePath)) {
+                        $filePath = Join-Path $PWD.Path $filePath
+                    }
 
-                $result = $result | Out-String
-                $result = $result.Trim()
+                    # Run dtree -v with absolute path
+                    # Don't capture stderr - let TUI display
+                    $result = & dtree.exe "-v" $filePath
+                    $exitCode = $LASTEXITCODE
 
-                if ($result -and (Test-Path $result)) {
-                    Set-Location $result
-                    $env:DTREE_PREV_DIR = $prevDir
+                    if ($exitCode -ne 0) {
+                        return
+                    }
+
+                    # dtree may return a directory path to cd into
+                    if ($result -and (Test-Path $result) -and (Test-Path $result -PathType Container)) {
+                        Set-Location $result
+                        $env:DTREE_PREV_DIR = $prevDir
+                    }
+                } else {
+                    # No file specified, just pass through
+                    & dtree.exe $Arguments
                 }
                 return
             }
@@ -93,11 +111,17 @@ if (-not (Test-Path $profilePath)) {
 $functionCode = @"
 function dt {
     param(
+        [switch]`$v,  # -v flag for view mode
         [Parameter(ValueFromRemainingArguments=`$true)]
         [string[]]`$Arguments
     )
 
     `$prevDir = `$PWD.Path
+
+    # Handle -v flag: rebuild arguments array to include it
+    if (`$v) {
+        `$Arguments = @('-v') + `$Arguments
+    }
 
     # Handle dt without arguments → open interactive TUI
     if (`$Arguments.Count -eq 0) {
@@ -134,20 +158,32 @@ function dt {
                 return
             }
             "-v" {
-                # View mode might return a path to cd into
-                `$result = & dtree.exe `$Arguments 2>&1
-                `$exitCode = `$LASTEXITCODE
+                # View mode: need to resolve relative path to absolute
+                if (`$Arguments.Count -ge 2) {
+                    `$filePath = `$Arguments[1]
 
-                if (`$exitCode -ne 0) {
-                    return
-                }
+                    # Convert relative path to absolute
+                    if (-not [System.IO.Path]::IsPathRooted(`$filePath)) {
+                        `$filePath = Join-Path `$PWD.Path `$filePath
+                    }
 
-                `$result = `$result | Out-String
-                `$result = `$result.Trim()
+                    # Run dtree -v with absolute path
+                    # Don't capture stderr - let TUI display
+                    `$result = & dtree.exe "-v" `$filePath
+                    `$exitCode = `$LASTEXITCODE
 
-                if (`$result -and (Test-Path `$result)) {
-                    Set-Location `$result
-                    `$env:DTREE_PREV_DIR = `$prevDir
+                    if (`$exitCode -ne 0) {
+                        return
+                    }
+
+                    # dtree may return a directory path to cd into
+                    if (`$result -and (Test-Path `$result) -and (Test-Path `$result -PathType Container)) {
+                        Set-Location `$result
+                        `$env:DTREE_PREV_DIR = `$prevDir
+                    }
+                } else {
+                    # No file specified, just pass through
+                    & dtree.exe `$Arguments
                 }
                 return
             }

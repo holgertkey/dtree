@@ -242,7 +242,7 @@ Complete testing checklist for dtree on Windows platform.
 - [x] `dt --version` → Shows version (no cd)
 - [x] `dt -bm` → Lists bookmarks (no cd)
 - [ ] `dt -bm add test` → Adds bookmark (no cd)
-- [ ] `dt -v file.txt` → Views file, then can cd
+- [x] `dt -v file.txt` → Views file, then can cd ✅ Fixed on 2025-10-28
 
 ---
 

@@ -1,3 +1,6 @@
 /target
 concept.md
 ROADMAP.md
+
+# Debug and testing files
+.debug/

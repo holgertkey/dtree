@@ -242,14 +242,23 @@ Check:
 - Created PowerShell wrapper function `dt` for shell integration
 - Automated installation script with PATH management
 - Fixed TUI display issue when running `dt` without arguments
+- Fixed `-v` flag parameter binding issue in PowerShell
 - Special handling for no-args case to allow stderr (TUI) to display while capturing stdout (path)
-- Tested all major functionality (navigation, bookmarks, previous directory, interactive TUI)
+- Tested all major functionality (navigation, bookmarks, previous directory, interactive TUI, file viewer)
 - Created update/replacement scripts for wrapper maintenance
 - Updated documentation with installation and testing instructions
 
-**Issues resolved**:
-- Fixed: `dt` without arguments was capturing all output including TUI, preventing display
-- Solution: Added separate handling for no-args case to let TUI render to stderr
+**Critical issues resolved**:
+1. **TUI not displaying**: `dt` without arguments was capturing all output including TUI, preventing display
+   - Solution: Added separate handling for no-args case to let TUI render to stderr
+
+2. **`dt -v` not working**: PowerShell was consuming `-v` flag as named parameter
+   - Root cause: PowerShell parameter binding intercepted `-v` before wrapper could process it
+   - Solution: Added explicit `[switch]$v` parameter declaration and reconstructed arguments array
+   - See: `BUGFIX_DT_V_FLAG.md` for detailed analysis
+
+3. **Fullscreen viewer exit path**: Binary was returning empty PathBuf on 'q' press
+   - Solution: Updated `event_handler.rs` to return parent directory of viewed file
 
 **Next**: Phase 4 - Testing and debugging
 
