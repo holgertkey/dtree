@@ -149,12 +149,9 @@ if ($hasStartMarker -and $hasEndMarker) {
     }
 
     # Remove ALL old code blocks between markers (including markers)
-    # Use a loop to ensure all blocks are removed, not just the first one
+    # PowerShell -replace replaces all matches by default (no need for loop or count parameter)
     $pattern = "(?s)$([regex]::Escape($START_MARKER)).*?$([regex]::Escape($END_MARKER))"
-    $newContent = $profileContent
-    while ($newContent -match $pattern) {
-        $newContent = $newContent -replace $pattern, '', 1
-    }
+    $newContent = $profileContent -replace $pattern, ''
 
     # Clean up multiple consecutive blank lines
     $newContent = $newContent -replace '(\r?\n){3,}', "`n`n"
