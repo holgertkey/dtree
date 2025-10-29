@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **IMPORTANT: When fixing bugs or errors in the code, ALWAYS write proper tests immediately to prevent regression.**
 
+- Save all files created during program debugging in the '.debug' folder. Save report files in the '.debug/reports' folder. Save files for testing in the '.debug/testing' folder.
+
 ### Version Management
 **Build Number Convention**: After each compilation with code changes, increment the build number in `Cargo.toml`:
 - Format: `version = "MAJOR.MINOR.PATCH+BUILD"`
@@ -295,7 +297,7 @@ dt() {
 **Automatic setup:**
 ```powershell
 # Run this to install the wrapper
-.\install-windows.ps1
+.\install-windows-wrapper.ps1
 ```
 
 **Manual setup** - Add to your PowerShell profile (`notepad $PROFILE`):
@@ -567,7 +569,7 @@ All dependencies work cross-platform:
 For detailed Windows porting instructions and progress, see:
 - `WINDOWS_PORTING_GUIDE.md` - Complete step-by-step guide (6 phases)
 - `TESTING_WINDOWS.md` - Test checklist for Windows
-- `install-windows.ps1` - PowerShell wrapper installer
+- `install-windows-wrapper.ps1` - PowerShell wrapper installer
 - `install-windows-binary.ps1` - Binary installation script
 
 **Windows porting phases:**
