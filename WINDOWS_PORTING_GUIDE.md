@@ -237,12 +237,13 @@ Check:
 
 ## Phase 3: Shell Integration for Windows (2-3 days) ✅ COMPLETED
 
-**Status**: ✅ Successfully completed on 2025-10-28
+**Status**: ✅ Successfully completed on 2025-10-29
 **Key achievements**:
 - Created PowerShell wrapper function `dt` for shell integration
 - Automated installation script with PATH management
 - Fixed TUI display issue when running `dt` without arguments
 - Fixed `-v` flag parameter binding issue in PowerShell
+- **Fixed `--view` flag support in PowerShell wrapper** (2025-10-29)
 - Special handling for no-args case to allow stderr (TUI) to display while capturing stdout (path)
 - Tested all major functionality (navigation, bookmarks, previous directory, interactive TUI, file viewer)
 - Created update/replacement scripts for wrapper maintenance
@@ -257,7 +258,12 @@ Check:
    - Solution: Added explicit `[switch]$v` parameter declaration and reconstructed arguments array
    - See: `BUGFIX_DT_V_FLAG.md` for detailed analysis
 
-3. **Fullscreen viewer exit path**: Binary was returning empty PathBuf on 'q' press
+3. **`dt --view` not working**: PowerShell wrapper only handled `-v`, not `--view`
+   - Root cause: Switch statement only checked for `-v` flag
+   - Solution: Added `[switch]$view` parameter and updated switch to handle both `-v` and `--view`
+   - See: `.debug/TESTING_DT_VIEW.md` for testing instructions
+
+4. **Fullscreen viewer exit path**: Binary was returning empty PathBuf on 'q' press
    - Solution: Updated `event_handler.rs` to return parent directory of viewed file
 
 **Next**: Phase 4 - Testing and debugging

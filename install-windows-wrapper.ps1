@@ -14,16 +14,20 @@ $functionCode = @"
 $START_MARKER
 function dt {
     param(
-        [switch]`$v,  # -v flag for view mode
+        [switch]`$v,      # -v flag for view mode
+        [switch]`$view,   # --view flag for view mode
         [Parameter(ValueFromRemainingArguments=`$true)]
         [string[]]`$Arguments
     )
 
     `$prevDir = `$PWD.Path
 
-    # Handle -v flag: rebuild arguments array to include it
+    # Handle -v or --view flags: rebuild arguments array to include them
     if (`$v) {
         `$Arguments = @('-v') + `$Arguments
+    }
+    if (`$view) {
+        `$Arguments = @('--view') + `$Arguments
     }
 
     # Handle dt without arguments → open interactive TUI
@@ -60,7 +64,7 @@ function dt {
                 & dtree.exe `$Arguments
                 return
             }
-            "-v" {
+            {`$_ -in "-v", "--view"} {
                 # View mode: need to resolve relative path to absolute
                 if (`$Arguments.Count -ge 2) {
                     `$filePath = `$Arguments[1]
@@ -70,9 +74,9 @@ function dt {
                         `$filePath = Join-Path `$PWD.Path `$filePath
                     }
 
-                    # Run dtree -v with absolute path
+                    # Run dtree with absolute path (preserve original flag)
                     # Don't capture stderr - let TUI display
-                    `$result = & dtree.exe "-v" `$filePath
+                    `$result = & dtree.exe `$Arguments[0] `$filePath
                     `$exitCode = `$LASTEXITCODE
 
                     if (`$exitCode -ne 0) {
@@ -135,9 +139,28 @@ if ($hasStartMarker -and $hasEndMarker) {
     # Update existing installation
     Write-Host "Found existing dtree wrapper, updating..." -ForegroundColor Yellow
 
-    # Remove old code between markers (including markers)
+    # Count how many blocks exist
+    $startCount = ([regex]::Matches($profileContent, [regex]::Escape($START_MARKER))).Count
+    $endCount = ([regex]::Matches($profileContent, [regex]::Escape($END_MARKER))).Count
+
+    if ($startCount -gt 1 -or $endCount -gt 1) {
+        Write-Host "[WARNING] Found $startCount start markers and $endCount end markers" -ForegroundColor Yellow
+        Write-Host "Removing ALL dtree blocks and adding fresh copy..." -ForegroundColor Yellow
+    }
+
+    # Remove ALL old code blocks between markers (including markers)
+    # Use a loop to ensure all blocks are removed, not just the first one
     $pattern = "(?s)$([regex]::Escape($START_MARKER)).*?$([regex]::Escape($END_MARKER))"
-    $newContent = $profileContent -replace $pattern, $functionCode.Trim()
+    $newContent = $profileContent
+    while ($newContent -match $pattern) {
+        $newContent = $newContent -replace $pattern, '', 1
+    }
+
+    # Clean up multiple consecutive blank lines
+    $newContent = $newContent -replace '(\r?\n){3,}', "`n`n"
+
+    # Add the new function code
+    $newContent = $newContent.TrimEnd() + "`n`n" + $functionCode
 
     # Save updated profile
     Set-Content -Path $profilePath -Value $newContent -NoNewline
