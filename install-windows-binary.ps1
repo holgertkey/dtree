@@ -85,16 +85,16 @@ try {
 # Set up PowerShell wrapper
 Write-Host ""
 Write-Host "Setting up PowerShell wrapper..." -ForegroundColor Yellow
-if (Test-Path "install-windows.ps1") {
+if (Test-Path "install-windows-wrapper.ps1") {
     try {
-        & .\install-windows.ps1
+        & .\install-windows-wrapper.ps1
         Write-Host "[OK] PowerShell wrapper setup completed" -ForegroundColor Green
     } catch {
         Write-Warning "PowerShell wrapper setup failed: $_"
-        Write-Host "You can run it manually later: .\install-windows.ps1" -ForegroundColor Yellow
+        Write-Host "You can run it manually later: .\install-windows-wrapper.ps1" -ForegroundColor Yellow
     }
 } else {
-    Write-Warning "install-windows.ps1 not found. PowerShell wrapper not installed."
+    Write-Warning "install-windows-wrapper.ps1 not found. PowerShell wrapper not installed."
 }
 
 Write-Host ""
