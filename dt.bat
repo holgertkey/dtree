@@ -1,6 +1,7 @@
 @echo off
 REM dt.bat - Cmd.exe wrapper for dtree
 REM Provides cd integration similar to bash dt() function
+REM Matches PowerShell dt() function behavior
 REM
 REM Usage:
 REM   dt              - Open interactive TUI
@@ -17,19 +18,21 @@ set "PREV_DIR=%CD%"
 
 REM Handle dt without arguments - interactive TUI
 if "%~1"=="" (
-    REM Run dtree and capture output
-    for /f "delims=" %%i in ('dtree.exe 2^>nul') do set "RESULT=%%i"
+    REM Run dtree and capture stdout only (stderr displays normally for TUI)
+    REM dtree uses stderr for TUI and stdout for output path
+    for /f "delims=" %%i in ('dtree.exe') do set "RESULT=%%i"
 
+    REM Check if command succeeded and result is a valid directory
     if !ERRORLEVEL! EQU 0 (
         if defined RESULT (
-            if exist "!RESULT!" (
+            if exist "!RESULT!\" (
                 endlocal & set "DTREE_PREV_DIR=%CD%" & cd /d "!RESULT!"
                 exit /b 0
             )
         )
     )
     endlocal
-    exit /b 1
+    exit /b 0
 )
 
 REM Handle dt - (return to previous directory)
@@ -58,16 +61,34 @@ REM Handle -v or --view flags
 if "%~1"=="-v" goto :view_mode
 if "%~1"=="--view" goto :view_mode
 
-REM Navigation mode - pass all arguments to dtree
-for /f "delims=" %%i in ('dtree.exe %* 2^>nul') do set "RESULT=%%i"
+REM Navigation mode - capture stdout (path) separately from stderr (errors)
+REM Use temporary file to capture all output (stdout + stderr)
+set "TEMP_FILE=%TEMP%\dtree_output_%RANDOM%.txt"
+dtree.exe %* > "%TEMP_FILE%" 2>&1
+set "EXIT_CODE=!ERRORLEVEL!"
 
-if !ERRORLEVEL! NEQ 0 (
-    endlocal
-    exit /b 1
+REM Read result from temp file
+set "RESULT="
+if exist "%TEMP_FILE%" (
+    for /f "usebackq delims=" %%i in ("%TEMP_FILE%") do (
+        if not defined RESULT set "RESULT=%%i"
+    )
+    del "%TEMP_FILE%" 2>nul
 )
 
+REM Check exit code
+if !EXIT_CODE! NEQ 0 (
+    endlocal
+    exit /b !EXIT_CODE!
+)
+
+REM Trim whitespace and check if result is a valid directory
 if defined RESULT (
-    if exist "!RESULT!" (
+    REM Remove leading/trailing spaces
+    for /f "tokens=* delims= " %%a in ("!RESULT!") do set "RESULT=%%a"
+
+    REM Check if path exists and is a directory
+    if exist "!RESULT!\" (
         endlocal & set "DTREE_PREV_DIR=%CD%" & cd /d "!RESULT!"
         exit /b 0
     )
@@ -83,30 +104,49 @@ dtree.exe %*
 exit /b %ERRORLEVEL%
 
 :view_mode
-REM View mode: convert relative path to absolute if needed
+REM View mode: need to resolve relative path to absolute
 set "FILE_PATH=%~2"
 
+REM If no file specified, just pass through to dtree
 if "%FILE_PATH%"=="" (
-    echo dt: -v requires a file path >&2
     endlocal
-    exit /b 1
+    dtree.exe %*
+    exit /b !ERRORLEVEL!
 )
 
-REM Convert to absolute path if relative
+REM Convert relative path to absolute if needed
 if not "%FILE_PATH:~1,1%"==":" (
+    REM Not an absolute path (doesn't have drive letter), make it absolute
     set "FILE_PATH=%CD%\%FILE_PATH%"
 )
 
-REM Run dtree in view mode and capture possible directory output
-for /f "delims=" %%i in ('dtree.exe %~1 "!FILE_PATH!" 2^>nul') do set "RESULT=%%i"
+REM Run dtree with absolute path (preserve original flag -v or --view)
+REM Don't capture stderr - let TUI display normally
+set "TEMP_FILE=%TEMP%\dtree_view_%RANDOM%.txt"
+dtree.exe %~1 "!FILE_PATH!" > "%TEMP_FILE%" 2>&1
+set "EXIT_CODE=!ERRORLEVEL!"
 
-if !ERRORLEVEL! NEQ 0 (
-    endlocal
-    exit /b 1
+REM Read result from temp file
+set "RESULT="
+if exist "%TEMP_FILE%" (
+    for /f "usebackq delims=" %%i in ("%TEMP_FILE%") do (
+        if not defined RESULT set "RESULT=%%i"
+    )
+    del "%TEMP_FILE%" 2>nul
 )
 
-REM If dtree returned a directory, cd into it
+REM Check exit code
+if !EXIT_CODE! NEQ 0 (
+    endlocal
+    exit /b !EXIT_CODE!
+)
+
+REM dtree may return a directory path to cd into
 if defined RESULT (
+    REM Trim whitespace
+    for /f "tokens=* delims= " %%a in ("!RESULT!") do set "RESULT=%%a"
+
+    REM Check if path exists and is a directory (Container)
     if exist "!RESULT!\" (
         endlocal & set "DTREE_PREV_DIR=%CD%" & cd /d "!RESULT!"
         exit /b 0
