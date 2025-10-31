@@ -26,8 +26,13 @@ if "%~1"=="" (
     if !ERRORLEVEL! EQU 0 (
         if defined RESULT (
             if exist "!RESULT!\" (
-                endlocal & set "DTREE_PREV_DIR=%CD%" & cd /d "!RESULT!"
-                exit /b 0
+                REM Use for loop to pass value through endlocal boundary
+                for %%p in ("!RESULT!") do (
+                    endlocal
+                    set "DTREE_PREV_DIR=%CD%"
+                    cd /d %%~p
+                    exit /b 0
+                )
             )
         )
     )
@@ -62,35 +67,39 @@ if "%~1"=="-v" goto :view_mode
 if "%~1"=="--view" goto :view_mode
 
 REM Navigation mode - capture stdout (path) separately from stderr (errors)
-REM Use temporary file to capture all output (stdout + stderr)
+REM Use temporary file to capture all output
 set "TEMP_FILE=%TEMP%\dtree_output_%RANDOM%.txt"
 dtree.exe %* > "%TEMP_FILE%" 2>&1
 set "EXIT_CODE=!ERRORLEVEL!"
 
-REM Read result from temp file
+REM If command failed, just exit with that code
+if !EXIT_CODE! NEQ 0 (
+    if exist "%TEMP_FILE%" del "%TEMP_FILE%" 2>nul
+    endlocal
+    exit /b !EXIT_CODE!
+)
+
+REM Read result from temp file (only if command succeeded)
 set "RESULT="
 if exist "%TEMP_FILE%" (
-    for /f "usebackq delims=" %%i in ("%TEMP_FILE%") do (
+    REM Read first non-empty line
+    for /f "usebackq tokens=*" %%i in ("%TEMP_FILE%") do (
         if not defined RESULT set "RESULT=%%i"
     )
     del "%TEMP_FILE%" 2>nul
 )
 
-REM Check exit code
-if !EXIT_CODE! NEQ 0 (
-    endlocal
-    exit /b !EXIT_CODE!
-)
-
-REM Trim whitespace and check if result is a valid directory
+REM Only cd if result is a valid directory
 if defined RESULT (
-    REM Remove leading/trailing spaces
-    for /f "tokens=* delims= " %%a in ("!RESULT!") do set "RESULT=%%a"
-
-    REM Check if path exists and is a directory
+    REM Check if path exists and is a directory (backslash at end checks for directory)
     if exist "!RESULT!\" (
-        endlocal & set "DTREE_PREV_DIR=%CD%" & cd /d "!RESULT!"
-        exit /b 0
+        REM Use for loop to pass value through endlocal boundary
+        for %%p in ("!RESULT!") do (
+            endlocal
+            set "DTREE_PREV_DIR=%CD%"
+            cd /d %%~p
+            exit /b 0
+        )
     )
 )
 
@@ -126,7 +135,14 @@ set "TEMP_FILE=%TEMP%\dtree_view_%RANDOM%.txt"
 dtree.exe %~1 "!FILE_PATH!" > "%TEMP_FILE%" 2>&1
 set "EXIT_CODE=!ERRORLEVEL!"
 
-REM Read result from temp file
+REM If command failed, just exit with that code
+if !EXIT_CODE! NEQ 0 (
+    if exist "%TEMP_FILE%" del "%TEMP_FILE%" 2>nul
+    endlocal
+    exit /b !EXIT_CODE!
+)
+
+REM Read result from temp file (only if command succeeded)
 set "RESULT="
 if exist "%TEMP_FILE%" (
     for /f "usebackq delims=" %%i in ("%TEMP_FILE%") do (
@@ -135,21 +151,17 @@ if exist "%TEMP_FILE%" (
     del "%TEMP_FILE%" 2>nul
 )
 
-REM Check exit code
-if !EXIT_CODE! NEQ 0 (
-    endlocal
-    exit /b !EXIT_CODE!
-)
-
 REM dtree may return a directory path to cd into
 if defined RESULT (
-    REM Trim whitespace
-    for /f "tokens=* delims= " %%a in ("!RESULT!") do set "RESULT=%%a"
-
     REM Check if path exists and is a directory (Container)
     if exist "!RESULT!\" (
-        endlocal & set "DTREE_PREV_DIR=%CD%" & cd /d "!RESULT!"
-        exit /b 0
+        REM Use for loop to pass value through endlocal boundary
+        for %%p in ("!RESULT!") do (
+            endlocal
+            set "DTREE_PREV_DIR=%CD%"
+            cd /d %%~p
+            exit /b 0
+        )
     )
 )
 
