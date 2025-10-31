@@ -132,7 +132,7 @@ if not "%FILE_PATH:~1,1%"==":" (
 REM Run dtree with absolute path (preserve original flag -v or --view)
 REM Don't capture stderr - let TUI display normally
 set "TEMP_FILE=%TEMP%\dtree_view_%RANDOM%.txt"
-dtree.exe %~1 "!FILE_PATH!" > "%TEMP_FILE%" 2>&1
+dtree.exe %~1 "!FILE_PATH!" > "%TEMP_FILE%"
 set "EXIT_CODE=!ERRORLEVEL!"
 
 REM If command failed, just exit with that code
