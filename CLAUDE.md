@@ -206,31 +206,35 @@ sudo cp target/release/dtree /usr/local/bin/
 
 **Automated installation (recommended):**
 ```powershell
-# One-step installation with PowerShell wrapper
+# One-step installation with all wrappers
 .\install-windows-binary.ps1
 ```
 
 This script will:
 - Build the release binary
-- Copy to `C:\Users\Holger\bin\dtree.exe`
+- Copy `dtree.exe` to `C:\Users\Holger\bin\`
+- Copy `dt.bat` wrapper to `C:\Users\Holger\bin\` (for cmd.exe)
 - Add directory to PATH
-- Install PowerShell wrapper function
+- Install PowerShell wrapper function (for PowerShell 5.x and 7.x+)
 - Test the installation
+
+**Result:** The `dt` command works in both PowerShell and cmd.exe!
 
 **Manual installation:**
 ```powershell
 # Build the project
 cargo build --release
 
-# Create bin directory and copy binary
+# Create bin directory and copy files
 New-Item -Path "$env:USERPROFILE\bin" -ItemType Directory -Force
 Copy-Item target\release\dtree.exe "$env:USERPROFILE\bin\"
+Copy-Item dt.bat "$env:USERPROFILE\bin\"
 
 # Add to PATH (restart terminal after this)
 [Environment]::SetEnvironmentVariable("Path", $env:PATH + ";$env:USERPROFILE\bin", "User")
 
-# Install PowerShell wrapper
-.\install-windows.ps1
+# Install PowerShell wrapper (for both 5.x and 7.x+)
+.\install-windows-wrapper.ps1
 ```
 
 **Alternative (cargo install):**
@@ -373,6 +377,40 @@ powershell -Command "dt --version"
 # PowerShell Core 7.x+:
 pwsh -Command "dt --version"
 ```
+
+#### Cmd.exe Integration
+
+**dt.bat wrapper** is automatically installed to `C:\Users\Holger\bin\dt.bat` by `install-windows-binary.ps1`
+
+**How it works:**
+- The `dt.bat` script wraps `dtree.exe` to provide `cd` integration in cmd.exe
+- Same functionality as PowerShell wrapper: navigation, bookmarks, file viewing
+- **No conflict with PowerShell**: PowerShell uses the `dt()` function, cmd.exe uses `dt.bat`
+
+**Usage in cmd.exe:**
+```cmd
+REM Basic commands
+dt --version        REM Show version
+dt -bm list         REM List bookmarks
+
+REM Navigation
+dt C:\Windows       REM Navigate to directory
+dt -                REM Return to previous directory
+dt                  REM Open interactive TUI
+
+REM File viewing
+dt -v file.txt      REM View file in fullscreen
+
+REM Bookmarks
+dt -bm add test     REM Create bookmark
+dt test             REM Navigate to bookmark
+```
+
+**Technical notes:**
+- Uses `DTREE_PREV_DIR` environment variable to track previous directory
+- Supports all dtree flags and arguments
+- Automatically converts relative paths to absolute for file viewing
+- Works alongside PowerShell wrapper without conflicts
 
 ### Usage
 ```bash

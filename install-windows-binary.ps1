@@ -52,6 +52,19 @@ Write-Host "[OK] Installed dtree.exe to $destPath" -ForegroundColor Green
 $binarySize = (Get-Item $destPath).Length / 1MB
 Write-Host "[OK] Binary size: $([math]::Round($binarySize, 2)) MB" -ForegroundColor Cyan
 
+# Copy dt.bat wrapper for cmd.exe
+$batSourcePath = "dt.bat"
+$batDestPath = Join-Path $InstallPath "dt.bat"
+
+if (Test-Path $batSourcePath) {
+    Write-Host ""
+    Write-Host "Installing cmd.exe wrapper..." -ForegroundColor Yellow
+    Copy-Item $batSourcePath $batDestPath -Force
+    Write-Host "[OK] Installed dt.bat to $batDestPath" -ForegroundColor Green
+} else {
+    Write-Warning "dt.bat not found in project directory. Cmd.exe wrapper not installed."
+}
+
 # Add to PATH if not already there
 $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if ($currentPath -notlike "*$InstallPath*") {
@@ -100,10 +113,17 @@ if (Test-Path "install-windows-wrapper.ps1") {
 Write-Host ""
 Write-Host "=== Installation Complete! ===" -ForegroundColor Green
 Write-Host ""
+Write-Host "Installed components:" -ForegroundColor Cyan
+Write-Host "  - dtree.exe (main binary)" -ForegroundColor White
+Write-Host "  - dt.bat (cmd.exe wrapper)" -ForegroundColor White
+Write-Host "  - dt() function (PowerShell wrapper)" -ForegroundColor White
+Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "1. Restart your terminal (to pick up PATH changes)" -ForegroundColor White
 Write-Host "2. Run: dt --help" -ForegroundColor White
 Write-Host "3. Try: dt (to open interactive tree)" -ForegroundColor White
 Write-Host "4. Create bookmarks: dt -bm add myproject" -ForegroundColor White
+Write-Host ""
+Write-Host "Note: 'dt' wrapper works in both PowerShell and cmd.exe!" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Enjoy using dtree!" -ForegroundColor Green
