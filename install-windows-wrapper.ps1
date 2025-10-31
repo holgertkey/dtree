@@ -1,8 +1,14 @@
 # install-windows-wrapper.ps1
 # PowerShell wrapper installer for dtree - similar to bash dt() function
+# Supports both Windows PowerShell 5.x and PowerShell Core 7.x+
 # This script can be run multiple times to update the wrapper function
 
 Write-Host "=== dtree PowerShell Wrapper Installer ===" -ForegroundColor Cyan
+Write-Host ""
+
+# Detect PowerShell version
+$psVersion = $PSVersionTable.PSVersion.Major
+Write-Host "Running under PowerShell $($PSVersionTable.PSVersion)" -ForegroundColor Gray
 Write-Host ""
 
 # Define markers for identifying our code block
@@ -118,82 +124,166 @@ function dt {
 $END_MARKER
 "@
 
-# Ensure profile exists
-$profilePath = $PROFILE
-if (-not (Test-Path $profilePath)) {
-    Write-Host "Creating PowerShell profile at: $profilePath" -ForegroundColor Yellow
-    New-Item -Path $profilePath -ItemType File -Force | Out-Null
-}
+# Function to install/update wrapper in a specific profile
+function Install-WrapperToProfile {
+    param(
+        [string]$ProfilePath,
+        [string]$ProfileName
+    )
 
-# Read current profile content
-$profileContent = Get-Content -Path $profilePath -Raw -ErrorAction SilentlyContinue
-if (-not $profileContent) {
-    $profileContent = ""
-}
+    Write-Host "Processing $ProfileName..." -ForegroundColor Cyan
 
-# Check if our markers exist
-$hasStartMarker = $profileContent -match [regex]::Escape($START_MARKER)
-$hasEndMarker = $profileContent -match [regex]::Escape($END_MARKER)
-
-if ($hasStartMarker -and $hasEndMarker) {
-    # Update existing installation
-    Write-Host "Found existing dtree wrapper, updating..." -ForegroundColor Yellow
-
-    # Count how many blocks exist
-    $startCount = ([regex]::Matches($profileContent, [regex]::Escape($START_MARKER))).Count
-    $endCount = ([regex]::Matches($profileContent, [regex]::Escape($END_MARKER))).Count
-
-    if ($startCount -gt 1 -or $endCount -gt 1) {
-        Write-Host "[WARNING] Found $startCount start markers and $endCount end markers" -ForegroundColor Yellow
-        Write-Host "Removing ALL dtree blocks and adding fresh copy..." -ForegroundColor Yellow
+    # Ensure profile directory exists
+    $profileDir = Split-Path $ProfilePath -Parent
+    if (-not (Test-Path $profileDir)) {
+        Write-Host "  Creating profile directory: $profileDir" -ForegroundColor Yellow
+        New-Item -Path $profileDir -ItemType Directory -Force | Out-Null
     }
 
-    # Remove ALL old code blocks between markers (including markers)
-    # PowerShell -replace replaces all matches by default (no need for loop or count parameter)
-    $pattern = "(?s)$([regex]::Escape($START_MARKER)).*?$([regex]::Escape($END_MARKER))"
-    $newContent = $profileContent -replace $pattern, ''
+    # Ensure profile file exists
+    if (-not (Test-Path $ProfilePath)) {
+        Write-Host "  Creating profile file: $ProfilePath" -ForegroundColor Yellow
+        New-Item -Path $ProfilePath -ItemType File -Force | Out-Null
+    }
 
-    # Clean up multiple consecutive blank lines
-    $newContent = $newContent -replace '(\r?\n){3,}', "`n`n"
+    # Read current profile content
+    $profileContent = Get-Content -Path $ProfilePath -Raw -ErrorAction SilentlyContinue
+    if (-not $profileContent) {
+        $profileContent = ""
+    }
 
-    # Add the new function code
-    $newContent = $newContent.TrimEnd() + "`n`n" + $functionCode
+    # Check if our markers exist
+    $hasStartMarker = $profileContent -match [regex]::Escape($START_MARKER)
+    $hasEndMarker = $profileContent -match [regex]::Escape($END_MARKER)
 
-    # Save updated profile
-    Set-Content -Path $profilePath -Value $newContent -NoNewline
-    Write-Host "[OK] Successfully updated 'dt' function in profile" -ForegroundColor Green
+    if ($hasStartMarker -and $hasEndMarker) {
+        # Update existing installation
+        Write-Host "  Found existing dtree wrapper, updating..." -ForegroundColor Yellow
 
-} elseif ($profileContent -match "function\s+dt\s*\{") {
-    # Function exists but without markers - warn user
-    Write-Host "[WARNING] Found existing 'dt' function without markers" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Your profile contains a 'dt' function that wasn't installed by this script." -ForegroundColor Yellow
-    Write-Host "To update safely, please:" -ForegroundColor Yellow
-    Write-Host "  1. Backup your profile: Copy-Item `$PROFILE `$PROFILE.backup" -ForegroundColor White
-    Write-Host "  2. Remove the existing 'dt' function from: $profilePath" -ForegroundColor White
-    Write-Host "  3. Run this installer again" -ForegroundColor White
-    Write-Host ""
+        # Count how many blocks exist
+        $startCount = ([regex]::Matches($profileContent, [regex]::Escape($START_MARKER))).Count
+        $endCount = ([regex]::Matches($profileContent, [regex]::Escape($END_MARKER))).Count
 
-    $response = Read-Host "Do you want to APPEND the new function anyway? (yes/no)"
-    if ($response -eq "yes") {
-        Add-Content -Path $profilePath -Value "`n$functionCode"
-        Write-Host "[OK] Appended new 'dt' function to profile" -ForegroundColor Green
-        Write-Host "[WARNING] You may have duplicate 'dt' functions - please review your profile" -ForegroundColor Yellow
+        if ($startCount -gt 1 -or $endCount -gt 1) {
+            Write-Host "  [WARNING] Found $startCount start markers and $endCount end markers" -ForegroundColor Yellow
+            Write-Host "  Removing ALL dtree blocks and adding fresh copy..." -ForegroundColor Yellow
+        }
+
+        # Remove ALL old code blocks between markers (including markers)
+        $pattern = "(?s)$([regex]::Escape($START_MARKER)).*?$([regex]::Escape($END_MARKER))"
+        $newContent = $profileContent -replace $pattern, ''
+
+        # Clean up multiple consecutive blank lines
+        $newContent = $newContent -replace '(\r?\n){3,}', "`n`n"
+
+        # Add the new function code
+        $newContent = $newContent.TrimEnd() + "`n`n" + $functionCode
+
+        # Save updated profile
+        Set-Content -Path $ProfilePath -Value $newContent -NoNewline
+        Write-Host "  [OK] Successfully updated 'dt' function" -ForegroundColor Green
+        return $true
+
+    } elseif ($profileContent -match "function\s+dt\s*\{") {
+        # Function exists but without markers - warn user
+        Write-Host "  [WARNING] Found existing 'dt' function without markers" -ForegroundColor Red
+        Write-Host "  Your profile contains a 'dt' function that wasn't installed by this script." -ForegroundColor Yellow
+        Write-Host "  To update safely, please:" -ForegroundColor Yellow
+        Write-Host "    1. Backup your profile: Copy-Item '$ProfilePath' '$ProfilePath.backup'" -ForegroundColor White
+        Write-Host "    2. Remove the existing 'dt' function manually" -ForegroundColor White
+        Write-Host "    3. Run this installer again" -ForegroundColor White
+        Write-Host ""
+        return $false
+
     } else {
-        Write-Host "Installation cancelled" -ForegroundColor Red
-        exit 1
+        # Fresh installation
+        Write-Host "  Installing 'dt' function..." -ForegroundColor Green
+        Add-Content -Path $ProfilePath -Value "`n$functionCode"
+        Write-Host "  [OK] Successfully installed 'dt' function" -ForegroundColor Green
+        return $true
     }
-
-} else {
-    # Fresh installation
-    Write-Host "Installing 'dt' function to profile..." -ForegroundColor Green
-    Add-Content -Path $profilePath -Value "`n$functionCode"
-    Write-Host "[OK] Successfully installed 'dt' function" -ForegroundColor Green
 }
 
+# Define profile paths for both PowerShell versions
+$profiles = @(
+    @{
+        Name = "Windows PowerShell 5.x"
+        Path = "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
+        ExeName = "powershell.exe"
+        Version = 5
+    },
+    @{
+        Name = "PowerShell Core 7.x+"
+        Path = "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+        ExeName = "pwsh.exe"
+        Version = 7
+    }
+)
+
+# Track installation results
+$installedProfiles = @()
+$skippedProfiles = @()
+
+# Process each profile
+foreach ($profile in $profiles) {
+    # Check if PowerShell version is available
+    $psExe = Get-Command $profile.ExeName -ErrorAction SilentlyContinue
+
+    if (-not $psExe) {
+        Write-Host "$($profile.Name) not found (skipping)" -ForegroundColor Gray
+        Write-Host ""
+        continue
+    }
+
+    Write-Host "Found $($profile.Name) at: $($psExe.Source)" -ForegroundColor Green
+
+    # Install wrapper to this profile
+    $success = Install-WrapperToProfile -ProfilePath $profile.Path -ProfileName $profile.Name
+
+    if ($success) {
+        $installedProfiles += $profile
+    } else {
+        $skippedProfiles += $profile
+    }
+
+    Write-Host ""
+}
+
+# Print summary
+Write-Host "=== Installation Summary ===" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "=== Next Steps ===" -ForegroundColor Cyan
-Write-Host "1. Restart PowerShell or run: . `$PROFILE" -ForegroundColor White
-Write-Host "2. Test with: dt --version" -ForegroundColor White
-Write-Host ""
-Write-Host "Profile location: $profilePath" -ForegroundColor Gray
+
+if ($installedProfiles.Count -gt 0) {
+    Write-Host "Successfully installed/updated in:" -ForegroundColor Green
+    foreach ($p in $installedProfiles) {
+        Write-Host "  - $($p.Name)" -ForegroundColor Green
+        Write-Host "    Profile: $($p.Path)" -ForegroundColor Gray
+    }
+    Write-Host ""
+}
+
+if ($skippedProfiles.Count -gt 0) {
+    Write-Host "Skipped (manual intervention required):" -ForegroundColor Yellow
+    foreach ($p in $skippedProfiles) {
+        Write-Host "  - $($p.Name)" -ForegroundColor Yellow
+        Write-Host "    Profile: $($p.Path)" -ForegroundColor Gray
+    }
+    Write-Host ""
+}
+
+if ($installedProfiles.Count -gt 0) {
+    Write-Host "=== Next Steps ===" -ForegroundColor Cyan
+    Write-Host "1. Restart PowerShell or reload profile:" -ForegroundColor White
+    if ($psVersion -eq 5) {
+        Write-Host "   . `$PROFILE" -ForegroundColor White
+    } else {
+        Write-Host "   . `$PROFILE" -ForegroundColor White
+    }
+    Write-Host "2. Test with: dt --version" -ForegroundColor White
+    Write-Host ""
+} else {
+    Write-Host "[ERROR] No profiles were updated successfully" -ForegroundColor Red
+    Write-Host "Please resolve the issues above and run the installer again" -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}

@@ -294,11 +294,23 @@ dt() {
 
 **Windows**: PowerShell integration (automatically installed by `install-windows-binary.ps1`)
 
-**Automatic setup:**
+**Automatic setup (recommended):**
 ```powershell
 # Run this to install the wrapper
 .\install-windows-wrapper.ps1
 ```
+
+This script will:
+- Automatically detect installed PowerShell versions (Windows PowerShell 5.x and PowerShell Core 7.x+)
+- Install the `dt` wrapper function to all detected PowerShell profiles
+- Update existing installations without breaking your profile
+- Show detailed summary of what was installed
+
+**Supported PowerShell versions:**
+- Windows PowerShell 5.x (profile: `Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1`)
+- PowerShell Core 7.x+ (profile: `Documents\PowerShell\Microsoft.PowerShell_profile.ps1`)
+
+If both versions are installed, the wrapper will be added to both profiles automatically.
 
 **Manual setup** - Add to your PowerShell profile (`notepad $PROFILE`):
 
@@ -353,6 +365,13 @@ dt -                # Should return to previous directory
 # Test bookmarks
 dt -bm add test     # Create bookmark
 dt test             # Navigate to bookmark
+
+# Test in both PowerShell versions (if both are installed)
+# Windows PowerShell 5.x:
+powershell -Command "dt --version"
+
+# PowerShell Core 7.x+:
+pwsh -Command "dt --version"
 ```
 
 ### Usage
