@@ -4,7 +4,7 @@ use ratatui::{
     Terminal,
 };
 use crossterm::{
-    event::{self, Event, EnableMouseCapture, DisableMouseCapture},
+    event::{self, Event, EnableMouseCapture, DisableMouseCapture, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -116,14 +116,18 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
         if event::poll(std::time::Duration::from_millis(100))? {
             match event::read()? {
                 Event::Key(key) => {
-                    match app.handle_key(key)? {
-                        Some(path) if !path.as_os_str().is_empty() => {
-                            return Ok(Some(path));
+                    // Only handle key press events, ignore release and repeat events
+                    // This prevents double-triggering on Windows where both Press and Release are generated
+                    if key.kind == KeyEventKind::Press {
+                        match app.handle_key(key)? {
+                            Some(path) if !path.as_os_str().is_empty() => {
+                                return Ok(Some(path));
+                            }
+                            None => {
+                                return Ok(None);
+                            }
+                            _ => {}
                         }
-                        None => {
-                            return Ok(None);
-                        }
-                        _ => {}
                     }
                 }
                 Event::Mouse(mouse) => {

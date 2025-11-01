@@ -645,13 +645,21 @@ impl EventHandler {
                 nav.reload_tree(*show_files)?;
 
                 // Fix selection if it's out of bounds after reload
-                if nav.selected >= nav.flat_list.len() && !nav.flat_list.is_empty() {
-                    nav.selected = nav.flat_list.len() - 1;
+                if !nav.flat_list.is_empty() {
+                    if nav.selected >= nav.flat_list.len() {
+                        nav.selected = nav.flat_list.len() - 1;
+                    }
+                } else {
+                    // Empty list - set to 0
+                    nav.selected = 0;
                 }
 
                 if *show_files {
-                    if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                    // Only load file if we have a valid selection
+                    if !nav.flat_list.is_empty() {
+                        if let Some(node) = nav.get_selected_node() {
+                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                        }
                     }
                 }
             }
