@@ -494,7 +494,7 @@ syntax_theme = "base16-ocean.dark"
 #   - "reset" - use terminal default color
 #
 # selected_color = "cyan"           # Color for selected item text
-# directory_color = "blue"          # Color for directory names
+# directory_color = "gray"          # Color for directory names
 # file_color = "white"              # Color for file names
 # border_color = "gray"             # Color for UI borders
 # error_color = "red"               # Color for error messages

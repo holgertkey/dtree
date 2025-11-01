@@ -17,7 +17,7 @@ pub fn get_preset(theme_name: &str) -> Option<ThemeConfig> {
 fn default_theme() -> ThemeConfig {
     ThemeConfig {
         selected_color: Some("cyan".to_string()),
-        directory_color: Some("blue".to_string()),
+        directory_color: Some("gray".to_string()),
         file_color: Some("white".to_string()),
         border_color: Some("gray".to_string()),
         error_color: Some("red".to_string()),

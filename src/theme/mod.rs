@@ -117,7 +117,7 @@ impl ThemeConfig {
     pub fn fallback_colors() -> Self {
         Self {
             selected_color: Some("cyan".to_string()),
-            directory_color: Some("blue".to_string()),
+            directory_color: Some("gray".to_string()),
             file_color: Some("white".to_string()),
             border_color: Some("gray".to_string()),
             error_color: Some("red".to_string()),
