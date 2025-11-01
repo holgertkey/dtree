@@ -237,25 +237,11 @@ impl EventHandler {
                 return Ok(None);
             }
 
-            // Handle q key - returns to tree view or exits with current directory
+            // Handle q key - return to tree view (stay in program)
             if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
                 *fullscreen_viewer = false;
                 *need_terminal_clear = true; // Clear terminal to remove mouse tracking artifacts
-
-                // Return current directory (parent of file being viewed)
-                // This is needed for shell wrapper to cd into the directory
-                if let Some(node) = nav.get_selected_node() {
-                    let node_borrowed = node.borrow();
-                    if node_borrowed.is_dir {
-                        return Ok(Some(node_borrowed.path.clone()));
-                    } else {
-                        // If it's a file, return parent directory
-                        if let Some(parent) = node_borrowed.path.parent() {
-                            return Ok(Some(parent.to_path_buf()));
-                        }
-                    }
-                }
-                return Ok(Some(PathBuf::new()));
+                return Ok(Some(PathBuf::new())); // Stay in program, just switch to tree view
             }
 
             // Handle Ctrl+j/k for file navigation in same directory
