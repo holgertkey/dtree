@@ -103,8 +103,8 @@ function dt {
         }
     }
 
-    # Navigation mode: capture stdout (path) separately from stderr (errors)
-    `$result = & dtree.exe `$Arguments 2>&1
+    # Navigation mode: capture stdout (path) only, let stderr display to user
+    `$result = & dtree.exe `$Arguments
     `$exitCode = `$LASTEXITCODE
 
     if (`$exitCode -ne 0) {
@@ -112,8 +112,10 @@ function dt {
         return
     }
 
-    `$result = `$result | Out-String
-    `$result = `$result.Trim()
+    if (`$result) {
+        `$result = `$result | Out-String
+        `$result = `$result.Trim()
+    }
 
     # Only cd if result is a valid directory
     if (`$result -and (Test-Path `$result)) {
