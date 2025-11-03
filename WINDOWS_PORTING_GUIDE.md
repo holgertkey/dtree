@@ -460,9 +460,9 @@ File `TESTING_WINDOWS.md`:
 ## Windows Testing Checklist
 
 ### Basic functionality
-- [ ] Launch dtree from any directory
-- [ ] Navigate tree with j/k/h/l and arrow keys
-- [ ] Expand/collapse folders with l/h
+- [x] Launch dtree from any directory
+- [x] Navigate tree with j/k/h/l and arrow keys
+- [x] Expand/collapse folders with l/h
 - [ ] Windows paths work: C:\, D:\
 - [ ] Paths with spaces: "C:\Program Files\"
 - [ ] UNC paths: \\server\share (if available)

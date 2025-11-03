@@ -66,6 +66,25 @@ fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
 
 /// Resolve path or bookmark name to a PathBuf
 fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBuf> {
+    // Windows-specific: Handle bare drive letters (e.g., "C:", "E:")
+    // Convert "C:" to "C:\" to navigate to the root of the drive
+    #[cfg(windows)]
+    {
+        if input.len() == 2 && input.chars().nth(1) == Some(':') {
+            let drive_letter = input.chars().nth(0).unwrap();
+            if drive_letter.is_ascii_alphabetic() {
+                // Convert "C:" to "C:\" to get the root of the drive
+                let root_path = format!("{}\\", input);
+                let path = PathBuf::from(&root_path);
+                if path.exists() {
+                    return Ok(canonicalize_and_normalize(&path)?);
+                } else {
+                    anyhow::bail!("Drive not found: {}", input);
+                }
+            }
+        }
+    }
+
     // 1. If looks like absolute path or contains path separator → treat as path
     if platform::is_absolute_path(input) || input.contains(std::path::MAIN_SEPARATOR) {
         let path = PathBuf::from(input);
