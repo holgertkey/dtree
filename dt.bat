@@ -66,10 +66,10 @@ REM Handle -v or --view flags
 if "%~1"=="-v" goto :view_mode
 if "%~1"=="--view" goto :view_mode
 
-REM Navigation mode - capture stdout (path) separately from stderr (errors)
-REM Use temporary file to capture all output
+REM Navigation mode - capture stdout (path) only, let stderr display to user
+REM Use temporary file to capture stdout only
 set "TEMP_FILE=%TEMP%\dtree_output_%RANDOM%.txt"
-dtree.exe %* > "%TEMP_FILE%" 2>&1
+dtree.exe %* > "%TEMP_FILE%"
 set "EXIT_CODE=!ERRORLEVEL!"
 
 REM If command failed, just exit with that code
@@ -130,7 +130,7 @@ if not "%FILE_PATH:~1,1%"==":" (
 )
 
 REM Run dtree with absolute path (preserve original flag -v or --view)
-REM Don't capture stderr - let TUI display normally
+REM Capture only stdout (path), let stderr display to user (TUI/errors)
 set "TEMP_FILE=%TEMP%\dtree_view_%RANDOM%.txt"
 dtree.exe %~1 "!FILE_PATH!" > "%TEMP_FILE%"
 set "EXIT_CODE=!ERRORLEVEL!"
