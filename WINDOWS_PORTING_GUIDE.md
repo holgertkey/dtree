@@ -463,37 +463,37 @@ File `TESTING_WINDOWS.md`:
 - [x] Launch dtree from any directory
 - [x] Navigate tree with j/k/h/l and arrow keys
 - [x] Expand/collapse folders with l/h
-- [ ] Windows paths work: C:\, D:\
-- [ ] Paths with spaces: "C:\Program Files\"
+- [x] Windows paths work: C:\, D:\
+- [x] Paths with spaces: "C:\Program Files\"
 - [ ] UNC paths: \\server\share (if available)
 
 ### File operations
-- [ ] View files with 'v' (split view)
-- [ ] Fullscreen file viewer with 'v' on file
-- [ ] Syntax highlighting works
-- [ ] Open in notepad with 'e'
-- [ ] Open in explorer with 'o'
-- [ ] Copy path to clipboard with 'c'
-- [ ] Visual selection mode (V, j/k, y to copy)
+- [x] View files with 'v' (split view)
+- [x] Fullscreen file viewer with 'v' on file
+- [x] Syntax highlighting works
+- [x] Open in notepad with 'e'
+- [x] Open in explorer with 'o'
+- [x] Copy path to clipboard with 'c'
+- [x] Visual selection mode (V, j/k, y to copy)
 
 ### Search functionality
-- [ ] Tree search with '/'
-- [ ] Normal substring search
-- [ ] Fuzzy search (query starting with '/')
-- [ ] File search within viewer
-- [ ] Navigate matches with n/N
-- [ ] Search results highlighting
-- [ ] Cancel search with Esc
+- [x] Tree search with '/'
+- [x] Normal substring search
+- [x] Fuzzy search (query starting with '/')
+- [x] File search within viewer
+- [x] Navigate matches with n/N
+- [x] Search results highlighting
+- [x] Cancel search with Esc
 
 ### Bookmarks
-- [ ] Create bookmark with 'm'
-- [ ] Navigate to bookmark with "'" (tick)
-- [ ] CLI: dt -bm (list bookmarks)
-- [ ] CLI: dt -bm add work
-- [ ] CLI: dt -bm add work C:\Projects
-- [ ] CLI: dt -bm remove work
-- [ ] Direct navigation: dt work
-- [ ] Bookmark priority over directory names
+- [x] Create bookmark with 'm'
+- [x] Navigate to bookmark with "'" (tick)
+- [x] CLI: dt -bm (list bookmarks)
+- [x] CLI: dt -bm add work
+- [x] CLI: dt -bm add work C:\Projects
+- [x] CLI: dt -bm remove work
+- [x] Direct navigation: dt work
+- [x] Bookmark priority over directory names
 
 ### Configuration
 - [ ] Config loads from %APPDATA%\dtree\config.toml
@@ -505,14 +505,14 @@ File `TESTING_WINDOWS.md`:
 - [ ] File manager config works
 
 ### Shell integration
-- [ ] dt (no args) → opens TUI
-- [ ] dt C:\Windows → cd directly
-- [ ] dt myproject → cd to bookmark
-- [ ] dt - → return to previous dir
-- [ ] dt -v file.txt → view file, then cd
-- [ ] dt -bm → list bookmarks
-- [ ] Exit TUI with Enter → cd to selected dir
-- [ ] Exit TUI with Esc → stay in current dir
+- [x] dt (no args) → opens TUI
+- [x] dt C:\Windows → cd directly
+- [x] dt myproject → cd to bookmark
+- [x] dt - → return to previous dir
+- [x] dt -v file.txt → view file, then cd
+- [x] dt -bm → list bookmarks
+- [x] Exit TUI with `q` → cd to selected dir
+- [x] Exit TUI with Esc → stay in current dir
 
 ### Edge cases
 - [ ] Very long paths (260+ chars - Windows MAX_PATH)
@@ -524,15 +524,15 @@ File `TESTING_WINDOWS.md`:
 - [ ] Permission errors (C:\System Volume Information)
 - [ ] Hidden files and folders
 - [ ] Large directories (1000+ files)
-- [ ] Binary files in viewer
+- [x] Binary files in viewer
 - [ ] Very large text files (100MB+)
 
 ### Terminal compatibility
-- [ ] Windows Terminal (recommended)
-- [ ] PowerShell 7
-- [ ] PowerShell 5.1
-- [ ] cmd.exe (basic test)
-- [ ] Git Bash (should work like Linux)
+- [x] Windows Terminal (recommended)
+- [x] PowerShell 7
+- [x] PowerShell 5.1
+- [x] cmd.exe (basic test)
+- [x] Git Bash (should work like Linux)
 
 ### Performance
 - [ ] Fast navigation (no lag)
