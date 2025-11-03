@@ -21,9 +21,8 @@ pub fn open_external_program(program: &str, path: &str) -> Result<()> {
 
 #[cfg(windows)]
 pub fn open_external_program(program: &str, path: &str) -> Result<()> {
-    // On Windows, handle different program types
-    // For file managers like explorer: use cmd /C start
-    // For editors: direct execution
+    // On Windows, use cmd /C to handle .exe, .cmd, .bat files
+    // This allows VS Code (code.cmd) and other script-based programs to work
 
     if program.contains("explorer") || program.contains("start") {
         // File manager: use cmd /C start to open without waiting
@@ -31,9 +30,16 @@ pub fn open_external_program(program: &str, path: &str) -> Result<()> {
             .args(["/C", "start", "", path])
             .spawn()?; // spawn instead of status to avoid waiting
     } else {
-        // Editor or other program: direct execution
-        Command::new(program)
-            .arg(path)
+        // Editor or other program: use cmd /C to support scripts (.cmd, .bat)
+        // Quote the path to handle spaces
+        let quoted_path = if path.contains(' ') {
+            format!("\"{}\"", path)
+        } else {
+            path.to_string()
+        };
+
+        Command::new("cmd")
+            .args(["/C", program, &quoted_path])
             .status()?;
     }
 

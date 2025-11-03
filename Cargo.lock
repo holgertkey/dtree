@@ -361,7 +361,7 @@ dependencies = [
 
 [[package]]
 name = "dtree"
-version = "1.0.0+007"
+version = "1.0.0+008"
 dependencies = [
  "anyhow",
  "arboard",
