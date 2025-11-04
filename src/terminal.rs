@@ -112,17 +112,24 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
 
         // Only render when needed (dirty flag optimization)
         if app.needs_redraw() {
-            // DEBUG: Print to stderr to track render calls
-            // eprintln!("RENDER");
             terminal.draw(|f| app.render(f))?;
             app.clear_dirty();
         }
 
-        // EVENT BATCHING: Process ALL available events before rendering
+        // EVENT BATCHING: Wait briefly for events to accumulate before processing
         // This prevents rendering after each individual event during rapid input (e.g., held key)
-        let mut events_processed = 0;
+
+        // First, check if any event is available (with 16ms timeout for ~60fps response)
+        if !event::poll(std::time::Duration::from_millis(16))? {
+            // No events after 16ms - poll async updates and continue
+            let _ = app.poll_search();
+            let _ = app.poll_sizes();
+            continue;
+        }
+
+        // Event available! Now drain ALL accumulated events before rendering
         loop {
-            // Check if events are available (non-blocking, 0ms timeout)
+            // Non-blocking check for more events
             if event::poll(std::time::Duration::from_millis(0))? {
                 match event::read()? {
                     Event::Key(key) => {
@@ -151,22 +158,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
                         // Consume all other events (FocusGained, FocusLost, Paste, etc.)
                     }
                 }
-                events_processed += 1;
             } else {
                 // No more events available - break inner loop
                 break;
-            }
-        }
-
-        // If no events were processed, wait with timeout for async updates
-        if events_processed == 0 {
-            if event::poll(std::time::Duration::from_millis(100))? {
-                // Event arrived during wait - will be processed on next loop iteration
-            } else {
-                // Timeout - poll async updates (search, sizes)
-                // poll_search() and poll_sizes() will mark_dirty() if there are updates
-                let _ = app.poll_search();
-                let _ = app.poll_sizes();
             }
         }
     }
