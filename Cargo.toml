@@ -1,7 +1,7 @@
 # Cargo.toml
 [package]
 name = "dtree"
-version = "1.0.0+014"
+version = "1.0.0+015"
 edition = "2021"
 authors = ["holgertkey"]
 license = "MIT"
