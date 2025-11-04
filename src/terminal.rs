@@ -112,44 +112,62 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
 
         // Only render when needed (dirty flag optimization)
         if app.needs_redraw() {
+            // DEBUG: Print to stderr to track render calls
+            // eprintln!("RENDER");
             terminal.draw(|f| app.render(f))?;
             app.clear_dirty();
         }
 
-        // Poll for events with 100ms timeout to allow background search to update
-        if event::poll(std::time::Duration::from_millis(100))? {
-            match event::read()? {
-                Event::Key(key) => {
-                    // Only handle key press events, ignore release and repeat events
-                    // This prevents double-triggering on Windows where both Press and Release are generated
-                    if key.kind == KeyEventKind::Press {
-                        match app.handle_key(key)? {
-                            Some(path) if !path.as_os_str().is_empty() => {
-                                return Ok(Some(path));
+        // EVENT BATCHING: Process ALL available events before rendering
+        // This prevents rendering after each individual event during rapid input (e.g., held key)
+        let mut events_processed = 0;
+        loop {
+            // Check if events are available (non-blocking, 0ms timeout)
+            if event::poll(std::time::Duration::from_millis(0))? {
+                match event::read()? {
+                    Event::Key(key) => {
+                        // Handle both Press and Repeat events for smooth scrolling
+                        // Ignore Release events to prevent double-triggering
+                        if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
+                            match app.handle_key(key)? {
+                                Some(path) if !path.as_os_str().is_empty() => {
+                                    return Ok(Some(path));
+                                }
+                                None => {
+                                    return Ok(None);
+                                }
+                                _ => {}
                             }
-                            None => {
-                                return Ok(None);
-                            }
-                            _ => {}
                         }
                     }
+                    Event::Mouse(mouse) => {
+                        let _ = app.handle_mouse(mouse);
+                    }
+                    Event::Resize(_width, _height) => {
+                        // Terminal was resized - mark for redraw
+                        app.mark_dirty();
+                    }
+                    _ => {
+                        // Consume all other events (FocusGained, FocusLost, Paste, etc.)
+                    }
                 }
-                Event::Mouse(mouse) => {
-                    let _ = app.handle_mouse(mouse);
-                }
-                Event::Resize(_width, _height) => {
-                    // Terminal was resized - mark for redraw
-                    app.mark_dirty();
-                }
-                _ => {
-                    // Consume all other events (FocusGained, FocusLost, Paste, etc.)
-                }
+                events_processed += 1;
+            } else {
+                // No more events available - break inner loop
+                break;
             }
-        } else {
-            // No event - poll search results if search is active
-            // poll_search() and poll_sizes() will mark_dirty() if there are updates
-            let _ = app.poll_search();
-            let _ = app.poll_sizes();
+        }
+
+        // If no events were processed, wait with timeout for async updates
+        if events_processed == 0 {
+            if event::poll(std::time::Duration::from_millis(100))? {
+                // Event arrived during wait - will be processed on next loop iteration
+            } else {
+                // Timeout - poll async updates (search, sizes)
+                // poll_search() and poll_sizes() will mark_dirty() if there are updates
+                let _ = app.poll_search();
+                let _ = app.poll_sizes();
+            }
         }
     }
 }
