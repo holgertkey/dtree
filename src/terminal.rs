@@ -110,7 +110,11 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
             terminal.clear()?;
         }
 
-        terminal.draw(|f| app.render(f))?;
+        // Only render when needed (dirty flag optimization)
+        if app.needs_redraw() {
+            terminal.draw(|f| app.render(f))?;
+            app.clear_dirty();
+        }
 
         // Poll for events with 100ms timeout to allow background search to update
         if event::poll(std::time::Duration::from_millis(100))? {
@@ -134,8 +138,8 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
                     let _ = app.handle_mouse(mouse);
                 }
                 Event::Resize(_width, _height) => {
-                    // Terminal was resized - the next draw() will handle it automatically
-                    // Just consume the event to prevent it from leaking
+                    // Terminal was resized - mark for redraw
+                    app.mark_dirty();
                 }
                 _ => {
                     // Consume all other events (FocusGained, FocusLost, Paste, etc.)
@@ -143,12 +147,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
             }
         } else {
             // No event - poll search results if search is active
-            let search_updated = app.poll_search();
-            let sizes_updated = app.poll_sizes();
-
-            if search_updated || sizes_updated {
-                // Updates available - redraw will happen on next loop
-            }
+            // poll_search() and poll_sizes() will mark_dirty() if there are updates
+            let _ = app.poll_search();
+            let _ = app.poll_sizes();
         }
     }
 }

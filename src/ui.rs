@@ -489,10 +489,13 @@ impl UI {
 
         let content_height = viewer_area.height.saturating_sub(2) as usize;
 
-        let content_to_display = if show_help {
-            get_help_content()
+        // Avoid cloning entire content - use references instead
+        let help_content;
+        let content_to_display: &[String] = if show_help {
+            help_content = get_help_content();
+            &help_content
         } else {
-            file_viewer.content.clone()
+            &file_viewer.content
         };
 
         // Calculate visible lines (leaving space for separator and file info)
