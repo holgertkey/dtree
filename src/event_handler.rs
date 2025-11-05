@@ -86,25 +86,21 @@ impl EventHandler {
 
                         // Try to navigate and check for errors
                         if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                            // Error occurred - enable file viewer if not already enabled
-                            if !*show_files {
-                                *show_files = true;
-                                nav.reload_tree(*show_files)?;
+                            // Error occurred - show details in file viewer if show_files is enabled
+                            if *show_files {
+                                let error_content = vec![
+                                    format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
+                                    String::new(),
+                                    error_msg,
+                                    String::new(),
+                                    "This directory cannot be accessed. Possible reasons:".to_string(),
+                                    "- Insufficient permissions".to_string(),
+                                    "- Directory was removed or renamed".to_string(),
+                                    "- Filesystem error".to_string(),
+                                ];
+                                file_viewer.load_content(error_content);
+                                *show_help = false;
                             }
-
-                            // Display error details in file viewer
-                            let error_content = vec![
-                                format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
-                                String::new(),
-                                error_msg,
-                                String::new(),
-                                "This directory cannot be accessed. Possible reasons:".to_string(),
-                                "- Insufficient permissions".to_string(),
-                                "- Directory was removed or renamed".to_string(),
-                                "- Filesystem error".to_string(),
-                            ];
-                            file_viewer.load_content(error_content);
-                            *show_help = false;
                         } else {
                             // Success - load file preview if needed
                             if *show_files {
@@ -560,25 +556,21 @@ impl EventHandler {
 
                             // Try to navigate and check for errors
                             if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                                // Error occurred - enable file viewer if not already enabled
-                                if !*show_files {
-                                    *show_files = true;
-                                    nav.reload_tree(*show_files)?;
+                                // Error occurred - show details in file viewer if show_files is enabled
+                                if *show_files {
+                                    let error_content = vec![
+                                        format!("Error accessing directory: {}", dir_name),
+                                        String::new(),
+                                        error_msg,
+                                        String::new(),
+                                        "This directory cannot be accessed. Possible reasons:".to_string(),
+                                        "- Insufficient permissions".to_string(),
+                                        "- Directory was removed or renamed".to_string(),
+                                        "- Filesystem error".to_string(),
+                                    ];
+                                    file_viewer.load_content(error_content);
+                                    *show_help = false;
                                 }
-
-                                // Display error details in file viewer
-                                let error_content = vec![
-                                    format!("Error accessing directory: {}", dir_name),
-                                    String::new(),
-                                    error_msg,
-                                    String::new(),
-                                    "This directory cannot be accessed. Possible reasons:".to_string(),
-                                    "- Insufficient permissions".to_string(),
-                                    "- Directory was removed or renamed".to_string(),
-                                    "- Filesystem error".to_string(),
-                                ];
-                                file_viewer.load_content(error_content);
-                                *show_help = false;
                             } else {
                                 // Success - load file preview if needed
                                 if *show_files {
@@ -597,10 +589,27 @@ impl EventHandler {
                         let node_borrowed = node.borrow();
                         if node_borrowed.is_dir {
                             let path = node_borrowed.path.clone();
+                            let dir_name = node_borrowed.name.clone();
                             drop(node_borrowed);
 
-                            // Toggle node - error marker will be shown in UI automatically
-                            let _ = nav.toggle_node(&path, *show_files);
+                            // Toggle node and check for errors
+                            if let Ok(Some(error_msg)) = nav.toggle_node(&path, *show_files) {
+                                // Error occurred - show details in file viewer if show_files is enabled
+                                if *show_files {
+                                    let error_content = vec![
+                                        format!("Error accessing directory: {}", dir_name),
+                                        String::new(),
+                                        error_msg,
+                                        String::new(),
+                                        "This directory cannot be read. Possible reasons:".to_string(),
+                                        "- Insufficient permissions".to_string(),
+                                        "- Directory was removed or renamed".to_string(),
+                                        "- Filesystem error".to_string(),
+                                    ];
+                                    file_viewer.load_content(error_content);
+                                    *show_help = false;
+                                }
+                            }
                         }
                     }
                 }
@@ -1011,25 +1020,21 @@ impl EventHandler {
 
                                 // Try to navigate and check for errors
                                 if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                                    // Error occurred - enable file viewer if not already enabled
-                                    if !*show_files {
-                                        *show_files = true;
-                                        let _ = nav.reload_tree(*show_files);
+                                    // Error occurred - show details in file viewer if show_files is enabled
+                                    if *show_files {
+                                        let error_content = vec![
+                                            format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
+                                            String::new(),
+                                            error_msg,
+                                            String::new(),
+                                            "This directory cannot be accessed. Possible reasons:".to_string(),
+                                            "- Insufficient permissions".to_string(),
+                                            "- Directory was removed or renamed".to_string(),
+                                            "- Filesystem error".to_string(),
+                                        ];
+                                        file_viewer.load_content(error_content);
+                                        *show_help = false;
                                     }
-
-                                    // Display error details in file viewer
-                                    let error_content = vec![
-                                        format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
-                                        String::new(),
-                                        error_msg,
-                                        String::new(),
-                                        "This directory cannot be accessed. Possible reasons:".to_string(),
-                                        "- Insufficient permissions".to_string(),
-                                        "- Directory was removed or renamed".to_string(),
-                                        "- Filesystem error".to_string(),
-                                    ];
-                                    file_viewer.load_content(error_content);
-                                    *show_help = false;
                                 } else {
                                     // Success - load file preview if needed
                                     if *show_files {
@@ -1071,10 +1076,27 @@ impl EventHandler {
                     let node_borrowed = node.borrow();
                     if node_borrowed.is_dir {
                         let path = node_borrowed.path.clone();
+                        let dir_name = node_borrowed.name.clone();
                         drop(node_borrowed);
 
-                        // Toggle node - error marker will be shown in UI automatically
-                        let _ = nav.toggle_node(&path, *show_files);
+                        // Toggle node and check for errors
+                        if let Ok(Some(error_msg)) = nav.toggle_node(&path, *show_files) {
+                            // Error occurred - show details in file viewer if show_files is enabled
+                            if *show_files {
+                                let error_content = vec![
+                                    format!("Error accessing directory: {}", dir_name),
+                                    String::new(),
+                                    error_msg,
+                                    String::new(),
+                                    "This directory cannot be read. Possible reasons:".to_string(),
+                                    "- Insufficient permissions".to_string(),
+                                    "- Directory was removed or renamed".to_string(),
+                                    "- Filesystem error".to_string(),
+                                ];
+                                file_viewer.load_content(error_content);
+                                *show_help = false;
+                            }
+                        }
                     }
                     self.last_click_time = None;
                 } else {
