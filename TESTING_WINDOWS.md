@@ -136,6 +136,11 @@ Complete testing checklist for dtree on Windows platform.
 - [ ] Background search thread works
 - [ ] Cancel search immediately with `Esc`
 - [ ] Large directories search quickly
+- [ ] **Repeated search doesn't hang** (bug fix in 1.0.0+016)
+  - [ ] Start search, then press `/` again immediately
+  - [ ] UI remains responsive (no freeze)
+  - [ ] New search starts without delay
+  - [ ] Can rapidly trigger searches multiple times
 
 ---
 
