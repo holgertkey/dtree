@@ -3,7 +3,13 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## User notes
-- Ensure that all comments are written in English.
+- **CRITICAL: All text in the code MUST be in English only** - this includes:
+  - All comments
+  - All error messages
+  - All user-facing strings
+  - All log messages
+  - All documentation
+  - No Russian, German, or any other language is allowed
 
 - Avoid writing lines like this in the comments:
   "Generated with [Claude Code](https://claude.com/claude-code)
