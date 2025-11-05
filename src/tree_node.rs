@@ -15,6 +15,7 @@ pub struct TreeNode {
     pub children: Vec<TreeNodeRef>,
     pub has_error: bool,           // Indicates read/access errors
     pub error_message: Option<String>, // Optional error description
+    is_sorted: bool,               // Cache flag: true if children are already sorted
 }
 
 impl TreeNode {
@@ -35,12 +36,20 @@ impl TreeNode {
             children: Vec::new(),
             has_error: false,
             error_message: None,
+            is_sorted: false,
         })
     }
 
     pub fn load_children(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
-        if !self.is_dir || !self.children.is_empty() {
+        // If children are already loaded and sorted, skip
+        if !self.is_dir || (!self.children.is_empty() && self.is_sorted) {
             return Ok(());
+        }
+
+        // If we're reloading (children exist but not sorted), clear them first
+        if !self.children.is_empty() {
+            self.children.clear();
+            self.is_sorted = false;
         }
 
         // Try to read directory
@@ -124,6 +133,9 @@ impl TreeNode {
                 _ => a_borrowed.name.cmp(&b_borrowed.name),
             }
         });
+
+        // Mark as sorted so we don't re-sort on next load
+        self.is_sorted = true;
 
         Ok(())
     }
