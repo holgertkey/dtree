@@ -149,7 +149,10 @@ impl TreeNode {
             self.is_expanded = false;
         } else {
             self.load_children(show_files, show_hidden, follow_symlinks)?;
-            self.is_expanded = true;
+            // Only expand if no access error occurred
+            if !self.has_error {
+                self.is_expanded = true;
+            }
         }
 
         Ok(())

@@ -104,12 +104,15 @@ impl Navigation {
                     }
                 };
 
+                // Check actual state after toggle (may not change if error occurred)
+                let is_expanded = node.borrow().is_expanded;
+
                 // Incremental update of flat_list
-                if was_expanded {
+                if was_expanded && !is_expanded {
                     // Node was expanded, now collapsed - remove children from flat_list
                     self.remove_descendants_from_flat_list(index);
-                } else {
-                    // Node was collapsed, now expanded - add children to flat_list
+                } else if !was_expanded && is_expanded {
+                    // Node was collapsed, now successfully expanded - add children to flat_list
                     self.insert_children_into_flat_list(index);
                 }
 
