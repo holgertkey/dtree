@@ -418,6 +418,66 @@ dt test             REM Navigate to bookmark
 - Automatically converts relative paths to absolute for file viewing
 - Works alongside PowerShell wrapper without conflicts
 
+### Uninstall
+
+#### Windows
+
+To uninstall dtree from Windows, use the provided uninstall script:
+
+```powershell
+# Basic uninstall (removes binary and wrappers only)
+.\uninstall-windows.ps1
+
+# Remove from PATH as well
+.\uninstall-windows.ps1 -RemoveFromPath
+
+# Remove configuration and bookmarks
+.\uninstall-windows.ps1 -RemoveConfig
+
+# Complete removal (everything)
+.\uninstall-windows.ps1 -RemoveFromPath -RemoveConfig
+
+# Force removal without confirmation prompts
+.\uninstall-windows.ps1 -RemoveConfig -Force
+```
+
+**What gets removed:**
+- `dtree.exe` from `C:\Users\Holger\bin\`
+- `dt.bat` wrapper from `C:\Users\Holger\bin\`
+- `dt` function from PowerShell profiles (both Windows PowerShell 5.x and PowerShell Core 7.x+)
+- Optionally: PATH entry (with `-RemoveFromPath`)
+- Optionally: Configuration directory at `%APPDATA%\dtree\` (with `-RemoveConfig`)
+
+**Manual uninstall (if script fails):**
+```powershell
+# Remove binaries
+Remove-Item "$env:USERPROFILE\bin\dtree.exe" -Force
+Remove-Item "$env:USERPROFILE\bin\dt.bat" -Force
+
+# Remove configuration (optional)
+Remove-Item "$env:APPDATA\dtree" -Recurse -Force
+
+# Remove PowerShell wrapper manually:
+# Edit $PROFILE and remove the dt function block between markers:
+# # >>> dtree wrapper start <<<
+# # >>> dtree wrapper end <<<
+```
+
+#### Linux/macOS
+
+```bash
+# Remove binary
+sudo rm /usr/local/bin/dtree
+# or for user installation:
+rm ~/bin/dtree
+
+# Remove configuration (optional)
+rm -rf ~/.config/dtree
+
+# Remove bash wrapper from ~/.bashrc
+# Edit ~/.bashrc and remove the dt() function
+```
+
 ### Usage
 ```bash
 # Navigation (with bookmark support)

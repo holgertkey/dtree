@@ -493,6 +493,55 @@ Complete documentation is available in the [docs](./docs) directory:
 
 ---
 
+## Uninstalling
+
+### Linux / macOS
+
+```bash
+# Remove binary
+sudo rm /usr/local/bin/dtree
+# or for user installation:
+rm ~/bin/dtree
+
+# Remove configuration (optional)
+rm -rf ~/.config/dtree
+
+# Remove bash wrapper from ~/.bashrc
+# Edit ~/.bashrc and remove the dt() function
+```
+
+### Windows
+
+**Automated uninstall (recommended):**
+
+```powershell
+# Basic uninstall (removes binary and wrappers only)
+.\uninstall-windows.ps1
+
+# Complete removal (including configuration)
+.\uninstall-windows.ps1 -RemoveFromPath -RemoveConfig
+```
+
+The uninstall script will remove:
+- `dtree.exe` and `dt.bat` from `C:\Users\<Username>\bin\`
+- PowerShell `dt` function from all profiles
+- Optionally: PATH entry and configuration directory
+
+**Manual uninstall:**
+
+```powershell
+# Remove binaries
+Remove-Item "$env:USERPROFILE\bin\dtree.exe" -Force
+Remove-Item "$env:USERPROFILE\bin\dt.bat" -Force
+
+# Remove configuration (optional)
+Remove-Item "$env:APPDATA\dtree" -Recurse -Force
+
+# Remove PowerShell wrapper: edit $PROFILE and remove dt() function
+```
+
+---
+
 ## Performance
 
 dtree is designed for speed:
