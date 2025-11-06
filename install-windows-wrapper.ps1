@@ -41,9 +41,17 @@ function dt {
         # dtree.exe uses stderr for TUI and stdout for output path
         # We capture only stdout (path) but let stderr (TUI) display normally
         `$result = & dtree.exe
-        if (`$LASTEXITCODE -eq 0 -and `$result -and (Test-Path `$result)) {
-            Set-Location `$result
-            `$env:DTREE_PREV_DIR = `$prevDir
+        if (`$LASTEXITCODE -eq 0 -and `$result) {
+            # Ensure result is a single string (handle array case)
+            if (`$result -is [array]) {
+                `$result = `$result -join ""
+            }
+            `$result = `$result.ToString().Trim()
+
+            if (`$result -and (Test-Path `$result)) {
+                Set-Location `$result
+                `$env:DTREE_PREV_DIR = `$prevDir
+            }
         }
         return
     }
@@ -90,9 +98,17 @@ function dt {
                     }
 
                     # dtree may return a directory path to cd into
-                    if (`$result -and (Test-Path `$result) -and (Test-Path `$result -PathType Container)) {
-                        Set-Location `$result
-                        `$env:DTREE_PREV_DIR = `$prevDir
+                    if (`$result) {
+                        # Ensure result is a single string (handle array case)
+                        if (`$result -is [array]) {
+                            `$result = `$result -join ""
+                        }
+                        `$result = `$result.ToString().Trim()
+
+                        if (`$result -and (Test-Path `$result) -and (Test-Path `$result -PathType Container)) {
+                            Set-Location `$result
+                            `$env:DTREE_PREV_DIR = `$prevDir
+                        }
                     }
                 } else {
                     # No file specified, just pass through
@@ -113,8 +129,11 @@ function dt {
     }
 
     if (`$result) {
-        `$result = `$result | Out-String
-        `$result = `$result.Trim()
+        # Ensure result is a single string (handle array case)
+        if (`$result -is [array]) {
+            `$result = `$result -join ""
+        }
+        `$result = `$result.ToString().Trim()
     }
 
     # Only cd if result is a valid directory
