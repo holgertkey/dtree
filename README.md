@@ -73,7 +73,9 @@ dt myproject          # Jump to bookmark instantly
 
 ## Installation
 
-### From Source
+### Linux / macOS
+
+#### From Source
 
 ```bash
 git clone https://github.com/holgertkey/dtree.git
@@ -88,7 +90,7 @@ cp target/release/dtree ~/bin/
 sudo cp target/release/dtree /usr/local/bin/
 ```
 
-### Bash Integration (Recommended)
+#### Bash Integration (Recommended)
 
 Add this to your `~/.bashrc` for seamless shell integration:
 
@@ -144,6 +146,132 @@ Then reload your shell:
 
 ```bash
 source ~/.bashrc
+```
+
+### Windows
+
+#### Automated Installation (Recommended)
+
+The easiest way to install dtree on Windows is using the automated installation script:
+
+```powershell
+# Clone repository
+git clone https://github.com/holgertkey/dtree.git
+cd dtree
+
+# Run automated installation (builds and installs everything)
+.\install-windows-binary.ps1
+```
+
+**What this script does:**
+- ✅ Builds the release binary (`dtree.exe`)
+- ✅ Installs to `C:\Users\<YourName>\bin\`
+- ✅ Installs `dt.bat` wrapper for cmd.exe
+- ✅ Installs PowerShell `dt` function for seamless navigation
+- ✅ Adds directory to PATH
+- ✅ Tests the installation
+
+**After installation:**
+1. **Restart PowerShell** (or run `. $PROFILE` to reload)
+2. Test with: `dt --version`
+3. Try: `dt` to open interactive tree
+
+#### Manual Installation
+
+If you prefer to install manually:
+
+```powershell
+# 1. Build the project
+cargo build --release
+
+# 2. Create bin directory and copy binary
+New-Item -Path "$env:USERPROFILE\bin" -ItemType Directory -Force
+Copy-Item target\release\dtree.exe "$env:USERPROFILE\bin\"
+Copy-Item dt.bat "$env:USERPROFILE\bin\"
+
+# 3. Add to PATH (restart terminal after this)
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$currentPath;$env:USERPROFILE\bin", "User")
+
+# 4. Install PowerShell wrapper
+.\install-windows-wrapper.ps1
+
+# 5. Reload PowerShell profile
+. $PROFILE
+```
+
+#### PowerShell Integration
+
+The PowerShell wrapper enables directory navigation with bookmarks. It's automatically installed by the installation script.
+
+**If you need to reload the wrapper** (after reinstalling):
+
+```powershell
+# Option 1: Reload profile in current session
+. $PROFILE
+
+# Option 2: Reinstall wrapper
+.\install-windows-wrapper.ps1
+
+# Option 3: Restart PowerShell
+```
+
+**Verify installation:**
+
+```powershell
+# Check version
+dt --version
+
+# Test bookmark navigation
+dt -bm add test          # Create bookmark
+dt test                  # Navigate to bookmark (should change directory)
+pwd                      # Verify current directory changed
+```
+
+#### Cmd.exe Support
+
+The `dt.bat` wrapper is automatically installed and provides the same functionality in cmd.exe:
+
+```cmd
+REM Basic commands
+dt --version        REM Show version
+dt                  REM Open interactive tree
+dt C:\Windows       REM Navigate to directory
+dt -                REM Return to previous directory
+dt -bm list         REM List bookmarks
+```
+
+#### Configuration
+
+After first run, configuration file will be created at:
+- **Config**: `%APPDATA%\dtree\config.toml`
+- **Bookmarks**: `%APPDATA%\dtree\bookmarks.json`
+
+Typically located at: `C:\Users\<YourName>\AppData\Roaming\dtree\`
+
+#### Troubleshooting
+
+**Problem: `dtree.exe` not found**
+
+Check if directory is in PATH:
+
+```powershell
+# Check PATH
+$env:PATH -split ';' | Select-String "bin"
+
+# Restart terminal to pick up PATH changes
+```
+
+**Problem: Permission denied when running scripts**
+
+You may need to allow script execution:
+
+```powershell
+# Check current policy
+Get-ExecutionPolicy
+
+# Allow scripts (run as Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ---
