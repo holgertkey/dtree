@@ -119,10 +119,10 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
         // EVENT BATCHING: Wait briefly for events to accumulate before processing
         // This prevents rendering after each individual event during rapid input (e.g., held key)
 
-        // First, check if any event is available (with 25ms timeout for optimal balance)
-        // 25ms = 40fps, provides good batching while maintaining responsive feel
-        if !event::poll(std::time::Duration::from_millis(25))? {
-            // No events after 25ms - poll async updates and continue
+        // First, check if any event is available (with 8ms timeout for optimal balance)
+        // 8ms = 125fps, provides responsive UI while still batching rapid inputs
+        if !event::poll(std::time::Duration::from_millis(8))? {
+            // No events after 8ms - poll async updates and continue
             let _ = app.poll_search();
             let _ = app.poll_sizes();
             continue;
