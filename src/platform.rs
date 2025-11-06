@@ -65,12 +65,14 @@ pub fn is_absolute_path(path: &str) -> bool {
 
 /// Normalize path separators for the current platform
 #[cfg(unix)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn normalize_path_separator(path: &str) -> String {
     // Unix: keep as-is (forward slashes)
     path.to_string()
 }
 
 #[cfg(windows)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn normalize_path_separator(path: &str) -> String {
     // Windows: convert forward slashes to backslashes
     path.replace('/', "\\")
