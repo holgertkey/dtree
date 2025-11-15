@@ -94,6 +94,10 @@ pub struct BehaviorConfig {
     /// Wrap long lines in file viewer (true = wrap, false = truncate)
     #[serde(default = "default_wrap_lines")]
     pub wrap_lines: bool,
+
+    /// Number of lines to scroll with mouse wheel in file viewer mode
+    #[serde(default = "default_mouse_scroll_lines")]
+    pub mouse_scroll_lines: usize,
 }
 
 impl Default for BehaviorConfig {
@@ -107,6 +111,7 @@ impl Default for BehaviorConfig {
             file_manager: default_file_manager(),
             hex_editor: default_hex_editor(),
             wrap_lines: default_wrap_lines(),
+            mouse_scroll_lines: default_mouse_scroll_lines(),
         }
     }
 }
@@ -155,6 +160,7 @@ fn default_hex_editor() -> String {
     }
 }
 fn default_wrap_lines() -> bool { true }
+fn default_mouse_scroll_lines() -> usize { 5 }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -553,6 +559,11 @@ hex_editor = "{}"
 # true  = Wrap long lines at word boundaries (default, better for reading text)
 # false = Truncate long lines with "..." indicator (better for code with long lines)
 wrap_lines = true
+
+# Number of lines to scroll with mouse wheel in file viewer mode
+# Default: 5 (balanced speed for comfortable scrolling)
+# Decrease to 1-2 for precise control, increase to 10+ for faster scrolling through large files
+mouse_scroll_lines = 5
 
 [keybindings]
 # Key bindings (each can have multiple keys)

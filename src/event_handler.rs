@@ -1163,13 +1163,17 @@ impl EventHandler {
         // In fullscreen mode with visual selection, move cursor up
         if fullscreen_viewer && file_viewer.visual_mode {
             let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
-            file_viewer.visual_move_up();
+            for _ in 0..config.behavior.mouse_scroll_lines {
+                file_viewer.visual_move_up();
+            }
             file_viewer.ensure_visual_cursor_visible(visible_height);
         // In fullscreen mode or in split view over file viewer area, scroll the file viewer
         } else if fullscreen_viewer || ((*show_files || *show_help) && mouse.column >= ui.viewer_area_start
             && mouse.row >= ui.viewer_area_top
             && mouse.row < ui.viewer_area_top + ui.viewer_area_height) {
-            file_viewer.scroll_up();
+            for _ in 0..config.behavior.mouse_scroll_lines {
+                file_viewer.scroll_up();
+            }
         } else {
             nav.move_up();
             if (*show_files || fullscreen_viewer) && !*show_help {
@@ -1216,7 +1220,9 @@ impl EventHandler {
         // In fullscreen mode with visual selection, move cursor down
         if fullscreen_viewer && file_viewer.visual_mode {
             let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
-            file_viewer.visual_move_down();
+            for _ in 0..config.behavior.mouse_scroll_lines {
+                file_viewer.visual_move_down();
+            }
             file_viewer.ensure_visual_cursor_visible(visible_height);
         // In fullscreen mode or in split view over file viewer area, scroll the file viewer
         } else if fullscreen_viewer || ((*show_files || *show_help) && mouse.column >= ui.viewer_area_start
@@ -1224,7 +1230,9 @@ impl EventHandler {
             && mouse.row < ui.viewer_area_top + ui.viewer_area_height) {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
             let lines_to_show = content_height.saturating_sub(2);
-            file_viewer.scroll_down(lines_to_show);
+            for _ in 0..config.behavior.mouse_scroll_lines {
+                file_viewer.scroll_down(lines_to_show);
+            }
         } else if nav.selected < nav.flat_list.len().saturating_sub(1) {
             nav.move_down();
             if (*show_files || fullscreen_viewer) && !*show_help {
