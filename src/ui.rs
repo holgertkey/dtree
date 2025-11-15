@@ -974,9 +974,13 @@ impl UI {
 
 /// Load help content from HELP.txt file (embedded at compile time)
 pub fn get_help_content() -> Vec<String> {
-    // Embed HELP.txt at compile time using include_str!
+    // Embed platform-specific help file at compile time using include_str!
     // This is more reliable than runtime file I/O
-    const HELP_TEXT: &str = include_str!("../HELP.txt");
+    #[cfg(unix)]
+    const HELP_TEXT: &str = include_str!("../HELP_UNIX.txt");
+
+    #[cfg(windows)]
+    const HELP_TEXT: &str = include_str!("../HELP_WINDOWS.txt");
 
     // Split by lines and convert to Vec<String>
     HELP_TEXT.lines().map(|line| line.to_string()).collect()
