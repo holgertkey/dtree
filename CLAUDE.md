@@ -128,6 +128,7 @@ The project is organized into modular components:
 - Keybindings: All shortcuts are configurable (navigation, search, bookmarks, visual mode)
 - Supports color names, RGB hex (#RRGGBB), and indexed colors (0-255)
 - External editor and file manager configuration with existence validation
+- Mouse scroll speed configuration: `mouse_scroll_lines` (default: 5 lines per scroll)
 
 **`src/bookmarks.rs`**
 - `Bookmarks` struct: Bookmark management and persistence
@@ -538,7 +539,7 @@ dtree -h              # Print help
 - `/`: Enter file search mode (search within file)
 - `n`/`N`: Next/previous search match (when search results exist)
 - `V`: Enter visual selection mode (Vim-style line selection)
-- `Mouse scroll`: Scroll document (or move selection cursor in visual mode)
+- `Mouse scroll`: Scroll document by configurable number of lines (default: 5 lines per scroll, configurable via `mouse_scroll_lines` in config.toml)
 
 **Visual Selection Mode (activated with `V` in fullscreen viewer):**
 - `j`/`k` or `↓`/`↑`: Expand selection down/up

@@ -74,6 +74,9 @@ double_click_timeout_ms = 500
 # Wrap long lines in file viewer (true = wrap, false = truncate)
 wrap_lines = true
 
+# Number of lines to scroll with mouse wheel in file viewer mode
+mouse_scroll_lines = 5
+
 # External editor command (for 'e' key)
 editor = "nano"
 
@@ -261,6 +264,23 @@ wrap_lines = false  # Truncate with "..." indicator
 
 You can toggle this at runtime with the `w` key in fullscreen viewer mode.
 
+### Mouse Scroll Speed
+
+Control how many lines to scroll with the mouse wheel in file viewer mode:
+
+```toml
+mouse_scroll_lines = 5   # Default (balanced speed)
+mouse_scroll_lines = 1   # Precise scrolling
+mouse_scroll_lines = 10  # Fast scrolling for large files
+```
+
+This setting applies to:
+- File preview panel (split view)
+- Fullscreen file viewer
+- Visual selection mode (cursor movement)
+
+**Note**: This only affects mouse wheel scrolling. Keyboard scrolling (`j`/`k`) always moves one line at a time.
+
 ### External Programs
 
 #### Editor
@@ -435,6 +455,7 @@ split_position = 50
 [behavior]
 max_file_lines = 10000
 wrap_lines = true
+mouse_scroll_lines = 5
 editor = "nano"
 file_manager = "mc"
 ```
@@ -459,6 +480,7 @@ highlight_color = "#FFFF00"
 [behavior]
 max_file_lines = 10000
 wrap_lines = true
+mouse_scroll_lines = 5
 editor = "nvim"
 hex_editor = "hexyl"
 file_manager = "ranger"
@@ -491,6 +513,7 @@ enable_syntax_highlighting = false
 [behavior]
 max_file_lines = 5000
 wrap_lines = true
+mouse_scroll_lines = 3  # Slower for performance
 show_hidden = false
 follow_symlinks = false
 ```

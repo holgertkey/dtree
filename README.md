@@ -458,12 +458,14 @@ When you run `dt <name>`, dtree resolves in this order:
 | Scroll wheel         | Navigate tree up/down               |
 | Drag divider         | Resize panels                       |
 | **File Preview**     |                                     |
-| Scroll wheel         | Scroll preview content              |
+| Scroll wheel         | Scroll preview content (5 lines*)   |
 | **Fullscreen Viewer** |                                    |
-| Scroll wheel         | Scroll document                     |
+| Scroll wheel         | Scroll document (5 lines*)          |
 | Shift+Click+Drag     | Select text for copying             |
 | **Visual Mode**      |                                     |
 | Scroll wheel         | Move selection cursor (auto-scroll) |
+
+\* *Scroll speed configurable via `mouse_scroll_lines` in config.toml (default: 5 lines per scroll)*
 
 ---
 
@@ -515,7 +517,8 @@ file_color = "white"
 
 [behavior]
 max_file_lines = 10000
-wrap_lines = true        # Wrap long lines (true) or truncate (false)
+wrap_lines = true           # Wrap long lines (true) or truncate (false)
+mouse_scroll_lines = 5      # Number of lines to scroll with mouse wheel (default: 5)
 editor = "nvim"
 hex_editor = "hexyl"
 file_manager = "ranger"
