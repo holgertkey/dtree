@@ -705,7 +705,23 @@ impl UI {
         // Add separator and file info at the end (only if not help)
         if !show_help && !file_viewer.current_path.as_os_str().is_empty() {
             let file_info = file_viewer.format_file_info();
-            let separator = "─".repeat(area.width.saturating_sub(2) as usize);
+
+            // In fullscreen mode, there are no left/right borders, so use full width
+            // In split view, subtract 2 for left/right borders
+            let footer_width = if is_fullscreen {
+                area.width as usize
+            } else {
+                area.width.saturating_sub(2) as usize
+            };
+
+            let separator = "─".repeat(footer_width);
+
+            // Pad file_info to match separator width
+            let file_info_padded = if file_info.len() < footer_width {
+                format!("{:<width$}", file_info, width = footer_width)
+            } else {
+                file_info
+            };
 
             let border_color = Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
 
@@ -713,7 +729,7 @@ impl UI {
                 Span::styled(separator, Style::default().fg(border_color))
             ));
             visible_lines.push(Line::from(
-                Span::styled(file_info, Style::default().fg(border_color))
+                Span::styled(file_info_padded, Style::default().fg(border_color))
             ));
         }
 
