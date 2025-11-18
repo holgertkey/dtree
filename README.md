@@ -75,7 +75,34 @@ dt myproject          # Jump to bookmark instantly
 
 ### Linux / macOS
 
-#### From Source
+#### Automated Installation (Recommended)
+
+The easiest way to install dtree on Linux is using the automated installation script:
+
+```bash
+# Clone repository
+git clone https://github.com/holgertkey/dtree.git
+cd dtree
+
+# Run automated installation (builds and installs everything)
+./install-linux.sh
+```
+
+**What this script does:**
+- ✅ Builds the release binary (`dtree`)
+- ✅ Installs to `~/bin/dtree`
+- ✅ Adds `~/bin` to PATH (if needed)
+- ✅ Installs bash wrapper function to `.bashrc` (or `.zshrc` for zsh users)
+- ✅ Tests the installation
+
+**After installation:**
+1. Reload your shell: `source ~/.bashrc`
+2. Test with: `dt --version`
+3. Try: `dt` to open interactive tree
+
+#### Manual Installation (From Source)
+
+If you prefer to install manually:
 
 ```bash
 git clone https://github.com/holgertkey/dtree.git
@@ -90,7 +117,7 @@ cp target/release/dtree ~/bin/
 sudo cp target/release/dtree /usr/local/bin/
 ```
 
-#### Bash Integration (Recommended)
+#### Bash Integration (Manual Setup)
 
 Add this to your `~/.bashrc` for seamless shell integration:
 
@@ -627,6 +654,29 @@ Complete documentation is available in the [docs](./docs) directory:
 ## Uninstalling
 
 ### Linux / macOS
+
+**Automated uninstall (recommended):**
+
+```bash
+# Basic uninstall (removes binary and wrapper only)
+./uninstall-linux.sh
+
+# Remove configuration as well
+./uninstall-linux.sh --remove-config
+
+# Remove from PATH as well
+./uninstall-linux.sh --remove-from-path
+
+# Complete removal without confirmation prompts
+./uninstall-linux.sh --remove-config --remove-from-path --force
+```
+
+The uninstall script will remove:
+- `dtree` from `~/bin/`
+- `dt()` wrapper function from shell config (`.bashrc` or `.zshrc`)
+- Optionally: PATH entry and configuration directory
+
+**Manual uninstall:**
 
 ```bash
 # Remove binary
