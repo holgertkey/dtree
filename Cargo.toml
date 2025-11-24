@@ -10,6 +10,17 @@ repository = "https://github.com/holgertkey/dtree"
 keywords = ["cli", "tui", "directory", "tree", "file-manager"]
 categories = ["command-line-utilities", "filesystem"]
 readme = "README.md"
+exclude = [
+    ".claude/",
+    "demos/",
+    "docs/assets/*.gif",
+    "install-*.sh",
+    "install-*.ps1",
+    "uninstall-*.sh",
+    "uninstall-*.ps1",
+    "dt.bat",
+    "*.backup",
+]
 
 [dependencies]
 ratatui = "0.28"
