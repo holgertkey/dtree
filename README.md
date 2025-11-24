@@ -73,6 +73,18 @@ dt myproject          # Jump to bookmark instantly
 
 ## Installation
 
+### From crates.io (Recommended)
+
+The easiest way to install dtree if you have Rust installed:
+
+```bash
+cargo install dtree-tui
+```
+
+After installation, you'll need to set up the shell integration for seamless navigation:
+- **Linux/macOS**: Follow the [Bash Integration](#bash-integration-manual-setup) instructions below
+- **Windows**: Follow the [PowerShell Integration](#powershell-integration) instructions below
+
 ### Linux / macOS
 
 #### Automated Installation (Recommended)
