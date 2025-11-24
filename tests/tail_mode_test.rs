@@ -19,7 +19,7 @@ fn test_tail_mode_toggle() {
     }
 
     // Create a FileViewer instance
-    let mut file_viewer = dtree::file_viewer::FileViewer::new();
+    let mut file_viewer = dtree_tui::file_viewer::FileViewer::new();
 
     // Initial state: tail_mode should be false
     assert!(!file_viewer.tail_mode, "Initial tail_mode should be false");
@@ -108,7 +108,7 @@ fn test_tail_mode_scroll_position() {
         writeln!(file, "Line {}", i).unwrap();
     }
 
-    let mut file_viewer = dtree::file_viewer::FileViewer::new();
+    let mut file_viewer = dtree_tui::file_viewer::FileViewer::new();
 
     // Load file and enable tail mode
     file_viewer.enable_tail_mode();
@@ -145,7 +145,7 @@ fn test_tail_mode_persistence_across_reloads() {
         writeln!(file, "Line {}", i).unwrap();
     }
 
-    let mut file_viewer = dtree::file_viewer::FileViewer::new();
+    let mut file_viewer = dtree_tui::file_viewer::FileViewer::new();
 
     // Enable tail mode and load file
     file_viewer.enable_tail_mode();
@@ -186,7 +186,7 @@ fn test_can_use_tail_mode() {
     let mut file = File::create(&text_file).unwrap();
     writeln!(file, "Hello world").unwrap();
 
-    let mut file_viewer = dtree::file_viewer::FileViewer::new();
+    let mut file_viewer = dtree_tui::file_viewer::FileViewer::new();
     file_viewer
         .load_file_with_width(&text_file, Some(80), 20, false, "base16-ocean.dark")
         .unwrap();
@@ -202,7 +202,7 @@ fn test_can_use_tail_mode() {
     );
 
     // Test with empty path (like help content)
-    let empty_viewer = dtree::file_viewer::FileViewer::new();
+    let empty_viewer = dtree_tui::file_viewer::FileViewer::new();
     assert!(
         !empty_viewer.can_use_tail_mode(),
         "Empty path should not support tail mode"
