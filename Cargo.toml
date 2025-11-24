@@ -1,6 +1,6 @@
 # Cargo.toml
 [package]
-name = "dtree"
+name = "dtree-tui"
 version = "1.1.0"
 edition = "2021"
 authors = ["holgertkey"]
