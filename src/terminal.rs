@@ -1,14 +1,11 @@
-use std::path::PathBuf;
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use anyhow::Result;
 use crossterm::{
-    event::{self, Event, EnableMouseCapture, DisableMouseCapture},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use anyhow::Result;
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::path::PathBuf;
 
 use crate::app::App;
 
@@ -37,18 +34,18 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 }
 
 pub fn cleanup_terminal() -> Result<()> {
-    use std::io::Write;
     use crossterm::terminal::{Clear, ClearType};
+    use std::io::Write;
 
     // Restore terminal state in reverse order of setup
 
     // 1. CRITICAL: Explicitly disable ALL mouse tracking modes
     //    This is more thorough than just DisableMouseCapture
-    let _ = write!(std::io::stderr(), "\x1b[?1000l");  // Disable X10 mouse
-    let _ = write!(std::io::stderr(), "\x1b[?1002l");  // Disable cell motion
-    let _ = write!(std::io::stderr(), "\x1b[?1003l");  // Disable all motion
-    let _ = write!(std::io::stderr(), "\x1b[?1006l");  // Disable SGR mode
-    let _ = write!(std::io::stderr(), "\x1b[?1015l");  // Disable urxvt mode
+    let _ = write!(std::io::stderr(), "\x1b[?1000l"); // Disable X10 mouse
+    let _ = write!(std::io::stderr(), "\x1b[?1002l"); // Disable cell motion
+    let _ = write!(std::io::stderr(), "\x1b[?1003l"); // Disable all motion
+    let _ = write!(std::io::stderr(), "\x1b[?1006l"); // Disable SGR mode
+    let _ = write!(std::io::stderr(), "\x1b[?1015l"); // Disable urxvt mode
     let _ = std::io::stderr().execute(DisableMouseCapture);
     let _ = std::io::stderr().flush();
 
@@ -97,7 +94,10 @@ pub fn cleanup_terminal() -> Result<()> {
     Ok(())
 }
 
-pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: &mut App) -> Result<Option<PathBuf>> {
+pub fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>,
+    app: &mut App,
+) -> Result<Option<PathBuf>> {
     // If in fullscreen mode and file loaded with unknown width, reload with correct terminal width
     if app.is_fullscreen_viewer() {
         let terminal_size = terminal.size()?;
@@ -110,40 +110,58 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: 
             terminal.clear()?;
         }
 
-        terminal.draw(|f| app.render(f))?;
+        // Only render when needed (dirty flag optimization)
+        if app.needs_redraw() {
+            terminal.draw(|f| app.render(f))?;
+            app.clear_dirty();
+        }
 
-        // Poll for events with 100ms timeout to allow background search to update
-        if event::poll(std::time::Duration::from_millis(100))? {
-            match event::read()? {
-                Event::Key(key) => {
-                    match app.handle_key(key)? {
-                        Some(path) if !path.as_os_str().is_empty() => {
-                            return Ok(Some(path));
+        // EVENT BATCHING: Wait briefly for events to accumulate before processing
+        // This prevents rendering after each individual event during rapid input (e.g., held key)
+
+        // First, check if any event is available (with 8ms timeout for optimal balance)
+        // 8ms = 125fps, provides responsive UI while still batching rapid inputs
+        if !event::poll(std::time::Duration::from_millis(8))? {
+            // No events after 8ms - poll async updates and continue
+            let _ = app.poll_search();
+            let _ = app.poll_sizes();
+            continue;
+        }
+
+        // Event available! Now drain ALL accumulated events before rendering
+        loop {
+            // Non-blocking check for more events
+            if event::poll(std::time::Duration::from_millis(0))? {
+                match event::read()? {
+                    Event::Key(key) => {
+                        // Handle both Press and Repeat events for smooth scrolling
+                        // Ignore Release events to prevent double-triggering
+                        if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
+                            match app.handle_key(key)? {
+                                Some(path) if !path.as_os_str().is_empty() => {
+                                    return Ok(Some(path));
+                                }
+                                None => {
+                                    return Ok(None);
+                                }
+                                _ => {}
+                            }
                         }
-                        None => {
-                            return Ok(None);
-                        }
-                        _ => {}
+                    }
+                    Event::Mouse(mouse) => {
+                        let _ = app.handle_mouse(mouse);
+                    }
+                    Event::Resize(_width, _height) => {
+                        // Terminal was resized - mark for redraw
+                        app.mark_dirty();
+                    }
+                    _ => {
+                        // Consume all other events (FocusGained, FocusLost, Paste, etc.)
                     }
                 }
-                Event::Mouse(mouse) => {
-                    let _ = app.handle_mouse(mouse);
-                }
-                Event::Resize(_width, _height) => {
-                    // Terminal was resized - the next draw() will handle it automatically
-                    // Just consume the event to prevent it from leaking
-                }
-                _ => {
-                    // Consume all other events (FocusGained, FocusLost, Paste, etc.)
-                }
-            }
-        } else {
-            // No event - poll search results if search is active
-            let search_updated = app.poll_search();
-            let sizes_updated = app.poll_sizes();
-
-            if search_updated || sizes_updated {
-                // Updates available - redraw will happen on next loop
+            } else {
+                // No more events available - break inner loop
+                break;
             }
         }
     }

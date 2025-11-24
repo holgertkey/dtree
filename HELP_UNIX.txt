@@ -266,9 +266,9 @@ COMMAND LINE OPTIONS
   dtree --version        Print version information
   dtree -h / --help      Print this help message
 
-BASH INTEGRATION
+SHELL INTEGRATION
   The 'dt' wrapper function is recommended for shell integration.
-  Add to your ~/.bashrc:
+  Add to your ~/.bashrc or ~/.zshrc:
 
 dt() {
   # Store current directory before navigation

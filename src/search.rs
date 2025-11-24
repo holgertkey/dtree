@@ -1,10 +1,10 @@
 // Allow many arguments for recursive search function - it needs context for deep traversal
 #![allow(clippy::too_many_arguments)]
 
+use crate::tree_node::TreeNodeRef;
+use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use std::path::PathBuf;
 use std::thread::{self, JoinHandle};
-use crossbeam_channel::{bounded, unbounded, Sender, Receiver};
-use crate::tree_node::TreeNodeRef;
 
 /// Messages from search thread to main thread
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub enum SearchMessage {
 pub struct SearchResult {
     pub path: PathBuf,
     pub is_dir: bool,
-    pub score: Option<i64>,        // Fuzzy match score (None for exact match)
+    pub score: Option<i64>, // Fuzzy match score (None for exact match)
     pub match_indices: Option<Vec<usize>>, // Character positions that matched (for highlighting)
 }
 
@@ -30,7 +30,7 @@ pub struct SearchResult {
 pub struct Search {
     pub mode: bool,
     pub query: String,
-    pub fuzzy_mode: bool,  // True if query starts with '/'
+    pub fuzzy_mode: bool, // True if query starts with '/'
     pub results: Vec<SearchResult>,
     pub selected: usize,
     pub show_results: bool,
@@ -111,7 +111,13 @@ impl Search {
     }
 
     /// Execute two-phase search: quick + deep background scan
-    pub fn perform_search(&mut self, root: &TreeNodeRef, show_files: bool, show_hidden: bool, follow_symlinks: bool) {
+    pub fn perform_search(
+        &mut self,
+        root: &TreeNodeRef,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) {
         // Cancel any existing search
         self.cancel_search();
 
@@ -135,7 +141,14 @@ impl Search {
         self.search_loaded_nodes(root, &query_lower, show_files, show_hidden, is_fuzzy);
 
         // Phase 2: Deep search in background thread
-        self.spawn_deep_search(root, query_lower, show_files, show_hidden, follow_symlinks, is_fuzzy);
+        self.spawn_deep_search(
+            root,
+            query_lower,
+            show_files,
+            show_hidden,
+            follow_symlinks,
+            is_fuzzy,
+        );
 
         self.show_results = true;
         self.focus_on_results = true; // Always focus on results after search
@@ -144,9 +157,16 @@ impl Search {
     }
 
     /// Phase 1: Quick search through already loaded (visible) nodes
-    fn search_loaded_nodes(&mut self, node: &TreeNodeRef, query: &str, show_files: bool, show_hidden: bool, fuzzy: bool) {
-        use fuzzy_matcher::FuzzyMatcher;
+    fn search_loaded_nodes(
+        &mut self,
+        node: &TreeNodeRef,
+        query: &str,
+        show_files: bool,
+        show_hidden: bool,
+        fuzzy: bool,
+    ) {
         use fuzzy_matcher::skim::SkimMatcherV2;
+        use fuzzy_matcher::FuzzyMatcher;
 
         let node_borrowed = node.borrow();
         let name_lower = node_borrowed.name.to_lowercase();
@@ -196,7 +216,15 @@ impl Search {
     }
 
     /// Phase 2: Spawn background thread for deep search
-    fn spawn_deep_search(&mut self, root: &TreeNodeRef, query: String, show_files: bool, show_hidden: bool, follow_symlinks: bool, fuzzy: bool) {
+    fn spawn_deep_search(
+        &mut self,
+        root: &TreeNodeRef,
+        query: String,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+        fuzzy: bool,
+    ) {
         let (result_tx, result_rx) = unbounded();
         let (cancel_tx, cancel_rx) = bounded(1);
 
@@ -205,7 +233,17 @@ impl Search {
 
         // Spawn search thread
         let handle = thread::spawn(move || {
-            Self::deep_search_recursive(&root_path, &query, &result_tx, &cancel_rx, show_files, show_hidden, follow_symlinks, fuzzy, &mut 0);
+            Self::deep_search_recursive(
+                &root_path,
+                &query,
+                &result_tx,
+                &cancel_rx,
+                show_files,
+                show_hidden,
+                follow_symlinks,
+                fuzzy,
+                &mut 0,
+            );
             let _ = result_tx.send(SearchMessage::Done);
         });
 
@@ -226,8 +264,8 @@ impl Search {
         fuzzy: bool,
         scanned: &mut usize,
     ) {
-        use fuzzy_matcher::FuzzyMatcher;
         use fuzzy_matcher::skim::SkimMatcherV2;
+        use fuzzy_matcher::FuzzyMatcher;
 
         // Check for cancellation
         if cancel_rx.try_recv().is_ok() {
@@ -277,12 +315,7 @@ impl Search {
             } else {
                 // Exact substring matching
                 if name_lower.contains(query) {
-                    let _ = result_tx.send(SearchMessage::Result(
-                        path.clone(),
-                        is_dir,
-                        None,
-                        None,
-                    ));
+                    let _ = result_tx.send(SearchMessage::Result(path.clone(), is_dir, None, None));
                 }
             }
         }
@@ -305,7 +338,17 @@ impl Search {
                     }
 
                     let child_path = entry.path();
-                    Self::deep_search_recursive(&child_path, query, result_tx, cancel_rx, show_files, show_hidden, follow_symlinks, fuzzy, scanned);
+                    Self::deep_search_recursive(
+                        &child_path,
+                        query,
+                        result_tx,
+                        cancel_rx,
+                        show_files,
+                        show_hidden,
+                        follow_symlinks,
+                        fuzzy,
+                        scanned,
+                    );
                 }
             }
         }
@@ -369,12 +412,18 @@ impl Search {
 
     /// Cancel current search
     pub fn cancel_search(&mut self) {
+        // Send cancellation signal to background thread
         if let Some(cancel_tx) = self.cancel_sender.take() {
             let _ = cancel_tx.send(());
         }
 
-        if let Some(handle) = self.search_thread.take() {
-            let _ = handle.join();
+        // Don't wait for the thread to finish - it will check cancel_rx and exit on its own
+        // Waiting here with join() would block the UI if the thread is in a long operation
+        // (e.g., scanning a large directory with thousands of files)
+        if let Some(_handle) = self.search_thread.take() {
+            // Thread will be detached and will terminate when it checks cancel_rx
+            // The thread checks cancel_rx frequently (at line 233 and 303)
+            // No need to join() - the thread will clean up automatically
         }
 
         self.result_receiver = None;
@@ -436,5 +485,136 @@ impl Search {
 impl Drop for Search {
     fn drop(&mut self) {
         self.cancel_search();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn test_cancel_search_does_not_block() {
+        // This test ensures that cancel_search() returns quickly
+        // even if the background thread is still running
+        let mut search = Search::new();
+
+        // Create a temporary directory with some files for testing
+        let test_dir = std::env::temp_dir().join("dtree_test_cancel");
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        let root = std::rc::Rc::new(std::cell::RefCell::new(
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
+        ));
+
+        // Start a search
+        search.enter_mode();
+        search.add_char('t');
+        search.add_char('e');
+        search.add_char('s');
+        search.add_char('t');
+        search.perform_search(&root, false, false, false);
+
+        // Give the background thread time to start
+        std::thread::sleep(Duration::from_millis(10));
+
+        // Now cancel the search and measure how long it takes
+        let start = Instant::now();
+        search.cancel_search();
+        let elapsed = start.elapsed();
+
+        // cancel_search() should return almost immediately (< 50ms)
+        // If it blocks on join(), it would take much longer
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "cancel_search() took too long: {:?}",
+            elapsed
+        );
+
+        // Clean up
+        let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
+    #[test]
+    fn test_repeated_search_does_not_hang() {
+        // This test simulates the bug scenario: starting a new search
+        // while another search is already running
+        let mut search = Search::new();
+
+        let test_dir = std::env::temp_dir().join("dtree_test_repeated");
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        let root = std::rc::Rc::new(std::cell::RefCell::new(
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
+        ));
+
+        // Start first search
+        search.enter_mode();
+        search.add_char('a');
+        search.perform_search(&root, false, false, false);
+
+        // Give it a moment to start
+        std::thread::sleep(Duration::from_millis(10));
+
+        // Start second search immediately (this should not hang)
+        let start = Instant::now();
+        search.enter_mode();
+        search.add_char('b');
+        search.perform_search(&root, false, false, false);
+        let elapsed = start.elapsed();
+
+        // The second search should start quickly without blocking
+        assert!(
+            elapsed < Duration::from_millis(100),
+            "Second search took too long: {:?}",
+            elapsed
+        );
+
+        // Start third search (stress test)
+        search.enter_mode();
+        search.add_char('c');
+        search.perform_search(&root, false, false, false);
+
+        // Clean up
+        search.cancel_search();
+        let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
+    #[test]
+    fn test_rapid_search_start_stop() {
+        // Stress test: rapidly start and stop searches
+        let mut search = Search::new();
+
+        let test_dir = std::env::temp_dir().join("dtree_test_rapid");
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        let root = std::rc::Rc::new(std::cell::RefCell::new(
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
+        ));
+
+        let start = Instant::now();
+
+        // Rapidly start and cancel 10 searches
+        for i in 0..10 {
+            search.enter_mode();
+            search.add_char('a');
+            search.add_char((b'0' + (i % 10) as u8) as char);
+            search.perform_search(&root, false, false, false);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+
+        let elapsed = start.elapsed();
+
+        // All 10 search starts should complete in < 1 second
+        // (each should take ~5ms + some overhead)
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "Rapid searches took too long: {:?}",
+            elapsed
+        );
+
+        // Clean up
+        search.cancel_search();
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }

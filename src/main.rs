@@ -1,25 +1,26 @@
-mod tree_node;
 mod app;
-mod terminal;
-mod navigation;
-mod file_viewer;
-mod search;
-mod ui;
-mod event_handler;
-mod config;
-mod theme;
 mod bookmarks;
+mod config;
 mod dir_size;
+mod event_handler;
 mod file_icons;
+mod file_viewer;
+mod navigation;
+mod platform;
+mod search;
+mod terminal;
+mod theme;
+mod tree_node;
+mod ui;
 
 use anyhow::Result;
 use app::App;
-use terminal::{setup_terminal, cleanup_terminal, run_app};
-use clap::Parser;
-use std::path::PathBuf;
-use std::process::Command;
-use config::Config;
 use bookmarks::Bookmarks;
+use clap::Parser;
+use config::Config;
+use platform::{canonicalize_and_normalize, open_external_program};
+use std::path::PathBuf;
+use terminal::{cleanup_terminal, run_app, setup_terminal};
 
 #[derive(Parser)]
 #[command(name = "dtree")]
@@ -50,76 +51,47 @@ struct Args {
 
 /// Open a file in the external editor specified in config
 fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
-    let editor = &config.behavior.editor;
-
-    // Use shell to execute editor with proper terminal handling
-    // Properly quote the file path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            editor,
-                            file_path.replace("'", "'\\''"));
-
-    let _status = Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
-
-    // Don't check exit status - many editors return non-zero codes for normal exit
-    // (e.g., when user presses Esc or q)
-
-    Ok(())
+    open_external_program(&config.behavior.editor, file_path)
 }
 
 /// Open a binary file in the external hex editor specified in config
 fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
-    let hex_editor = &config.behavior.hex_editor;
-
-    // Use shell to execute hex editor with proper terminal handling
-    // Properly quote the file path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            hex_editor,
-                            file_path.replace("'", "'\\''"));
-
-    let _status = Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
-
-    // Don't check exit status - many hex viewers return non-zero codes for normal exit
-    // (e.g., mcview returns 1 when user presses Esc or q)
-
-    Ok(())
+    open_external_program(&config.behavior.hex_editor, file_path)
 }
 
 /// Open a directory in the external file manager specified in config
 fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
-    let file_manager = &config.behavior.file_manager;
-
-    // Use shell to execute file manager with proper terminal handling
-    // Properly quote the directory path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            file_manager,
-                            dir_path.replace("'", "'\\''"));
-
-    let _status = Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
-
-    // Don't check exit status - many file managers return non-zero codes for normal exit
-    // (e.g., mc returns 1 when user presses Esc or q)
-
-    Ok(())
+    open_external_program(&config.behavior.file_manager, dir_path)
 }
 
 /// Resolve path or bookmark name to a PathBuf
 fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBuf> {
-    // 1. If starts with . or / or contains / → treat as path
-    if input.starts_with('.') || input.starts_with('/') || input.contains('/') {
+    // Windows-specific: Handle bare drive letters (e.g., "C:", "E:")
+    // Convert "C:" to "C:\" to navigate to the root of the drive
+    #[cfg(windows)]
+    {
+        if input.len() == 2 && input.chars().nth(1) == Some(':') {
+            let drive_letter = input.chars().next().unwrap();
+            if drive_letter.is_ascii_alphabetic() {
+                // Convert "C:" to "C:\" to get the root of the drive
+                let root_path = format!("{}\\", input);
+                let path = PathBuf::from(&root_path);
+                if path.exists() {
+                    return Ok(canonicalize_and_normalize(&path)?);
+                } else {
+                    anyhow::bail!("Drive not found: {}", input);
+                }
+            }
+        }
+    }
+
+    // 1. If looks like absolute path or contains path separator → treat as path
+    if platform::is_absolute_path(input) || input.contains(std::path::MAIN_SEPARATOR) {
         let path = PathBuf::from(input);
         if !path.exists() {
             anyhow::bail!("Directory not found: {}", input);
         }
-        return Ok(path.canonicalize()?);
+        return Ok(canonicalize_and_normalize(&path)?);
     }
 
     // 2. Check if it's a bookmark
@@ -130,7 +102,8 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
             anyhow::bail!(
                 "Bookmark '{}' points to non-existent directory: {}\n\
                 Use 'dt -bm list' to see all bookmarks",
-                input, bookmark.path.display()
+                input,
+                bookmark.path.display()
             );
         }
     }
@@ -138,21 +111,28 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
     // 3. Try as path
     let path = PathBuf::from(input);
     if path.exists() {
-        return Ok(path.canonicalize()?);
+        return Ok(canonicalize_and_normalize(&path)?);
     }
 
     // 4. Neither bookmark nor path found
     anyhow::bail!(
         "Neither bookmark '{}' nor directory '{}' found.\n\
         Use 'dt -bm list' to see all bookmarks",
-        input, input
+        input,
+        input
     );
 }
 
 fn main() -> Result<()> {
     // Preprocess arguments: convert -bm to --bm for clap compatibility
     let args: Vec<String> = std::env::args()
-        .map(|arg| if arg == "-bm" { "--bm".to_string() } else { arg })
+        .map(|arg| {
+            if arg == "-bm" {
+                "--bm".to_string()
+            } else {
+                arg
+            }
+        })
         .collect();
 
     // Ensure config file exists (create if missing)
@@ -191,7 +171,12 @@ fn main() -> Result<()> {
             } else {
                 for bookmark in bookmarks.list() {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                    println!("  {} → {} ({})", bookmark.key, name, bookmark.path.display());
+                    println!(
+                        "  {} → {} ({})",
+                        bookmark.key,
+                        name,
+                        bookmark.path.display()
+                    );
                 }
             }
             return Ok(());
@@ -214,7 +199,7 @@ fn main() -> Result<()> {
                     anyhow::bail!("Path does not exist: {}", path.display());
                 }
 
-                let mut path = path.canonicalize()?;
+                let mut path = canonicalize_and_normalize(&path)?;
 
                 // Bookmarks must be directories only
                 if path.is_file() {
@@ -226,7 +211,8 @@ fn main() -> Result<()> {
                     }
                 }
 
-                let dir_name = path.file_name()
+                let dir_name = path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .map(|s| s.to_string());
 
@@ -248,7 +234,12 @@ fn main() -> Result<()> {
                 } else {
                     for bookmark in bookmarks.list() {
                         let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                        println!("  {} → {} ({})", bookmark.key, name, bookmark.path.display());
+                        println!(
+                            "  {} → {} ({})",
+                            bookmark.key,
+                            name,
+                            bookmark.path.display()
+                        );
                     }
                 }
             }

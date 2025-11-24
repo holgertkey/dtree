@@ -1,8 +1,8 @@
-use std::path::PathBuf;
-use std::fs;
-use std::rc::Rc;
-use std::cell::RefCell;
 use anyhow::Result;
+use std::cell::RefCell;
+use std::fs;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 pub type TreeNodeRef = Rc<RefCell<TreeNode>>;
 
@@ -13,13 +13,15 @@ pub struct TreeNode {
     pub is_expanded: bool,
     pub depth: usize,
     pub children: Vec<TreeNodeRef>,
-    pub has_error: bool,           // Indicates read/access errors
+    pub has_error: bool,               // Indicates read/access errors
     pub error_message: Option<String>, // Optional error description
+    is_sorted: bool,                   // Cache flag: true if children are already sorted
 }
 
 impl TreeNode {
     pub fn new(path: PathBuf, depth: usize) -> Result<Self> {
-        let name = path.file_name()
+        let name = path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("")
             .to_string();
@@ -35,12 +37,25 @@ impl TreeNode {
             children: Vec::new(),
             has_error: false,
             error_message: None,
+            is_sorted: false,
         })
     }
 
-    pub fn load_children(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
-        if !self.is_dir || !self.children.is_empty() {
+    pub fn load_children(
+        &mut self,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<()> {
+        // If children are already loaded and sorted, skip
+        if !self.is_dir || (!self.children.is_empty() && self.is_sorted) {
             return Ok(());
+        }
+
+        // If we're reloading (children exist but not sorted), clear them first
+        if !self.children.is_empty() {
+            self.children.clear();
+            self.is_sorted = false;
         }
 
         // Try to read directory
@@ -91,8 +106,11 @@ impl TreeNode {
                             }
                             Err(e) => {
                                 error_count += 1;
-                                skipped_entries.push(format!("{}: {}",
-                                    path.file_name().unwrap_or_default().to_string_lossy(), e));
+                                skipped_entries.push(format!(
+                                    "{}: {}",
+                                    path.file_name().unwrap_or_default().to_string_lossy(),
+                                    e
+                                ));
                             }
                         }
                     }
@@ -125,10 +143,18 @@ impl TreeNode {
             }
         });
 
+        // Mark as sorted so we don't re-sort on next load
+        self.is_sorted = true;
+
         Ok(())
     }
 
-    pub fn toggle_expand(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
+    pub fn toggle_expand(
+        &mut self,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<()> {
         if !self.is_dir {
             return Ok(());
         }
@@ -137,7 +163,10 @@ impl TreeNode {
             self.is_expanded = false;
         } else {
             self.load_children(show_files, show_hidden, follow_symlinks)?;
-            self.is_expanded = true;
+            // Only expand if no access error occurred
+            if !self.has_error {
+                self.is_expanded = true;
+            }
         }
 
         Ok(())

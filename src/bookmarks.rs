@@ -36,9 +36,10 @@ impl Bookmark {
         }
 
         // Forbid reserved names on Windows (optional, but safer for cross-platform)
-        let reserved = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
-                        "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
-                        "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+        let reserved = [
+            "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+            "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        ];
         if reserved.contains(&name.to_uppercase().as_str()) {
             anyhow::bail!("Bookmark name '{}' is reserved", name);
         }
@@ -55,10 +56,10 @@ pub struct Bookmarks {
     pub is_selecting: bool,
     pub is_creating: bool,
     pub input_buffer: String,
-    pub selected_index: usize,       // Current selection in list
-    pub filter_mode: bool,            // True = filter/search mode, False = navigation mode
-    filtered_keys: Vec<String>,       // Cached filtered bookmark keys
-    pub scroll_offset: usize,         // Scroll offset for bookmark list in creation mode
+    pub selected_index: usize,                 // Current selection in list
+    pub filter_mode: bool,                     // True = filter/search mode, False = navigation mode
+    filtered_keys: Vec<String>,                // Cached filtered bookmark keys
+    pub scroll_offset: usize,                  // Scroll offset for bookmark list in creation mode
     pub pending_deletion_index: Option<usize>, // Index of bookmark marked for deletion
 }
 
@@ -160,8 +161,7 @@ impl Bookmarks {
         let json = serde_json::to_string_pretty(&bookmarks_vec)
             .context("Failed to serialize bookmarks")?;
 
-        fs::write(&self.file_path, json)
-            .context("Failed to write bookmarks file")?;
+        fs::write(&self.file_path, json).context("Failed to write bookmarks file")?;
 
         Ok(())
     }
@@ -314,11 +314,14 @@ impl Bookmarks {
             self.filtered_keys = self.list().iter().map(|b| b.key.clone()).collect();
         } else {
             // Filter bookmarks by key or name
-            self.filtered_keys = self.list()
+            self.filtered_keys = self
+                .list()
                 .iter()
                 .filter(|b| {
                     let key_match = b.key.to_lowercase().contains(&query);
-                    let name_match = b.name.as_ref()
+                    let name_match = b
+                        .name
+                        .as_ref()
                         .map(|n| n.to_lowercase().contains(&query))
                         .unwrap_or(false);
                     key_match || name_match
@@ -432,8 +435,20 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add some bookmarks
-        bookmarks.add("a".to_string(), PathBuf::from("/tmp/test1"), Some("Test 1".to_string())).unwrap();
-        bookmarks.add("b".to_string(), PathBuf::from("/tmp/test2"), Some("Test 2".to_string())).unwrap();
+        bookmarks
+            .add(
+                "a".to_string(),
+                PathBuf::from("/tmp/test1"),
+                Some("Test 1".to_string()),
+            )
+            .unwrap();
+        bookmarks
+            .add(
+                "b".to_string(),
+                PathBuf::from("/tmp/test2"),
+                Some("Test 2".to_string()),
+            )
+            .unwrap();
 
         // Save
         bookmarks.save().unwrap();
@@ -444,8 +459,14 @@ mod tests {
 
         // Verify
         assert_eq!(bookmarks2.list().len(), 2);
-        assert_eq!(bookmarks2.get("a").unwrap().path, PathBuf::from("/tmp/test1"));
-        assert_eq!(bookmarks2.get("b").unwrap().path, PathBuf::from("/tmp/test2"));
+        assert_eq!(
+            bookmarks2.get("a").unwrap().path,
+            PathBuf::from("/tmp/test1")
+        );
+        assert_eq!(
+            bookmarks2.get("b").unwrap().path,
+            PathBuf::from("/tmp/test2")
+        );
     }
 
     #[test]
@@ -456,7 +477,8 @@ mod tests {
 
         // Write invalid JSON (trailing comma)
         let mut file = std::fs::File::create(&file_path).unwrap();
-        file.write_all(b"[\n  {\"key\": \"a\", \"path\": \"/tmp/test\", \"name\": \"test\"},\n]").unwrap();
+        file.write_all(b"[\n  {\"key\": \"a\", \"path\": \"/tmp/test\", \"name\": \"test\"},\n]")
+            .unwrap();
         drop(file);
 
         // Try to load
@@ -521,7 +543,13 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add bookmark
-        bookmarks.add("x".to_string(), PathBuf::from("/tmp/testx"), Some("TestX".to_string())).unwrap();
+        bookmarks
+            .add(
+                "x".to_string(),
+                PathBuf::from("/tmp/testx"),
+                Some("TestX".to_string()),
+            )
+            .unwrap();
         assert_eq!(bookmarks.list().len(), 1);
         assert!(bookmarks.get("x").is_some());
 
@@ -537,9 +565,15 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add bookmarks in random order
-        bookmarks.add("z".to_string(), PathBuf::from("/tmp/z"), None).unwrap();
-        bookmarks.add("a".to_string(), PathBuf::from("/tmp/a"), None).unwrap();
-        bookmarks.add("m".to_string(), PathBuf::from("/tmp/m"), None).unwrap();
+        bookmarks
+            .add("z".to_string(), PathBuf::from("/tmp/z"), None)
+            .unwrap();
+        bookmarks
+            .add("a".to_string(), PathBuf::from("/tmp/a"), None)
+            .unwrap();
+        bookmarks
+            .add("m".to_string(), PathBuf::from("/tmp/m"), None)
+            .unwrap();
 
         let list = bookmarks.list();
         assert_eq!(list.len(), 3);
@@ -584,14 +618,32 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add bookmark
-        bookmarks.add("t".to_string(), PathBuf::from("/tmp/first"), Some("First".to_string())).unwrap();
-        assert_eq!(bookmarks.get("t").unwrap().path, PathBuf::from("/tmp/first"));
+        bookmarks
+            .add(
+                "t".to_string(),
+                PathBuf::from("/tmp/first"),
+                Some("First".to_string()),
+            )
+            .unwrap();
+        assert_eq!(
+            bookmarks.get("t").unwrap().path,
+            PathBuf::from("/tmp/first")
+        );
 
         // Overwrite with same key
-        bookmarks.add("t".to_string(), PathBuf::from("/tmp/second"), Some("Second".to_string())).unwrap();
+        bookmarks
+            .add(
+                "t".to_string(),
+                PathBuf::from("/tmp/second"),
+                Some("Second".to_string()),
+            )
+            .unwrap();
 
         // Should have updated path
-        assert_eq!(bookmarks.get("t").unwrap().path, PathBuf::from("/tmp/second"));
+        assert_eq!(
+            bookmarks.get("t").unwrap().path,
+            PathBuf::from("/tmp/second")
+        );
         assert_eq!(bookmarks.get("t").unwrap().name, Some("Second".to_string()));
 
         // Should still have only one bookmark
@@ -604,14 +656,41 @@ mod tests {
         let mut bookmarks = create_test_bookmarks(&temp_dir);
 
         // Add multi-character bookmarks
-        bookmarks.add("work".to_string(), PathBuf::from("/tmp/work"), Some("Work".to_string())).unwrap();
-        bookmarks.add("project-123".to_string(), PathBuf::from("/tmp/proj"), Some("Project".to_string())).unwrap();
-        bookmarks.add("my_home".to_string(), PathBuf::from("/home/user"), Some("Home".to_string())).unwrap();
+        bookmarks
+            .add(
+                "work".to_string(),
+                PathBuf::from("/tmp/work"),
+                Some("Work".to_string()),
+            )
+            .unwrap();
+        bookmarks
+            .add(
+                "project-123".to_string(),
+                PathBuf::from("/tmp/proj"),
+                Some("Project".to_string()),
+            )
+            .unwrap();
+        bookmarks
+            .add(
+                "my_home".to_string(),
+                PathBuf::from("/home/user"),
+                Some("Home".to_string()),
+            )
+            .unwrap();
 
         assert_eq!(bookmarks.list().len(), 3);
-        assert_eq!(bookmarks.get("work").unwrap().path, PathBuf::from("/tmp/work"));
-        assert_eq!(bookmarks.get("project-123").unwrap().path, PathBuf::from("/tmp/proj"));
-        assert_eq!(bookmarks.get("my_home").unwrap().path, PathBuf::from("/home/user"));
+        assert_eq!(
+            bookmarks.get("work").unwrap().path,
+            PathBuf::from("/tmp/work")
+        );
+        assert_eq!(
+            bookmarks.get("project-123").unwrap().path,
+            PathBuf::from("/tmp/proj")
+        );
+        assert_eq!(
+            bookmarks.get("my_home").unwrap().path,
+            PathBuf::from("/home/user")
+        );
     }
 
     #[test]
@@ -640,9 +719,19 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("reserved"));
 
         // Valid names should succeed
-        assert!(bookmarks.add("work".to_string(), PathBuf::from("/tmp/work"), None).is_ok());
-        assert!(bookmarks.add("project-123".to_string(), PathBuf::from("/tmp/proj"), None).is_ok());
-        assert!(bookmarks.add("my_home.backup".to_string(), PathBuf::from("/tmp/home"), None).is_ok());
+        assert!(bookmarks
+            .add("work".to_string(), PathBuf::from("/tmp/work"), None)
+            .is_ok());
+        assert!(bookmarks
+            .add("project-123".to_string(), PathBuf::from("/tmp/proj"), None)
+            .is_ok());
+        assert!(bookmarks
+            .add(
+                "my_home.backup".to_string(),
+                PathBuf::from("/tmp/home"),
+                None
+            )
+            .is_ok());
     }
 
     #[test]
@@ -655,5 +744,4 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
     }
-
 }

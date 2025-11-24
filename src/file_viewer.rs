@@ -1,16 +1,17 @@
-use std::path::{Path, PathBuf};
+use anyhow::Result;
+use once_cell::sync::Lazy;
+use ratatui::style::{Color, Style};
+use ratatui::text::{Line, Span};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use anyhow::Result;
+use std::path::{Path, PathBuf};
+use syntect::easy::HighlightLines;
+use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
-use ratatui::text::{Line, Span};
-use ratatui::style::{Style, Color};
-use once_cell::sync::Lazy;
-use syntect::parsing::SyntaxSet;
-use syntect::highlighting::ThemeSet;
-use syntect::easy::HighlightLines;
 
 /// Lazy-loaded syntax set (loaded once on first use)
 static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(SyntaxSet::load_defaults_newlines);
@@ -27,22 +28,22 @@ pub struct FileViewer {
     pub current_size: u64,
     pub current_permissions: u32,
     pub show_line_numbers: bool,
-    pub wrap_lines: bool,  // true = wrap long lines, false = truncate
+    pub wrap_lines: bool, // true = wrap long lines, false = truncate
     pub syntax_name: Option<String>,
     pub is_binary: bool,
-    pub tail_mode: bool,  // true = showing last N lines, false = showing first N lines
-    pub total_lines: Option<usize>,  // total lines in file (if known)
+    pub tail_mode: bool, // true = showing last N lines, false = showing first N lines
+    pub total_lines: Option<usize>, // total lines in file (if known)
 
     // Search functionality
     pub search_mode: bool,
     pub search_query: String,
-    pub search_results: Vec<usize>,  // Line numbers with matches (0-indexed)
-    pub current_match: usize,  // Current match index in search_results
+    pub search_results: Vec<usize>, // Line numbers with matches (0-indexed)
+    pub current_match: usize,       // Current match index in search_results
 
     // Visual selection mode
     pub visual_mode: bool,
-    pub visual_start: Option<usize>,  // Start line of selection (0-indexed)
-    pub visual_cursor: usize,  // Current cursor position in visual mode (0-indexed)
+    pub visual_start: Option<usize>, // Start line of selection (0-indexed)
+    pub visual_cursor: usize,        // Current cursor position in visual mode (0-indexed)
 }
 
 impl Default for FileViewer {
@@ -61,7 +62,7 @@ impl FileViewer {
             current_size: 0,
             current_permissions: 0,
             show_line_numbers: false,
-            wrap_lines: true,  // Default to wrapping enabled
+            wrap_lines: true, // Default to wrapping enabled
             syntax_name: None,
             is_binary: false,
             tail_mode: false,
@@ -94,7 +95,8 @@ impl FileViewer {
         let file_size = file.metadata()?.len();
 
         // If file is small, just read all lines
-        if file_size < 1024 * 1024 {  // < 1MB
+        if file_size < 1024 * 1024 {
+            // < 1MB
             let reader = BufReader::new(file);
             let all_lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
             let total = all_lines.len();
@@ -109,7 +111,7 @@ impl FileViewer {
 
         // For large files: seek backward from end
         // Strategy: read chunks backwards until we have enough lines
-        const CHUNK_SIZE: u64 = 64 * 1024;  // 64KB chunks
+        const CHUNK_SIZE: u64 = 64 * 1024; // 64KB chunks
         let mut buffer = Vec::new();
         let mut current_pos = file_size;
 
@@ -155,7 +157,14 @@ impl FileViewer {
     }
 
     /// Load file content with specified max width and max lines
-    pub fn load_file_with_width(&mut self, path: &Path, max_width: Option<usize>, max_lines: usize, enable_syntax_highlighting: bool, syntax_theme: &str) -> Result<()> {
+    pub fn load_file_with_width(
+        &mut self,
+        path: &Path,
+        max_width: Option<usize>,
+        max_lines: usize,
+        enable_syntax_highlighting: bool,
+        syntax_theme: &str,
+    ) -> Result<()> {
         const DEFAULT_MAX_WIDTH: usize = 10000; // Very large default to avoid truncation
 
         let max_width = max_width.unwrap_or(DEFAULT_MAX_WIDTH);
@@ -174,7 +183,8 @@ impl FileViewer {
         // Check if this is a file
         if !path.is_file() {
             if path.is_dir() {
-                self.content.push("[Directory - use arrow keys to navigate]".to_string());
+                self.content
+                    .push("[Directory - use arrow keys to navigate]".to_string());
             } else if path.is_symlink() {
                 self.content.push("[Symbolic link]".to_string());
             } else {
@@ -187,7 +197,19 @@ impl FileViewer {
         match std::fs::metadata(path) {
             Ok(metadata) => {
                 self.current_size = metadata.len();
-                self.current_permissions = metadata.permissions().mode();
+                #[cfg(unix)]
+                {
+                    self.current_permissions = metadata.permissions().mode();
+                }
+                #[cfg(windows)]
+                {
+                    // On Windows, permissions are simpler - just check if file is readonly
+                    self.current_permissions = if metadata.permissions().readonly() {
+                        0o444 // read-only
+                    } else {
+                        0o644 // read-write
+                    };
+                }
             }
             Err(e) => {
                 self.content.push(format!("[Cannot read metadata: {}]", e));
@@ -243,7 +265,8 @@ impl FileViewer {
                     Err(e) => {
                         // Possibly binary file or encoding error
                         self.content.clear();
-                        self.content.push(format!("[Binary file or encoding error: {}]", e));
+                        self.content
+                            .push(format!("[Binary file or encoding error: {}]", e));
                         return Ok(());
                     }
                 }
@@ -274,9 +297,18 @@ impl FileViewer {
 
         // Add truncation indicator if needed
         if !self.tail_mode && total_lines > max_lines {
-            self.content.push(format!("\n[... truncated, showing first {} of {} lines. Press End to see tail ...]", max_lines, total_lines));
+            self.content.push(format!(
+                "\n[... truncated, showing first {} of {} lines. Press End to see tail ...]",
+                max_lines, total_lines
+            ));
         } else if self.tail_mode && total_lines > max_lines {
-            self.content.insert(0, format!("[... showing last {} of {} lines. Press Home to see head ...]", max_lines, total_lines));
+            self.content.insert(
+                0,
+                format!(
+                    "[... showing last {} of {} lines. Press Home to see head ...]",
+                    max_lines, total_lines
+                ),
+            );
         }
 
         if self.content.is_empty() {
@@ -303,7 +335,9 @@ impl FileViewer {
         self.syntax_name = Some(syntax.name.clone());
 
         // Get theme
-        let theme = THEME_SET.themes.get(theme_name)
+        let theme = THEME_SET
+            .themes
+            .get(theme_name)
             .unwrap_or_else(|| THEME_SET.themes.get("base16-ocean.dark").unwrap());
 
         // Highlight lines
@@ -713,7 +747,11 @@ impl FileViewer {
         if self.search_results.is_empty() {
             "No matches".to_string()
         } else {
-            format!("Match {}/{}", self.current_match + 1, self.search_results.len())
+            format!(
+                "Match {}/{}",
+                self.current_match + 1,
+                self.search_results.len()
+            )
         }
     }
 
@@ -736,7 +774,8 @@ impl FileViewer {
             return String::new();
         }
 
-        let file_name = self.current_path
+        let file_name = self
+            .current_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("Unknown");
@@ -757,7 +796,11 @@ impl FileViewer {
 
         // Add search info if there are search results
         let search_info = if !self.search_results.is_empty() {
-            format!(" | Search: {} matches for '{}'", self.search_results.len(), self.search_query)
+            format!(
+                " | Search: {} matches for '{}'",
+                self.search_results.len(),
+                self.search_query
+            )
         } else if !self.search_query.is_empty() {
             format!(" | Search: no matches for '{}'", self.search_query)
         } else {
@@ -772,7 +815,10 @@ impl FileViewer {
             String::new()
         };
 
-        format!(" {} | {} | {} | {}{}{}", file_name, size_str, lines_info, permissions_str, search_info, visual_info)
+        format!(
+            " {} | {} | {} | {}{}{}",
+            file_name, size_str, lines_info, permissions_str, search_info, visual_info
+        )
     }
 
     // ===== Visual selection functionality =====
@@ -872,7 +918,10 @@ impl FileViewer {
         }
         // If cursor is below visible area, scroll down
         else if self.visual_cursor >= self.scroll + visible_height {
-            self.scroll = self.visual_cursor.saturating_sub(visible_height - 1).min(max_scroll);
+            self.scroll = self
+                .visual_cursor
+                .saturating_sub(visible_height - 1)
+                .min(max_scroll);
         }
     }
 }
@@ -894,28 +943,42 @@ pub fn format_file_size(size: u64) -> String {
     }
 }
 
-/// Format Unix permissions as string
+/// Format permissions as string (cross-platform)
 pub fn format_permissions(mode: u32) -> String {
-    // Extract permission bits (last 9 bits)
-    let perms = mode & 0o777;
+    #[cfg(unix)]
+    {
+        // Unix: Full permission bits
+        let perms = mode & 0o777;
 
-    // Determine file type
-    let file_type = if mode & 0o170000 == 0o040000 {
-        'd' // directory
-    } else if mode & 0o170000 == 0o120000 {
-        'l' // symbolic link
-    } else {
-        '-' // regular file
-    };
+        // Determine file type
+        let file_type = if mode & 0o170000 == 0o040000 {
+            'd' // directory
+        } else if mode & 0o170000 == 0o120000 {
+            'l' // symbolic link
+        } else {
+            '-' // regular file
+        };
 
-    // Format permissions for owner, group, and others
-    let user = format_permission_triplet((perms >> 6) & 0o7);
-    let group = format_permission_triplet((perms >> 3) & 0o7);
-    let other = format_permission_triplet(perms & 0o7);
+        // Format permissions for owner, group, and others
+        let user = format_permission_triplet((perms >> 6) & 0o7);
+        let group = format_permission_triplet((perms >> 3) & 0o7);
+        let other = format_permission_triplet(perms & 0o7);
 
-    format!("{}{}{}{} ({:04o})", file_type, user, group, other, perms)
+        format!("{}{}{}{} ({:04o})", file_type, user, group, other, perms)
+    }
+
+    #[cfg(windows)]
+    {
+        // Windows: Simple read-only/read-write display
+        if mode == 0o444 {
+            "read-only".to_string()
+        } else {
+            "read-write".to_string()
+        }
+    }
 }
 
+#[cfg(unix)]
 fn format_permission_triplet(triplet: u32) -> String {
     let r = if triplet & 0o4 != 0 { 'r' } else { '-' };
     let w = if triplet & 0o2 != 0 { 'w' } else { '-' };

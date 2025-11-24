@@ -1,4 +1,6 @@
 /target
-concept.md
 CLAUDE.md
-ROADMAP.md
+
+# Debug and testing files
+.debug/
+.claude/

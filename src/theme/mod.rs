@@ -7,8 +7,7 @@ pub mod presets;
 /// All fields are Option<String>:
 /// - None means the color is not set (use preset theme value)
 /// - Some(value) means the color is explicitly set (override preset)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ThemeConfig {
     /// Color for selected items
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -63,7 +62,6 @@ pub struct ThemeConfig {
     pub background_color: Option<String>,
 }
 
-
 impl ThemeConfig {
     /// Parse a color string to ratatui Color
     pub fn parse_color(color_str: &str) -> Color {
@@ -117,7 +115,7 @@ impl ThemeConfig {
     pub fn fallback_colors() -> Self {
         Self {
             selected_color: Some("cyan".to_string()),
-            directory_color: Some("blue".to_string()),
+            directory_color: Some("gray".to_string()),
             file_color: Some("white".to_string()),
             border_color: Some("gray".to_string()),
             error_color: Some("red".to_string()),

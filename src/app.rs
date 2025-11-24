@@ -1,16 +1,16 @@
-use std::path::PathBuf;
+use anyhow::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::Frame;
-use anyhow::Result;
+use std::path::PathBuf;
 
-use crate::navigation::Navigation;
+use crate::bookmarks::Bookmarks;
+use crate::config::Config;
+use crate::dir_size::DirSizeCache;
+use crate::event_handler::EventHandler;
 use crate::file_viewer::FileViewer;
+use crate::navigation::Navigation;
 use crate::search::Search;
 use crate::ui::UI;
-use crate::event_handler::EventHandler;
-use crate::config::Config;
-use crate::bookmarks::Bookmarks;
-use crate::dir_size::DirSizeCache;
 
 /// Main application state
 pub struct App {
@@ -28,6 +28,7 @@ pub struct App {
     show_sizes: bool,
     dir_size_cache: DirSizeCache,
     need_terminal_clear: bool,
+    needs_redraw: bool, // Dirty flag for selective rendering optimization
 }
 
 impl App {
@@ -35,7 +36,12 @@ impl App {
         // Load configuration from global config file
         let config = Config::load()?;
 
-        let nav = Navigation::new(start_path, false, config.behavior.show_hidden, config.behavior.follow_symlinks)?;
+        let nav = Navigation::new(
+            start_path,
+            false,
+            config.behavior.show_hidden,
+            config.behavior.follow_symlinks,
+        )?;
         let mut file_viewer = FileViewer::new();
         let search = Search::new();
         let mut ui = UI::new();
@@ -62,11 +68,12 @@ impl App {
             show_sizes: false,
             dir_size_cache: DirSizeCache::new(),
             need_terminal_clear: false,
+            needs_redraw: true, // Start with redraw needed to render initial frame
         })
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<Option<PathBuf>> {
-        self.event_handler.handle_key(
+        let result = self.event_handler.handle_key(
             key,
             &mut self.nav,
             &mut self.file_viewer,
@@ -81,11 +88,16 @@ impl App {
             &mut self.need_terminal_clear,
             &self.ui,
             &self.config,
-        )
+        );
+
+        // Mark for redraw after handling input
+        self.mark_dirty();
+
+        result
     }
 
     pub fn handle_mouse(&mut self, mouse: MouseEvent) -> Result<()> {
-        self.event_handler.handle_mouse(
+        let result = self.event_handler.handle_mouse(
             mouse,
             &mut self.nav,
             &mut self.file_viewer,
@@ -96,7 +108,12 @@ impl App {
             &mut self.show_help,
             self.fullscreen_viewer,
             &self.config,
-        )
+        );
+
+        // Mark for redraw after handling mouse input
+        self.mark_dirty();
+
+        result
     }
 
     pub fn render(&mut self, frame: &mut Frame) {
@@ -118,13 +135,21 @@ impl App {
     /// Poll search results from background thread
     /// Returns true if there were updates and UI needs to be redrawn
     pub fn poll_search(&mut self) -> bool {
-        self.search.poll_results()
+        let updated = self.search.poll_results();
+        if updated {
+            self.mark_dirty();
+        }
+        updated
     }
 
     /// Poll directory size calculation results from background thread
     /// Returns true if there were updates and UI needs to be redrawn
     pub fn poll_sizes(&mut self) -> bool {
-        self.dir_size_cache.poll_results()
+        let updated = self.dir_size_cache.poll_results();
+        if updated {
+            self.mark_dirty();
+        }
+        updated
     }
 
     /// Set fullscreen viewer mode and load the specified file
@@ -136,9 +161,12 @@ impl App {
         self.nav.reload_tree(true)?;
 
         // Find and select the current file in the flat list
-        if let Some(index) = self.nav.flat_list.iter().position(|node| {
-            node.borrow().path == file_path
-        }) {
+        if let Some(index) = self
+            .nav
+            .flat_list
+            .iter()
+            .position(|node| node.borrow().path == file_path)
+        {
             self.nav.selected = index;
         }
 
@@ -147,7 +175,17 @@ impl App {
         let max_lines = self.config.behavior.max_file_lines;
         let enable_highlighting = self.config.appearance.enable_syntax_highlighting;
         let theme = &self.config.appearance.syntax_theme.clone();
-        self.file_viewer.load_file_with_width(file_path, None, max_lines, enable_highlighting, theme)?;
+        self.file_viewer.load_file_with_width(
+            file_path,
+            None,
+            max_lines,
+            enable_highlighting,
+            theme,
+        )?;
+
+        // Mark for redraw after state change
+        self.mark_dirty();
+
         Ok(())
     }
 
@@ -170,8 +208,11 @@ impl App {
                 &path,
                 self.config.behavior.max_file_lines,
                 true, // fullscreen
-                &self.config
+                &self.config,
             )?;
+
+            // Mark for redraw after reloading file
+            self.mark_dirty();
         }
         Ok(())
     }
@@ -180,7 +221,26 @@ impl App {
     pub fn should_clear_terminal(&mut self) -> bool {
         let result = self.need_terminal_clear;
         self.need_terminal_clear = false;
+        if result {
+            // Terminal clear requires a redraw
+            self.mark_dirty();
+        }
         result
+    }
+
+    /// Mark app as needing redraw (dirty flag pattern)
+    pub fn mark_dirty(&mut self) {
+        self.needs_redraw = true;
+    }
+
+    /// Clear dirty flag after rendering
+    pub fn clear_dirty(&mut self) {
+        self.needs_redraw = false;
+    }
+
+    /// Check if app needs to be redrawn
+    pub fn needs_redraw(&self) -> bool {
+        self.needs_redraw
     }
 }
 

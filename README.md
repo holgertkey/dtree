@@ -73,7 +73,36 @@ dt myproject          # Jump to bookmark instantly
 
 ## Installation
 
-### From Source
+### Linux / macOS
+
+#### Automated Installation (Recommended)
+
+The easiest way to install dtree on Linux is using the automated installation script:
+
+```bash
+# Clone repository
+git clone https://github.com/holgertkey/dtree.git
+cd dtree
+
+# Run automated installation (builds and installs everything)
+./install-linux.sh
+```
+
+**What this script does:**
+- ✅ Builds the release binary (`dtree`)
+- ✅ Installs to `~/bin/dtree`
+- ✅ Adds `~/bin` to PATH (if needed)
+- ✅ Installs bash wrapper function to `.bashrc` (or `.zshrc` for zsh users)
+- ✅ Tests the installation
+
+**After installation:**
+1. Reload your shell: `source ~/.bashrc`
+2. Test with: `dt --version`
+3. Try: `dt` to open interactive tree
+
+#### Manual Installation (From Source)
+
+If you prefer to install manually:
 
 ```bash
 git clone https://github.com/holgertkey/dtree.git
@@ -88,7 +117,7 @@ cp target/release/dtree ~/bin/
 sudo cp target/release/dtree /usr/local/bin/
 ```
 
-### Bash Integration (Recommended)
+#### Bash Integration (Manual Setup)
 
 Add this to your `~/.bashrc` for seamless shell integration:
 
@@ -144,6 +173,132 @@ Then reload your shell:
 
 ```bash
 source ~/.bashrc
+```
+
+### Windows
+
+#### Automated Installation (Recommended)
+
+The easiest way to install dtree on Windows is using the automated installation script:
+
+```powershell
+# Clone repository
+git clone https://github.com/holgertkey/dtree.git
+cd dtree
+
+# Run automated installation (builds and installs everything)
+.\install-windows-binary.ps1
+```
+
+**What this script does:**
+- ✅ Builds the release binary (`dtree.exe`)
+- ✅ Installs to `C:\Users\<YourName>\bin\`
+- ✅ Installs `dt.bat` wrapper for cmd.exe
+- ✅ Installs PowerShell `dt` function for seamless navigation
+- ✅ Adds directory to PATH
+- ✅ Tests the installation
+
+**After installation:**
+1. **Restart PowerShell** (or run `. $PROFILE` to reload)
+2. Test with: `dt --version`
+3. Try: `dt` to open interactive tree
+
+#### Manual Installation
+
+If you prefer to install manually:
+
+```powershell
+# 1. Build the project
+cargo build --release
+
+# 2. Create bin directory and copy binary
+New-Item -Path "$env:USERPROFILE\bin" -ItemType Directory -Force
+Copy-Item target\release\dtree.exe "$env:USERPROFILE\bin\"
+Copy-Item dt.bat "$env:USERPROFILE\bin\"
+
+# 3. Add to PATH (restart terminal after this)
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$currentPath;$env:USERPROFILE\bin", "User")
+
+# 4. Install PowerShell wrapper
+.\install-windows-wrapper.ps1
+
+# 5. Reload PowerShell profile
+. $PROFILE
+```
+
+#### PowerShell Integration
+
+The PowerShell wrapper enables directory navigation with bookmarks. It's automatically installed by the installation script.
+
+**If you need to reload the wrapper** (after reinstalling):
+
+```powershell
+# Option 1: Reload profile in current session
+. $PROFILE
+
+# Option 2: Reinstall wrapper
+.\install-windows-wrapper.ps1
+
+# Option 3: Restart PowerShell
+```
+
+**Verify installation:**
+
+```powershell
+# Check version
+dt --version
+
+# Test bookmark navigation
+dt -bm add test          # Create bookmark
+dt test                  # Navigate to bookmark (should change directory)
+pwd                      # Verify current directory changed
+```
+
+#### Cmd.exe Support
+
+The `dt.bat` wrapper is automatically installed and provides the same functionality in cmd.exe:
+
+```cmd
+REM Basic commands
+dt --version        REM Show version
+dt                  REM Open interactive tree
+dt C:\Windows       REM Navigate to directory
+dt -                REM Return to previous directory
+dt -bm list         REM List bookmarks
+```
+
+#### Configuration
+
+After first run, configuration file will be created at:
+- **Config**: `%APPDATA%\dtree\config.toml`
+- **Bookmarks**: `%APPDATA%\dtree\bookmarks.json`
+
+Typically located at: `C:\Users\<YourName>\AppData\Roaming\dtree\`
+
+#### Troubleshooting
+
+**Problem: `dtree.exe` not found**
+
+Check if directory is in PATH:
+
+```powershell
+# Check PATH
+$env:PATH -split ';' | Select-String "bin"
+
+# Restart terminal to pick up PATH changes
+```
+
+**Problem: Permission denied when running scripts**
+
+You may need to allow script execution:
+
+```powershell
+# Check current policy
+Get-ExecutionPolicy
+
+# Allow scripts (run as Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ---
@@ -330,12 +485,14 @@ When you run `dt <name>`, dtree resolves in this order:
 | Scroll wheel         | Navigate tree up/down               |
 | Drag divider         | Resize panels                       |
 | **File Preview**     |                                     |
-| Scroll wheel         | Scroll preview content              |
+| Scroll wheel         | Scroll preview content (5 lines*)   |
 | **Fullscreen Viewer** |                                    |
-| Scroll wheel         | Scroll document                     |
+| Scroll wheel         | Scroll document (5 lines*)          |
 | Shift+Click+Drag     | Select text for copying             |
 | **Visual Mode**      |                                     |
 | Scroll wheel         | Move selection cursor (auto-scroll) |
+
+\* *Scroll speed configurable via `mouse_scroll_lines` in config.toml (default: 5 lines per scroll)*
 
 ---
 
@@ -387,7 +544,8 @@ file_color = "white"
 
 [behavior]
 max_file_lines = 10000
-wrap_lines = true        # Wrap long lines (true) or truncate (false)
+wrap_lines = true           # Wrap long lines (true) or truncate (false)
+mouse_scroll_lines = 5      # Number of lines to scroll with mouse wheel (default: 5)
 editor = "nvim"
 hex_editor = "hexyl"
 file_manager = "ranger"
@@ -490,6 +648,78 @@ Complete documentation is available in the [docs](./docs) directory:
 - **Nerd Fonts** - For file type icons (enable with `show_icons = true`)
 - **hexyl** - For binary file viewing (`cargo install hexyl`)
 - **xclip** - For clipboard support on Linux (usually pre-installed)
+
+---
+
+## Uninstalling
+
+### Linux / macOS
+
+**Automated uninstall (recommended):**
+
+```bash
+# Basic uninstall (removes binary and wrapper only)
+./uninstall-linux.sh
+
+# Remove configuration as well
+./uninstall-linux.sh --remove-config
+
+# Remove from PATH as well
+./uninstall-linux.sh --remove-from-path
+
+# Complete removal without confirmation prompts
+./uninstall-linux.sh --remove-config --remove-from-path --force
+```
+
+The uninstall script will remove:
+- `dtree` from `~/bin/`
+- `dt()` wrapper function from shell config (`.bashrc` or `.zshrc`)
+- Optionally: PATH entry and configuration directory
+
+**Manual uninstall:**
+
+```bash
+# Remove binary
+sudo rm /usr/local/bin/dtree
+# or for user installation:
+rm ~/bin/dtree
+
+# Remove configuration (optional)
+rm -rf ~/.config/dtree
+
+# Remove bash wrapper from ~/.bashrc
+# Edit ~/.bashrc and remove the dt() function
+```
+
+### Windows
+
+**Automated uninstall (recommended):**
+
+```powershell
+# Basic uninstall (removes binary and wrappers only)
+.\uninstall-windows.ps1
+
+# Complete removal (including configuration)
+.\uninstall-windows.ps1 -RemoveFromPath -RemoveConfig
+```
+
+The uninstall script will remove:
+- `dtree.exe` and `dt.bat` from `C:\Users\<Username>\bin\`
+- PowerShell `dt` function from all profiles
+- Optionally: PATH entry and configuration directory
+
+**Manual uninstall:**
+
+```powershell
+# Remove binaries
+Remove-Item "$env:USERPROFILE\bin\dtree.exe" -Force
+Remove-Item "$env:USERPROFILE\bin\dt.bat" -Force
+
+# Remove configuration (optional)
+Remove-Item "$env:APPDATA\dtree" -Recurse -Force
+
+# Remove PowerShell wrapper: edit $PROFILE and remove dt() function
+```
 
 ---
 
