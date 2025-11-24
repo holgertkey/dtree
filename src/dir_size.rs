@@ -1,9 +1,9 @@
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use crossbeam_channel::{unbounded, Receiver, Sender};
 
 /// Maximum calculation time per directory (5 seconds)
 const CALCULATION_TIMEOUT: Duration = Duration::from_secs(5);
@@ -212,11 +212,7 @@ fn worker_loop(
                 let start_time = Instant::now();
                 let mut file_count = 0;
 
-                let result = calculate_dir_size_limited(
-                    &path,
-                    start_time,
-                    &mut file_count,
-                );
+                let result = calculate_dir_size_limited(&path, start_time, &mut file_count);
 
                 // Send results
                 let _ = result_tx.send(SizeMessage::Result(
@@ -289,11 +285,8 @@ fn calculate_dir_size_limited(
                     }
                 } else if metadata.is_dir() {
                     // Recursively calculate subdirectory size
-                    let subdir_result = calculate_dir_size_limited(
-                        &entry.path(),
-                        start_time,
-                        file_count,
-                    );
+                    let subdir_result =
+                        calculate_dir_size_limited(&entry.path(), start_time, file_count);
 
                     total_size += subdir_result.size;
 

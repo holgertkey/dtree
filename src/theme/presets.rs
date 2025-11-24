@@ -23,26 +23,26 @@ fn default_theme() -> ThemeConfig {
         error_color: Some("red".to_string()),
         highlight_color: Some("yellow".to_string()),
         file_search_highlight_color: Some("yellow".to_string()),
-        cursor_color: Some("yellow".to_string()),     // for search & bookmarks
-        tree_cursor_color: Some("dim".to_string()),   // "dim" = no color, just dimming
+        cursor_color: Some("yellow".to_string()), // for search & bookmarks
+        tree_cursor_color: Some("dim".to_string()), // "dim" = no color, just dimming
         tree_cursor_bg_color: Some("dim".to_string()), // "dim" = no background color
-        main_border_color: Some("gray".to_string()),  // main window border
+        main_border_color: Some("gray".to_string()), // main window border
         panel_border_color: Some("cyan".to_string()), // panel borders (search, bookmarks)
-        background_color: Some("reset".to_string()),  // terminal default
+        background_color: Some("reset".to_string()), // terminal default
     }
 }
 
 /// Gruvbox theme - Warm, high contrast theme inspired by Gruvbox
 fn gruvbox_theme() -> ThemeConfig {
     ThemeConfig {
-        selected_color: Some("#fe8019".to_string()),  // bright orange
+        selected_color: Some("#fe8019".to_string()), // bright orange
         directory_color: Some("#83a598".to_string()), // bright blue
-        file_color: Some("#ebdbb2".to_string()),      // light foreground
-        border_color: Some("#928374".to_string()),    // gray
-        error_color: Some("#fb4934".to_string()),     // bright red
+        file_color: Some("#ebdbb2".to_string()),     // light foreground
+        border_color: Some("#928374".to_string()),   // gray
+        error_color: Some("#fb4934".to_string()),    // bright red
         highlight_color: Some("#fabd2f".to_string()), // bright yellow
         file_search_highlight_color: Some("#fabd2f".to_string()), // bright yellow for file search
-        cursor_color: Some("#fabd2f".to_string()),    // yellow for search & bookmarks
+        cursor_color: Some("#fabd2f".to_string()),   // yellow for search & bookmarks
         tree_cursor_color: Some("#ebdbb2".to_string()), // light foreground text
         tree_cursor_bg_color: Some("#303030".to_string()), // barely visible darker background
         main_border_color: Some("#928374".to_string()), // gray border
@@ -111,14 +111,14 @@ fn dracula_theme() -> ThemeConfig {
 /// Obsidian theme - Dark theme inspired by Obsidian app with subtle cursor
 fn obsidian_theme() -> ThemeConfig {
     ThemeConfig {
-        selected_color: Some("#a88bfa".to_string()),  // soft purple
+        selected_color: Some("#a88bfa".to_string()), // soft purple
         directory_color: Some("#8b9dff".to_string()), // light blue
-        file_color: Some("#dcddde".to_string()),      // light gray
-        border_color: Some("#3e4044".to_string()),    // dark gray
-        error_color: Some("#f14c4c".to_string()),     // soft red
+        file_color: Some("#dcddde".to_string()),     // light gray
+        border_color: Some("#3e4044".to_string()),   // dark gray
+        error_color: Some("#f14c4c".to_string()),    // soft red
         highlight_color: Some("#c792ea".to_string()), // violet
         file_search_highlight_color: Some("#c792ea".to_string()), // violet for file search
-        cursor_color: Some("#a88bfa".to_string()),    // purple for search & bookmarks
+        cursor_color: Some("#a88bfa".to_string()),   // purple for search & bookmarks
         tree_cursor_color: Some("#dcddde".to_string()), // light gray text
         tree_cursor_bg_color: Some("#1e1e21".to_string()), // barely visible dark background
         main_border_color: Some("#3e4044".to_string()), // dark gray border

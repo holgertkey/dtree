@@ -1,26 +1,26 @@
-mod tree_node;
 mod app;
-mod terminal;
-mod navigation;
-mod file_viewer;
-mod search;
-mod ui;
-mod event_handler;
-mod config;
-mod theme;
 mod bookmarks;
+mod config;
 mod dir_size;
+mod event_handler;
 mod file_icons;
+mod file_viewer;
+mod navigation;
 mod platform;
+mod search;
+mod terminal;
+mod theme;
+mod tree_node;
+mod ui;
 
 use anyhow::Result;
 use app::App;
-use terminal::{setup_terminal, cleanup_terminal, run_app};
-use clap::Parser;
-use std::path::PathBuf;
-use config::Config;
 use bookmarks::Bookmarks;
-use platform::{open_external_program, canonicalize_and_normalize};
+use clap::Parser;
+use config::Config;
+use platform::{canonicalize_and_normalize, open_external_program};
+use std::path::PathBuf;
+use terminal::{cleanup_terminal, run_app, setup_terminal};
 
 #[derive(Parser)]
 #[command(name = "dtree")]
@@ -71,7 +71,7 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
     #[cfg(windows)]
     {
         if input.len() == 2 && input.chars().nth(1) == Some(':') {
-            let drive_letter = input.chars().nth(0).unwrap();
+            let drive_letter = input.chars().next().unwrap();
             if drive_letter.is_ascii_alphabetic() {
                 // Convert "C:" to "C:\" to get the root of the drive
                 let root_path = format!("{}\\", input);
@@ -102,7 +102,8 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
             anyhow::bail!(
                 "Bookmark '{}' points to non-existent directory: {}\n\
                 Use 'dt -bm list' to see all bookmarks",
-                input, bookmark.path.display()
+                input,
+                bookmark.path.display()
             );
         }
     }
@@ -117,14 +118,21 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
     anyhow::bail!(
         "Neither bookmark '{}' nor directory '{}' found.\n\
         Use 'dt -bm list' to see all bookmarks",
-        input, input
+        input,
+        input
     );
 }
 
 fn main() -> Result<()> {
     // Preprocess arguments: convert -bm to --bm for clap compatibility
     let args: Vec<String> = std::env::args()
-        .map(|arg| if arg == "-bm" { "--bm".to_string() } else { arg })
+        .map(|arg| {
+            if arg == "-bm" {
+                "--bm".to_string()
+            } else {
+                arg
+            }
+        })
         .collect();
 
     // Ensure config file exists (create if missing)
@@ -163,7 +171,12 @@ fn main() -> Result<()> {
             } else {
                 for bookmark in bookmarks.list() {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                    println!("  {} → {} ({})", bookmark.key, name, bookmark.path.display());
+                    println!(
+                        "  {} → {} ({})",
+                        bookmark.key,
+                        name,
+                        bookmark.path.display()
+                    );
                 }
             }
             return Ok(());
@@ -198,7 +211,8 @@ fn main() -> Result<()> {
                     }
                 }
 
-                let dir_name = path.file_name()
+                let dir_name = path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .map(|s| s.to_string());
 
@@ -220,7 +234,12 @@ fn main() -> Result<()> {
                 } else {
                     for bookmark in bookmarks.list() {
                         let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                        println!("  {} → {} ({})", bookmark.key, name, bookmark.path.display());
+                        println!(
+                            "  {} → {} ({})",
+                            bookmark.key,
+                            name,
+                            bookmark.path.display()
+                        );
                     }
                 }
             }

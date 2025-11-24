@@ -1,19 +1,19 @@
 // Allow many arguments for event handler functions - they need direct access to app state
 #![allow(clippy::too_many_arguments)]
 
+use anyhow::Result;
+use arboard::Clipboard;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
-use arboard::Clipboard;
-use anyhow::Result;
 
-use crate::navigation::Navigation;
-use crate::file_viewer::FileViewer;
-use crate::search::Search;
 use crate::bookmarks::Bookmarks;
-use crate::ui::UI;
 use crate::config::Config;
 use crate::dir_size::DirSizeCache;
+use crate::file_viewer::FileViewer;
+use crate::navigation::Navigation;
+use crate::search::Search;
+use crate::ui::UI;
 
 /// Event handler for keyboard and mouse input
 pub struct EventHandler {
@@ -21,7 +21,7 @@ pub struct EventHandler {
     pub dragging_vertical: bool, // For bottom panel resize
     pub last_click_time: Option<(Instant, usize)>,
     pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
-    pub last_search_click_time: Option<(Instant, usize)>, // For search results double-click
+    pub last_search_click_time: Option<(Instant, usize)>,   // For search results double-click
 }
 
 impl Default for EventHandler {
@@ -81,7 +81,10 @@ impl EventHandler {
                     if let Some(bookmark) = bookmarks.get_selected_bookmark() {
                         let path = bookmark.path.clone();
                         let bookmark_key = bookmark.key.clone();
-                        let dir_name = bookmark.name.clone().unwrap_or_else(|| bookmark_key.clone());
+                        let dir_name = bookmark
+                            .name
+                            .clone()
+                            .unwrap_or_else(|| bookmark_key.clone());
                         bookmarks.exit_selection_mode();
 
                         // Try to navigate and check for errors
@@ -89,11 +92,15 @@ impl EventHandler {
                             // Error occurred - show details in file viewer if show_files is enabled
                             if *show_files {
                                 let error_content = vec![
-                                    format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
+                                    format!(
+                                        "Error accessing bookmark '{}' ({})",
+                                        bookmark_key, dir_name
+                                    ),
                                     String::new(),
                                     error_msg,
                                     String::new(),
-                                    "This directory cannot be accessed. Possible reasons:".to_string(),
+                                    "This directory cannot be accessed. Possible reasons:"
+                                        .to_string(),
                                     "- Insufficient permissions".to_string(),
                                     "- Directory was removed or renamed".to_string(),
                                     "- Filesystem error".to_string(),
@@ -105,7 +112,13 @@ impl EventHandler {
                             // Success - load file preview if needed
                             if *show_files {
                                 if let Some(node) = nav.get_selected_node() {
-                                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                    let _ = ui.load_file_for_viewer(
+                                        file_viewer,
+                                        &node.borrow().path,
+                                        config.behavior.max_file_lines,
+                                        false,
+                                        config,
+                                    );
                                 }
                             }
                         }
@@ -182,12 +195,15 @@ impl EventHandler {
                                 node_borrowed.path.clone()
                             } else {
                                 // File - use parent directory
-                                node_borrowed.path.parent()
+                                node_borrowed
+                                    .path
+                                    .parent()
                                     .map(|p| p.to_path_buf())
                                     .unwrap_or_else(|| node_borrowed.path.clone())
                             };
 
-                            let dir_name = path.file_name()
+                            let dir_name = path
+                                .file_name()
                                 .and_then(|n| n.to_str())
                                 .map(|s| s.to_string());
 
@@ -247,7 +263,13 @@ impl EventHandler {
                         // Move to next file in directory
                         nav.move_down();
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                true,
+                                config,
+                            );
                         }
                         return Ok(Some(PathBuf::new()));
                     }
@@ -255,7 +277,13 @@ impl EventHandler {
                         // Move to previous file in directory
                         nav.move_up();
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                true,
+                                config,
+                            );
                         }
                         return Ok(Some(PathBuf::new()));
                     }
@@ -312,9 +340,16 @@ impl EventHandler {
                     let saved_scroll = file_viewer.scroll;
                     // Reload the current file to apply wrapping changes
                     if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                        let _ = ui.load_file_for_viewer(
+                            file_viewer,
+                            &node.borrow().path,
+                            config.behavior.max_file_lines,
+                            true,
+                            config,
+                        );
                         // Restore scroll position (clamped to content length)
-                        file_viewer.scroll = saved_scroll.min(file_viewer.content.len().saturating_sub(1));
+                        file_viewer.scroll =
+                            saved_scroll.min(file_viewer.content.len().saturating_sub(1));
                     }
                     return Ok(Some(PathBuf::new()));
                 }
@@ -329,11 +364,13 @@ impl EventHandler {
                             // Check if binary file
                             if file_viewer.is_binary {
                                 // Return special marker for hex editor
-                                let marker_path = PathBuf::from(format!("HEXEDITOR:{}", path.display()));
+                                let marker_path =
+                                    PathBuf::from(format!("HEXEDITOR:{}", path.display()));
                                 return Ok(Some(marker_path));
                             } else {
                                 // Return special marker for text editor
-                                let marker_path = PathBuf::from(format!("EDITOR:{}", path.display()));
+                                let marker_path =
+                                    PathBuf::from(format!("EDITOR:{}", path.display()));
                                 return Ok(Some(marker_path));
                             }
                         }
@@ -356,12 +393,15 @@ impl EventHandler {
                         let path_to_open = if node_borrowed.is_dir {
                             node_borrowed.path.clone()
                         } else {
-                            node_borrowed.path.parent()
+                            node_borrowed
+                                .path
+                                .parent()
                                 .unwrap_or(&node_borrowed.path)
                                 .to_path_buf()
                         };
                         drop(node_borrowed);
-                        let marker_path = PathBuf::from(format!("FILEMGR:{}", path_to_open.display()));
+                        let marker_path =
+                            PathBuf::from(format!("FILEMGR:{}", path_to_open.display()));
                         return Ok(Some(marker_path));
                     }
                     return Ok(Some(PathBuf::new()));
@@ -385,7 +425,13 @@ impl EventHandler {
                         file_viewer.enable_head_mode();
                         // Reload file with head mode
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                true,
+                                config,
+                            );
                         }
                     } else {
                         // Normal Home behavior - jump to top
@@ -399,7 +445,13 @@ impl EventHandler {
                         file_viewer.enable_tail_mode();
                         // Reload file with tail mode
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, true, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                true,
+                                config,
+                            );
                         }
                         // Scroll to end after switching to tail mode
                         let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
@@ -514,7 +566,13 @@ impl EventHandler {
                     nav.move_down();
                     if *show_files || *fullscreen_viewer {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, *fullscreen_viewer, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                *fullscreen_viewer,
+                                config,
+                            );
                             *show_help = false;
                         }
                     }
@@ -527,7 +585,13 @@ impl EventHandler {
                     nav.move_up();
                     if *show_files || *fullscreen_viewer {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, *fullscreen_viewer, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                *fullscreen_viewer,
+                                config,
+                            );
                             *show_help = false;
                         }
                     }
@@ -540,7 +604,13 @@ impl EventHandler {
                         let _ = nav.expand_path_to_node(&path, *show_files);
                         search.focus_on_results = false;
                         if *show_files {
-                            let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &path,
+                                config.behavior.max_file_lines,
+                                false,
+                                config,
+                            );
                             *show_help = false;
                         }
                     }
@@ -563,7 +633,8 @@ impl EventHandler {
                                         String::new(),
                                         error_msg,
                                         String::new(),
-                                        "This directory cannot be accessed. Possible reasons:".to_string(),
+                                        "This directory cannot be accessed. Possible reasons:"
+                                            .to_string(),
                                         "- Insufficient permissions".to_string(),
                                         "- Directory was removed or renamed".to_string(),
                                         "- Filesystem error".to_string(),
@@ -575,7 +646,13 @@ impl EventHandler {
                                 // Success - load file preview if needed
                                 if *show_files {
                                     if let Some(node) = nav.get_selected_node() {
-                                        let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                                        let _ = ui.load_file_for_viewer(
+                                            file_viewer,
+                                            &node.borrow().path,
+                                            config.behavior.max_file_lines,
+                                            false,
+                                            config,
+                                        );
                                     }
                                 }
                             }
@@ -601,7 +678,8 @@ impl EventHandler {
                                         String::new(),
                                         error_msg,
                                         String::new(),
-                                        "This directory cannot be read. Possible reasons:".to_string(),
+                                        "This directory cannot be read. Possible reasons:"
+                                            .to_string(),
                                         "- Insufficient permissions".to_string(),
                                         "- Directory was removed or renamed".to_string(),
                                         "- Filesystem error".to_string(),
@@ -646,7 +724,13 @@ impl EventHandler {
                     // Only load file if we have a valid selection
                     if !nav.flat_list.is_empty() {
                         if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node.borrow().path,
+                                config.behavior.max_file_lines,
+                                false,
+                                config,
+                            );
                         }
                     }
                 }
@@ -683,7 +767,13 @@ impl EventHandler {
 
                         if *fullscreen_viewer {
                             // Load file for fullscreen viewing with full terminal width
-                            let _ = ui.load_file_for_viewer(file_viewer, &node_borrowed.path, config.behavior.max_file_lines, true, config);
+                            let _ = ui.load_file_for_viewer(
+                                file_viewer,
+                                &node_borrowed.path,
+                                config.behavior.max_file_lines,
+                                true,
+                                config,
+                            );
                         }
                     }
                 }
@@ -710,7 +800,8 @@ impl EventHandler {
 
                         if is_binary {
                             // Return special marker for hex editor
-                            let marker_path = PathBuf::from(format!("HEXEDITOR:{}", path.display()));
+                            let marker_path =
+                                PathBuf::from(format!("HEXEDITOR:{}", path.display()));
                             return Ok(Some(marker_path));
                         } else {
                             // Return special marker for text editor
@@ -729,7 +820,9 @@ impl EventHandler {
                         node_borrowed.path.clone()
                     } else {
                         // For files, open the parent directory
-                        node_borrowed.path.parent()
+                        node_borrowed
+                            .path
+                            .parent()
                             .unwrap_or(&node_borrowed.path)
                             .to_path_buf()
                     };
@@ -803,12 +896,12 @@ impl EventHandler {
     ) -> Result<Option<PathBuf>> {
         match key.code {
             KeyCode::Esc => {
-                file_viewer.clear_search();  // Clear everything
+                file_viewer.clear_search(); // Clear everything
                 Ok(Some(PathBuf::new()))
             }
             KeyCode::Enter => {
-                file_viewer.perform_search();  // This will scroll to first match
-                file_viewer.exit_search_mode();  // Exit input mode but keep results
+                file_viewer.perform_search(); // This will scroll to first match
+                file_viewer.exit_search_mode(); // Exit input mode but keep results
                 Ok(Some(PathBuf::new()))
             }
             KeyCode::Char(c) => {
@@ -908,7 +1001,18 @@ impl EventHandler {
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse, nav, file_viewer, search, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_mouse_click(
+                    mouse,
+                    nav,
+                    file_viewer,
+                    search,
+                    bookmarks,
+                    ui,
+                    show_files,
+                    show_help,
+                    fullscreen_viewer,
+                    config,
+                )?;
             }
             MouseEventKind::Drag(MouseButton::Left) => {
                 // Ignore dragging in fullscreen mode
@@ -931,10 +1035,32 @@ impl EventHandler {
                 }
             }
             MouseEventKind::ScrollUp => {
-                self.handle_scroll_up(mouse, nav, file_viewer, search, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_scroll_up(
+                    mouse,
+                    nav,
+                    file_viewer,
+                    search,
+                    bookmarks,
+                    ui,
+                    show_files,
+                    show_help,
+                    fullscreen_viewer,
+                    config,
+                )?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_scroll_down(mouse, nav, file_viewer, search, bookmarks, ui, show_files, show_help, fullscreen_viewer, config)?;
+                self.handle_scroll_down(
+                    mouse,
+                    nav,
+                    file_viewer,
+                    search,
+                    bookmarks,
+                    ui,
+                    show_files,
+                    show_help,
+                    fullscreen_viewer,
+                    config,
+                )?;
             }
             _ => {}
         }
@@ -960,105 +1086,138 @@ impl EventHandler {
         }
 
         // Check click in search results panel
-        if search.show_results && ui.bottom_panel_height > 0
-            && mouse.row > ui.bottom_panel_top && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
-                let results_count = search.get_results_count();
-                if results_count > 0 {
-                    let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
-                    if clicked_row < results_count {
-                        let now = Instant::now();
-                        let is_double_click = if let Some((last_time, last_idx)) = self.last_search_click_time {
-                            clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(config.behavior.double_click_timeout_ms)
+        if search.show_results
+            && ui.bottom_panel_height > 0
+            && mouse.row > ui.bottom_panel_top
+            && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1)
+        {
+            let results_count = search.get_results_count();
+            if results_count > 0 {
+                let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
+                if clicked_row < results_count {
+                    let now = Instant::now();
+                    let is_double_click =
+                        if let Some((last_time, last_idx)) = self.last_search_click_time {
+                            clicked_row == last_idx
+                                && now.duration_since(last_time)
+                                    < Duration::from_millis(config.behavior.double_click_timeout_ms)
                         } else {
                             false
                         };
 
-                        if is_double_click {
-                            // Double-click: jump to search result
-                            search.set_selected(clicked_row);
-                            if let Some(path) = search.get_selected_result() {
-                                let _ = nav.expand_path_to_node(&path, *show_files);
-                                search.focus_on_results = false;
-                                if *show_files {
-                                    let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, false, config);
-                                    *show_help = false;
-                                }
+                    if is_double_click {
+                        // Double-click: jump to search result
+                        search.set_selected(clicked_row);
+                        if let Some(path) = search.get_selected_result() {
+                            let _ = nav.expand_path_to_node(&path, *show_files);
+                            search.focus_on_results = false;
+                            if *show_files {
+                                let _ = ui.load_file_for_viewer(
+                                    file_viewer,
+                                    &path,
+                                    config.behavior.max_file_lines,
+                                    false,
+                                    config,
+                                );
+                                *show_help = false;
                             }
-                            self.last_search_click_time = None;
-                        } else {
-                            // Single click: just select the result
-                            search.set_selected(clicked_row);
-                            self.last_search_click_time = Some((now, clicked_row));
                         }
+                        self.last_search_click_time = None;
+                    } else {
+                        // Single click: just select the result
+                        search.set_selected(clicked_row);
+                        self.last_search_click_time = Some((now, clicked_row));
                     }
                 }
-                return Ok(());
             }
+            return Ok(());
+        }
 
         // Check click in bookmarks panel (selection mode only, not creation mode)
-        if bookmarks.is_selecting && ui.bottom_panel_height > 0
-            && mouse.row > ui.bottom_panel_top && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1) {
-                let filtered = bookmarks.get_filtered_bookmarks();
-                if !filtered.is_empty() {
-                    let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
-                    if clicked_row < filtered.len() {
-                        let now = Instant::now();
-                        let is_double_click = if let Some((last_time, last_idx)) = self.last_bookmark_click_time {
-                            clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(config.behavior.double_click_timeout_ms)
+        if bookmarks.is_selecting
+            && ui.bottom_panel_height > 0
+            && mouse.row > ui.bottom_panel_top
+            && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1)
+        {
+            let filtered = bookmarks.get_filtered_bookmarks();
+            if !filtered.is_empty() {
+                let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
+                if clicked_row < filtered.len() {
+                    let now = Instant::now();
+                    let is_double_click =
+                        if let Some((last_time, last_idx)) = self.last_bookmark_click_time {
+                            clicked_row == last_idx
+                                && now.duration_since(last_time)
+                                    < Duration::from_millis(config.behavior.double_click_timeout_ms)
                         } else {
                             false
                         };
 
-                        if is_double_click {
-                            // Double-click: navigate to bookmark
-                            bookmarks.selected_index = clicked_row;
-                            if let Some(bookmark) = bookmarks.get_selected_bookmark() {
-                                let path = bookmark.path.clone();
-                                let bookmark_key = bookmark.key.clone();
-                                let dir_name = bookmark.name.clone().unwrap_or_else(|| bookmark_key.clone());
-                                bookmarks.exit_selection_mode();
+                    if is_double_click {
+                        // Double-click: navigate to bookmark
+                        bookmarks.selected_index = clicked_row;
+                        if let Some(bookmark) = bookmarks.get_selected_bookmark() {
+                            let path = bookmark.path.clone();
+                            let bookmark_key = bookmark.key.clone();
+                            let dir_name = bookmark
+                                .name
+                                .clone()
+                                .unwrap_or_else(|| bookmark_key.clone());
+                            bookmarks.exit_selection_mode();
 
-                                // Try to navigate and check for errors
-                                if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                                    // Error occurred - show details in file viewer if show_files is enabled
-                                    if *show_files {
-                                        let error_content = vec![
-                                            format!("Error accessing bookmark '{}' ({})", bookmark_key, dir_name),
-                                            String::new(),
-                                            error_msg,
-                                            String::new(),
-                                            "This directory cannot be accessed. Possible reasons:".to_string(),
-                                            "- Insufficient permissions".to_string(),
-                                            "- Directory was removed or renamed".to_string(),
-                                            "- Filesystem error".to_string(),
-                                        ];
-                                        file_viewer.load_content(error_content);
-                                        *show_help = false;
-                                    }
-                                } else {
-                                    // Success - load file preview if needed
-                                    if *show_files {
-                                        if let Some(node) = nav.get_selected_node() {
-                                            let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, false, config);
-                                        }
+                            // Try to navigate and check for errors
+                            if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
+                                // Error occurred - show details in file viewer if show_files is enabled
+                                if *show_files {
+                                    let error_content = vec![
+                                        format!(
+                                            "Error accessing bookmark '{}' ({})",
+                                            bookmark_key, dir_name
+                                        ),
+                                        String::new(),
+                                        error_msg,
+                                        String::new(),
+                                        "This directory cannot be accessed. Possible reasons:"
+                                            .to_string(),
+                                        "- Insufficient permissions".to_string(),
+                                        "- Directory was removed or renamed".to_string(),
+                                        "- Filesystem error".to_string(),
+                                    ];
+                                    file_viewer.load_content(error_content);
+                                    *show_help = false;
+                                }
+                            } else {
+                                // Success - load file preview if needed
+                                if *show_files {
+                                    if let Some(node) = nav.get_selected_node() {
+                                        let _ = ui.load_file_for_viewer(
+                                            file_viewer,
+                                            &node.borrow().path,
+                                            config.behavior.max_file_lines,
+                                            false,
+                                            config,
+                                        );
                                     }
                                 }
                             }
-                            self.last_bookmark_click_time = None;
-                        } else {
-                            // Single click: just select the bookmark
-                            bookmarks.selected_index = clicked_row;
-                            self.last_bookmark_click_time = Some((now, clicked_row));
                         }
+                        self.last_bookmark_click_time = None;
+                    } else {
+                        // Single click: just select the bookmark
+                        bookmarks.selected_index = clicked_row;
+                        self.last_bookmark_click_time = Some((now, clicked_row));
                     }
                 }
-                return Ok(());
             }
+            return Ok(());
+        }
 
         // Check click in tree area
-        if mouse.column >= ui.tree_area_start && mouse.column < ui.tree_area_end
-            && mouse.row >= ui.tree_area_top && mouse.row < ui.tree_area_top + ui.tree_area_height {
-
+        if mouse.column >= ui.tree_area_start
+            && mouse.column < ui.tree_area_end
+            && mouse.row >= ui.tree_area_top
+            && mouse.row < ui.tree_area_top + ui.tree_area_height
+        {
             // Calculate clicked row accounting for scroll offset
             let clicked_row_visible = mouse.row.saturating_sub(ui.tree_area_top + 1) as usize;
             let clicked_row = clicked_row_visible + ui.tree_scroll_offset;
@@ -1066,7 +1225,9 @@ impl EventHandler {
             if clicked_row < nav.flat_list.len() {
                 let now = Instant::now();
                 let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time {
-                    clicked_row == last_idx && now.duration_since(last_time) < Duration::from_millis(config.behavior.double_click_timeout_ms)
+                    clicked_row == last_idx
+                        && now.duration_since(last_time)
+                            < Duration::from_millis(config.behavior.double_click_timeout_ms)
                 } else {
                     false
                 };
@@ -1105,7 +1266,13 @@ impl EventHandler {
 
                     if *show_files || fullscreen_viewer {
                         let path = nav.flat_list[clicked_row].borrow().path.clone();
-                        let _ = ui.load_file_for_viewer(file_viewer, &path, config.behavior.max_file_lines, fullscreen_viewer, config);
+                        let _ = ui.load_file_for_viewer(
+                            file_viewer,
+                            &path,
+                            config.behavior.max_file_lines,
+                            fullscreen_viewer,
+                            config,
+                        );
                         *show_help = false;
                     }
                 }
@@ -1168,9 +1335,12 @@ impl EventHandler {
             }
             file_viewer.ensure_visual_cursor_visible(visible_height);
         // In fullscreen mode or in split view over file viewer area, scroll the file viewer
-        } else if fullscreen_viewer || ((*show_files || *show_help) && mouse.column >= ui.viewer_area_start
-            && mouse.row >= ui.viewer_area_top
-            && mouse.row < ui.viewer_area_top + ui.viewer_area_height) {
+        } else if fullscreen_viewer
+            || ((*show_files || *show_help)
+                && mouse.column >= ui.viewer_area_start
+                && mouse.row >= ui.viewer_area_top
+                && mouse.row < ui.viewer_area_top + ui.viewer_area_height)
+        {
             for _ in 0..config.behavior.mouse_scroll_lines {
                 file_viewer.scroll_up();
             }
@@ -1178,7 +1348,13 @@ impl EventHandler {
             nav.move_up();
             if (*show_files || fullscreen_viewer) && !*show_help {
                 if let Some(node) = nav.get_selected_node() {
-                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, fullscreen_viewer, config);
+                    let _ = ui.load_file_for_viewer(
+                        file_viewer,
+                        &node.borrow().path,
+                        config.behavior.max_file_lines,
+                        fullscreen_viewer,
+                        config,
+                    );
                 }
             }
         }
@@ -1225,9 +1401,12 @@ impl EventHandler {
             }
             file_viewer.ensure_visual_cursor_visible(visible_height);
         // In fullscreen mode or in split view over file viewer area, scroll the file viewer
-        } else if fullscreen_viewer || ((*show_files || *show_help) && mouse.column >= ui.viewer_area_start
-            && mouse.row >= ui.viewer_area_top
-            && mouse.row < ui.viewer_area_top + ui.viewer_area_height) {
+        } else if fullscreen_viewer
+            || ((*show_files || *show_help)
+                && mouse.column >= ui.viewer_area_start
+                && mouse.row >= ui.viewer_area_top
+                && mouse.row < ui.viewer_area_top + ui.viewer_area_height)
+        {
             let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
             let lines_to_show = content_height.saturating_sub(2);
             for _ in 0..config.behavior.mouse_scroll_lines {
@@ -1237,7 +1416,13 @@ impl EventHandler {
             nav.move_down();
             if (*show_files || fullscreen_viewer) && !*show_help {
                 if let Some(node) = nav.get_selected_node() {
-                    let _ = ui.load_file_for_viewer(file_viewer, &node.borrow().path, config.behavior.max_file_lines, fullscreen_viewer, config);
+                    let _ = ui.load_file_for_viewer(
+                        file_viewer,
+                        &node.borrow().path,
+                        config.behavior.max_file_lines,
+                        fullscreen_viewer,
+                        config,
+                    );
                 }
             }
         }

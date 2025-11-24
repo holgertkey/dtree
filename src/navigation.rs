@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
-use std::collections::HashMap;
-use anyhow::Result;
 use crate::tree_node::{TreeNode, TreeNodeRef};
-use std::rc::Rc;
+use anyhow::Result;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 /// Navigation logic for tree traversal and manipulation
 pub struct Navigation {
@@ -17,7 +17,12 @@ pub struct Navigation {
 }
 
 impl Navigation {
-    pub fn new(start_path: PathBuf, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<Self> {
+    pub fn new(
+        start_path: PathBuf,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<Self> {
         let mut root = TreeNode::new(start_path, 0)?;
         root.load_children(show_files, show_hidden, follow_symlinks)?;
         root.is_expanded = true;
@@ -96,7 +101,11 @@ impl Navigation {
                 // Toggle the node
                 let error_msg = {
                     let mut node_borrowed = node.borrow_mut();
-                    node_borrowed.toggle_expand(show_files, self.show_hidden, self.follow_symlinks)?;
+                    node_borrowed.toggle_expand(
+                        show_files,
+                        self.show_hidden,
+                        self.follow_symlinks,
+                    )?;
                     if node_borrowed.has_error {
                         node_borrowed.error_message.clone()
                     } else {
@@ -121,12 +130,24 @@ impl Navigation {
         }
 
         // Fallback to full rebuild if node not found in flat_list
-        let error_msg = Self::toggle_node_recursive(&self.root, path, show_files, self.show_hidden, self.follow_symlinks)?;
+        let error_msg = Self::toggle_node_recursive(
+            &self.root,
+            path,
+            show_files,
+            self.show_hidden,
+            self.follow_symlinks,
+        )?;
         self.rebuild_flat_list();
         Ok(error_msg)
     }
 
-    fn toggle_node_recursive(node: &TreeNodeRef, target_path: &Path, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<Option<String>> {
+    fn toggle_node_recursive(
+        node: &TreeNodeRef,
+        target_path: &Path,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<Option<String>> {
         // Check if this is the target node
         {
             let mut node_borrowed = node.borrow_mut();
@@ -147,7 +168,13 @@ impl Navigation {
         let children_count = node.borrow().children.len();
         for i in 0..children_count {
             let child = Rc::clone(&node.borrow().children[i]);
-            if let Some(error_msg) = Self::toggle_node_recursive(&child, target_path, show_files, show_hidden, follow_symlinks)? {
+            if let Some(error_msg) = Self::toggle_node_recursive(
+                &child,
+                target_path,
+                show_files,
+                show_hidden,
+                follow_symlinks,
+            )? {
                 return Ok(Some(error_msg));
             }
         }
@@ -157,12 +184,22 @@ impl Navigation {
 
     /// Reload tree with new show_files setting
     pub fn reload_tree(&mut self, show_files: bool) -> Result<()> {
-        Self::reload_node_recursive(&self.root, show_files, self.show_hidden, self.follow_symlinks)?;
+        Self::reload_node_recursive(
+            &self.root,
+            show_files,
+            self.show_hidden,
+            self.follow_symlinks,
+        )?;
         self.rebuild_flat_list();
         Ok(())
     }
 
-    fn reload_node_recursive(node: &TreeNodeRef, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
+    fn reload_node_recursive(
+        node: &TreeNodeRef,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<()> {
         // Check if we need to reload this node
         let should_reload = {
             let node_borrowed = node.borrow();
@@ -215,7 +252,11 @@ impl Navigation {
 
     /// Navigate to arbitrary directory (for bookmarks)
     /// Returns Some(error_message) if directory cannot be accessed, None otherwise
-    pub fn go_to_directory(&mut self, target_path: PathBuf, show_files: bool) -> Result<Option<String>> {
+    pub fn go_to_directory(
+        &mut self,
+        target_path: PathBuf,
+        show_files: bool,
+    ) -> Result<Option<String>> {
         if !target_path.is_dir() {
             return Ok(None);
         }
@@ -246,7 +287,13 @@ impl Navigation {
 
     /// Expand path to node (for search results)
     pub fn expand_path_to_node(&mut self, target_path: &PathBuf, show_files: bool) -> Result<()> {
-        Self::expand_path_recursive(&self.root, target_path, show_files, self.show_hidden, self.follow_symlinks)?;
+        Self::expand_path_recursive(
+            &self.root,
+            target_path,
+            show_files,
+            self.show_hidden,
+            self.follow_symlinks,
+        )?;
         self.rebuild_flat_list();
 
         // Find and select element in tree using HashMap (O(1) instead of O(n))
@@ -257,7 +304,13 @@ impl Navigation {
         Ok(())
     }
 
-    fn expand_path_recursive(node: &TreeNodeRef, target_path: &PathBuf, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<bool> {
+    fn expand_path_recursive(
+        node: &TreeNodeRef,
+        target_path: &PathBuf,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<bool> {
         // Check if this is the target node or if target is a descendant
         {
             let mut node_borrowed = node.borrow_mut();
@@ -285,7 +338,13 @@ impl Navigation {
         let children_count = node.borrow().children.len();
         for i in 0..children_count {
             let child = Rc::clone(&node.borrow().children[i]);
-            if Self::expand_path_recursive(&child, target_path, show_files, show_hidden, follow_symlinks)? {
+            if Self::expand_path_recursive(
+                &child,
+                target_path,
+                show_files,
+                show_hidden,
+                follow_symlinks,
+            )? {
                 return Ok(true);
             }
         }
@@ -310,7 +369,8 @@ impl Navigation {
 
         // Remove descendants
         if remove_count > 0 {
-            self.flat_list.drain((parent_index + 1)..(parent_index + 1 + remove_count));
+            self.flat_list
+                .drain((parent_index + 1)..(parent_index + 1 + remove_count));
         }
 
         // Rebuild path_to_index mapping

@@ -1,5 +1,5 @@
-use std::process::Command;
 use anyhow::Result;
+use std::process::Command;
 
 /// Open an external program with the given path
 /// This function handles platform differences in launching external programs
@@ -7,14 +7,13 @@ use anyhow::Result;
 pub fn open_external_program(program: &str, path: &str) -> Result<()> {
     // Unix: use sh shell with proper TTY handling
     // Properly quote the path to handle spaces and special characters
-    let shell_cmd = format!("{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
-                            program,
-                            path.replace("'", "'\\''"));
+    let shell_cmd = format!(
+        "{} '{}' < /dev/tty > /dev/tty 2> /dev/tty",
+        program,
+        path.replace("'", "'\\''")
+    );
 
-    Command::new("sh")
-        .arg("-c")
-        .arg(&shell_cmd)
-        .status()?;
+    Command::new("sh").arg("-c").arg(&shell_cmd).status()?;
 
     Ok(())
 }
@@ -56,11 +55,13 @@ pub fn is_absolute_path(path: &str) -> bool {
 #[cfg(windows)]
 pub fn is_absolute_path(path: &str) -> bool {
     // Windows: C:\, D:\, \\server\share (UNC), or contains path separator
-    path.len() >= 2 && (
-        (path.chars().nth(1) == Some(':')) ||  // C:\, D:\
+    path.len() >= 2
+        && (
+            (path.chars().nth(1) == Some(':')) ||  // C:\, D:\
         path.starts_with("\\\\") ||             // \\server\share
-        path.contains(std::path::MAIN_SEPARATOR)  // Any path with separators
-    )
+        path.contains(std::path::MAIN_SEPARATOR)
+            // Any path with separators
+        )
 }
 
 /// Normalize path separators for the current platform
@@ -80,15 +81,17 @@ pub fn normalize_path_separator(path: &str) -> String {
 
 /// Canonicalize path and normalize for display
 /// On Windows, removes the \\?\ prefix if present
-pub fn canonicalize_and_normalize(path: &std::path::Path) -> Result<std::path::PathBuf, std::io::Error> {
+pub fn canonicalize_and_normalize(
+    path: &std::path::Path,
+) -> Result<std::path::PathBuf, std::io::Error> {
     let canonical = path.canonicalize()?;
 
     #[cfg(windows)]
     {
         // On Windows, remove the \\?\ prefix if present
         let path_str = canonical.to_string_lossy();
-        if path_str.starts_with("\\\\?\\") {
-            let normalized = &path_str[4..]; // Remove \\?\ prefix
+        if let Some(normalized) = path_str.strip_prefix("\\\\?\\") {
+            // Remove \\?\ prefix
             return Ok(std::path::PathBuf::from(normalized));
         }
     }

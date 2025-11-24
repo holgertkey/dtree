@@ -1,8 +1,8 @@
-use std::path::PathBuf;
-use std::fs;
-use std::rc::Rc;
-use std::cell::RefCell;
 use anyhow::Result;
+use std::cell::RefCell;
+use std::fs;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 pub type TreeNodeRef = Rc<RefCell<TreeNode>>;
 
@@ -13,14 +13,15 @@ pub struct TreeNode {
     pub is_expanded: bool,
     pub depth: usize,
     pub children: Vec<TreeNodeRef>,
-    pub has_error: bool,           // Indicates read/access errors
+    pub has_error: bool,               // Indicates read/access errors
     pub error_message: Option<String>, // Optional error description
-    is_sorted: bool,               // Cache flag: true if children are already sorted
+    is_sorted: bool,                   // Cache flag: true if children are already sorted
 }
 
 impl TreeNode {
     pub fn new(path: PathBuf, depth: usize) -> Result<Self> {
-        let name = path.file_name()
+        let name = path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("")
             .to_string();
@@ -40,7 +41,12 @@ impl TreeNode {
         })
     }
 
-    pub fn load_children(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
+    pub fn load_children(
+        &mut self,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<()> {
         // If children are already loaded and sorted, skip
         if !self.is_dir || (!self.children.is_empty() && self.is_sorted) {
             return Ok(());
@@ -100,8 +106,11 @@ impl TreeNode {
                             }
                             Err(e) => {
                                 error_count += 1;
-                                skipped_entries.push(format!("{}: {}",
-                                    path.file_name().unwrap_or_default().to_string_lossy(), e));
+                                skipped_entries.push(format!(
+                                    "{}: {}",
+                                    path.file_name().unwrap_or_default().to_string_lossy(),
+                                    e
+                                ));
                             }
                         }
                     }
@@ -140,7 +149,12 @@ impl TreeNode {
         Ok(())
     }
 
-    pub fn toggle_expand(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) -> Result<()> {
+    pub fn toggle_expand(
+        &mut self,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) -> Result<()> {
         if !self.is_dir {
             return Ok(());
         }

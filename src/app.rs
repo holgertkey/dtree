@@ -1,16 +1,16 @@
-use std::path::PathBuf;
+use anyhow::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::Frame;
-use anyhow::Result;
+use std::path::PathBuf;
 
-use crate::navigation::Navigation;
+use crate::bookmarks::Bookmarks;
+use crate::config::Config;
+use crate::dir_size::DirSizeCache;
+use crate::event_handler::EventHandler;
 use crate::file_viewer::FileViewer;
+use crate::navigation::Navigation;
 use crate::search::Search;
 use crate::ui::UI;
-use crate::event_handler::EventHandler;
-use crate::config::Config;
-use crate::bookmarks::Bookmarks;
-use crate::dir_size::DirSizeCache;
 
 /// Main application state
 pub struct App {
@@ -28,7 +28,7 @@ pub struct App {
     show_sizes: bool,
     dir_size_cache: DirSizeCache,
     need_terminal_clear: bool,
-    needs_redraw: bool,  // Dirty flag for selective rendering optimization
+    needs_redraw: bool, // Dirty flag for selective rendering optimization
 }
 
 impl App {
@@ -36,7 +36,12 @@ impl App {
         // Load configuration from global config file
         let config = Config::load()?;
 
-        let nav = Navigation::new(start_path, false, config.behavior.show_hidden, config.behavior.follow_symlinks)?;
+        let nav = Navigation::new(
+            start_path,
+            false,
+            config.behavior.show_hidden,
+            config.behavior.follow_symlinks,
+        )?;
         let mut file_viewer = FileViewer::new();
         let search = Search::new();
         let mut ui = UI::new();
@@ -63,7 +68,7 @@ impl App {
             show_sizes: false,
             dir_size_cache: DirSizeCache::new(),
             need_terminal_clear: false,
-            needs_redraw: true,  // Start with redraw needed to render initial frame
+            needs_redraw: true, // Start with redraw needed to render initial frame
         })
     }
 
@@ -156,9 +161,12 @@ impl App {
         self.nav.reload_tree(true)?;
 
         // Find and select the current file in the flat list
-        if let Some(index) = self.nav.flat_list.iter().position(|node| {
-            node.borrow().path == file_path
-        }) {
+        if let Some(index) = self
+            .nav
+            .flat_list
+            .iter()
+            .position(|node| node.borrow().path == file_path)
+        {
             self.nav.selected = index;
         }
 
@@ -167,7 +175,13 @@ impl App {
         let max_lines = self.config.behavior.max_file_lines;
         let enable_highlighting = self.config.appearance.enable_syntax_highlighting;
         let theme = &self.config.appearance.syntax_theme.clone();
-        self.file_viewer.load_file_with_width(file_path, None, max_lines, enable_highlighting, theme)?;
+        self.file_viewer.load_file_with_width(
+            file_path,
+            None,
+            max_lines,
+            enable_highlighting,
+            theme,
+        )?;
 
         // Mark for redraw after state change
         self.mark_dirty();
@@ -194,7 +208,7 @@ impl App {
                 &path,
                 self.config.behavior.max_file_lines,
                 true, // fullscreen
-                &self.config
+                &self.config,
             )?;
 
             // Mark for redraw after reloading file

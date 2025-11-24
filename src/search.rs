@@ -1,10 +1,10 @@
 // Allow many arguments for recursive search function - it needs context for deep traversal
 #![allow(clippy::too_many_arguments)]
 
+use crate::tree_node::TreeNodeRef;
+use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use std::path::PathBuf;
 use std::thread::{self, JoinHandle};
-use crossbeam_channel::{bounded, unbounded, Sender, Receiver};
-use crate::tree_node::TreeNodeRef;
 
 /// Messages from search thread to main thread
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub enum SearchMessage {
 pub struct SearchResult {
     pub path: PathBuf,
     pub is_dir: bool,
-    pub score: Option<i64>,        // Fuzzy match score (None for exact match)
+    pub score: Option<i64>, // Fuzzy match score (None for exact match)
     pub match_indices: Option<Vec<usize>>, // Character positions that matched (for highlighting)
 }
 
@@ -30,7 +30,7 @@ pub struct SearchResult {
 pub struct Search {
     pub mode: bool,
     pub query: String,
-    pub fuzzy_mode: bool,  // True if query starts with '/'
+    pub fuzzy_mode: bool, // True if query starts with '/'
     pub results: Vec<SearchResult>,
     pub selected: usize,
     pub show_results: bool,
@@ -111,7 +111,13 @@ impl Search {
     }
 
     /// Execute two-phase search: quick + deep background scan
-    pub fn perform_search(&mut self, root: &TreeNodeRef, show_files: bool, show_hidden: bool, follow_symlinks: bool) {
+    pub fn perform_search(
+        &mut self,
+        root: &TreeNodeRef,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) {
         // Cancel any existing search
         self.cancel_search();
 
@@ -135,7 +141,14 @@ impl Search {
         self.search_loaded_nodes(root, &query_lower, show_files, show_hidden, is_fuzzy);
 
         // Phase 2: Deep search in background thread
-        self.spawn_deep_search(root, query_lower, show_files, show_hidden, follow_symlinks, is_fuzzy);
+        self.spawn_deep_search(
+            root,
+            query_lower,
+            show_files,
+            show_hidden,
+            follow_symlinks,
+            is_fuzzy,
+        );
 
         self.show_results = true;
         self.focus_on_results = true; // Always focus on results after search
@@ -144,9 +157,16 @@ impl Search {
     }
 
     /// Phase 1: Quick search through already loaded (visible) nodes
-    fn search_loaded_nodes(&mut self, node: &TreeNodeRef, query: &str, show_files: bool, show_hidden: bool, fuzzy: bool) {
-        use fuzzy_matcher::FuzzyMatcher;
+    fn search_loaded_nodes(
+        &mut self,
+        node: &TreeNodeRef,
+        query: &str,
+        show_files: bool,
+        show_hidden: bool,
+        fuzzy: bool,
+    ) {
         use fuzzy_matcher::skim::SkimMatcherV2;
+        use fuzzy_matcher::FuzzyMatcher;
 
         let node_borrowed = node.borrow();
         let name_lower = node_borrowed.name.to_lowercase();
@@ -196,7 +216,15 @@ impl Search {
     }
 
     /// Phase 2: Spawn background thread for deep search
-    fn spawn_deep_search(&mut self, root: &TreeNodeRef, query: String, show_files: bool, show_hidden: bool, follow_symlinks: bool, fuzzy: bool) {
+    fn spawn_deep_search(
+        &mut self,
+        root: &TreeNodeRef,
+        query: String,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+        fuzzy: bool,
+    ) {
         let (result_tx, result_rx) = unbounded();
         let (cancel_tx, cancel_rx) = bounded(1);
 
@@ -205,7 +233,17 @@ impl Search {
 
         // Spawn search thread
         let handle = thread::spawn(move || {
-            Self::deep_search_recursive(&root_path, &query, &result_tx, &cancel_rx, show_files, show_hidden, follow_symlinks, fuzzy, &mut 0);
+            Self::deep_search_recursive(
+                &root_path,
+                &query,
+                &result_tx,
+                &cancel_rx,
+                show_files,
+                show_hidden,
+                follow_symlinks,
+                fuzzy,
+                &mut 0,
+            );
             let _ = result_tx.send(SearchMessage::Done);
         });
 
@@ -226,8 +264,8 @@ impl Search {
         fuzzy: bool,
         scanned: &mut usize,
     ) {
-        use fuzzy_matcher::FuzzyMatcher;
         use fuzzy_matcher::skim::SkimMatcherV2;
+        use fuzzy_matcher::FuzzyMatcher;
 
         // Check for cancellation
         if cancel_rx.try_recv().is_ok() {
@@ -277,12 +315,7 @@ impl Search {
             } else {
                 // Exact substring matching
                 if name_lower.contains(query) {
-                    let _ = result_tx.send(SearchMessage::Result(
-                        path.clone(),
-                        is_dir,
-                        None,
-                        None,
-                    ));
+                    let _ = result_tx.send(SearchMessage::Result(path.clone(), is_dir, None, None));
                 }
             }
         }
@@ -305,7 +338,17 @@ impl Search {
                     }
 
                     let child_path = entry.path();
-                    Self::deep_search_recursive(&child_path, query, result_tx, cancel_rx, show_files, show_hidden, follow_symlinks, fuzzy, scanned);
+                    Self::deep_search_recursive(
+                        &child_path,
+                        query,
+                        result_tx,
+                        cancel_rx,
+                        show_files,
+                        show_hidden,
+                        follow_symlinks,
+                        fuzzy,
+                        scanned,
+                    );
                 }
             }
         }
@@ -461,7 +504,7 @@ mod tests {
         std::fs::create_dir_all(&test_dir).unwrap();
 
         let root = std::rc::Rc::new(std::cell::RefCell::new(
-            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap()
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
         ));
 
         // Start a search
@@ -482,8 +525,11 @@ mod tests {
 
         // cancel_search() should return almost immediately (< 50ms)
         // If it blocks on join(), it would take much longer
-        assert!(elapsed < Duration::from_millis(50),
-            "cancel_search() took too long: {:?}", elapsed);
+        assert!(
+            elapsed < Duration::from_millis(50),
+            "cancel_search() took too long: {:?}",
+            elapsed
+        );
 
         // Clean up
         let _ = std::fs::remove_dir_all(&test_dir);
@@ -499,7 +545,7 @@ mod tests {
         std::fs::create_dir_all(&test_dir).unwrap();
 
         let root = std::rc::Rc::new(std::cell::RefCell::new(
-            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap()
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
         ));
 
         // Start first search
@@ -518,8 +564,11 @@ mod tests {
         let elapsed = start.elapsed();
 
         // The second search should start quickly without blocking
-        assert!(elapsed < Duration::from_millis(100),
-            "Second search took too long: {:?}", elapsed);
+        assert!(
+            elapsed < Duration::from_millis(100),
+            "Second search took too long: {:?}",
+            elapsed
+        );
 
         // Start third search (stress test)
         search.enter_mode();
@@ -540,7 +589,7 @@ mod tests {
         std::fs::create_dir_all(&test_dir).unwrap();
 
         let root = std::rc::Rc::new(std::cell::RefCell::new(
-            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap()
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
         ));
 
         let start = Instant::now();
@@ -558,8 +607,11 @@ mod tests {
 
         // All 10 search starts should complete in < 1 second
         // (each should take ~5ms + some overhead)
-        assert!(elapsed < Duration::from_secs(1),
-            "Rapid searches took too long: {:?}", elapsed);
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "Rapid searches took too long: {:?}",
+            elapsed
+        );
 
         // Clean up
         search.cancel_search();

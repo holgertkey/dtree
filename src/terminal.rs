@@ -1,14 +1,11 @@
-use std::path::PathBuf;
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use anyhow::Result;
 use crossterm::{
-    event::{self, Event, EnableMouseCapture, DisableMouseCapture, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use anyhow::Result;
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::path::PathBuf;
 
 use crate::app::App;
 
@@ -37,18 +34,18 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 }
 
 pub fn cleanup_terminal() -> Result<()> {
-    use std::io::Write;
     use crossterm::terminal::{Clear, ClearType};
+    use std::io::Write;
 
     // Restore terminal state in reverse order of setup
 
     // 1. CRITICAL: Explicitly disable ALL mouse tracking modes
     //    This is more thorough than just DisableMouseCapture
-    let _ = write!(std::io::stderr(), "\x1b[?1000l");  // Disable X10 mouse
-    let _ = write!(std::io::stderr(), "\x1b[?1002l");  // Disable cell motion
-    let _ = write!(std::io::stderr(), "\x1b[?1003l");  // Disable all motion
-    let _ = write!(std::io::stderr(), "\x1b[?1006l");  // Disable SGR mode
-    let _ = write!(std::io::stderr(), "\x1b[?1015l");  // Disable urxvt mode
+    let _ = write!(std::io::stderr(), "\x1b[?1000l"); // Disable X10 mouse
+    let _ = write!(std::io::stderr(), "\x1b[?1002l"); // Disable cell motion
+    let _ = write!(std::io::stderr(), "\x1b[?1003l"); // Disable all motion
+    let _ = write!(std::io::stderr(), "\x1b[?1006l"); // Disable SGR mode
+    let _ = write!(std::io::stderr(), "\x1b[?1015l"); // Disable urxvt mode
     let _ = std::io::stderr().execute(DisableMouseCapture);
     let _ = std::io::stderr().flush();
 
@@ -97,7 +94,10 @@ pub fn cleanup_terminal() -> Result<()> {
     Ok(())
 }
 
-pub fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>, app: &mut App) -> Result<Option<PathBuf>> {
+pub fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>,
+    app: &mut App,
+) -> Result<Option<PathBuf>> {
     // If in fullscreen mode and file loaded with unknown width, reload with correct terminal width
     if app.is_fullscreen_viewer() {
         let terminal_size = terminal.size()?;

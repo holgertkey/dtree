@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
+use crossterm::event::KeyCode;
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use crossterm::event::KeyCode;
 
 use crate::theme::ThemeConfig;
 
@@ -53,12 +53,24 @@ impl Default for AppearanceConfig {
     }
 }
 
-fn default_theme() -> String { "default".to_string() }
-fn default_show_icons() -> bool { false }
-fn default_split_position() -> u16 { 20 }
-fn default_show_line_numbers() -> bool { false }
-fn default_enable_syntax_highlighting() -> bool { true }
-fn default_syntax_theme() -> String { "base16-ocean.dark".to_string() }
+fn default_theme() -> String {
+    "default".to_string()
+}
+fn default_show_icons() -> bool {
+    false
+}
+fn default_split_position() -> u16 {
+    20
+}
+fn default_show_line_numbers() -> bool {
+    false
+}
+fn default_enable_syntax_highlighting() -> bool {
+    true
+}
+fn default_syntax_theme() -> String {
+    "base16-ocean.dark".to_string()
+}
 
 /// Behavior configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,10 +128,18 @@ impl Default for BehaviorConfig {
     }
 }
 
-fn default_max_file_lines() -> usize { 10000 }
-fn default_show_hidden() -> bool { true }
-fn default_follow_symlinks() -> bool { true }
-fn default_double_click_timeout() -> u64 { 500 }
+fn default_max_file_lines() -> usize {
+    10000
+}
+fn default_show_hidden() -> bool {
+    true
+}
+fn default_follow_symlinks() -> bool {
+    true
+}
+fn default_double_click_timeout() -> u64 {
+    500
+}
 #[cfg(unix)]
 fn default_editor() -> String {
     std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string())
@@ -159,8 +179,12 @@ fn default_hex_editor() -> String {
         "notepad.exe".to_string()
     }
 }
-fn default_wrap_lines() -> bool { true }
-fn default_mouse_scroll_lines() -> usize { 5 }
+fn default_wrap_lines() -> bool {
+    true
+}
+fn default_mouse_scroll_lines() -> usize {
+    5
+}
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,19 +262,45 @@ impl Default for KeybindingsConfig {
     }
 }
 
-fn default_quit_keys() -> Vec<String> { vec!["q".to_string(), "Esc".to_string()] }
-fn default_search_keys() -> Vec<String> { vec!["/".to_string()] }
-fn default_toggle_files_keys() -> Vec<String> { vec!["s".to_string()] }
-fn default_toggle_help_keys() -> Vec<String> { vec!["i".to_string()] }
-fn default_copy_path_keys() -> Vec<String> { vec!["c".to_string()] }
-fn default_open_editor_keys() -> Vec<String> { vec!["e".to_string()] }
-fn default_open_file_manager_keys() -> Vec<String> { vec!["o".to_string()] }
-fn default_create_bookmark_keys() -> Vec<String> { vec!["m".to_string()] }
-fn default_select_bookmark_keys() -> Vec<String> { vec!["'".to_string()] }
-fn default_show_line_numbers_keys() -> Vec<String> { vec!["l".to_string()] }
-fn default_toggle_wrap_keys() -> Vec<String> { vec!["w".to_string()] }
-fn default_visual_mode_keys() -> Vec<String> { vec!["V".to_string()] }
-fn default_visual_copy_keys() -> Vec<String> { vec!["y".to_string(), "Y".to_string()] }
+fn default_quit_keys() -> Vec<String> {
+    vec!["q".to_string(), "Esc".to_string()]
+}
+fn default_search_keys() -> Vec<String> {
+    vec!["/".to_string()]
+}
+fn default_toggle_files_keys() -> Vec<String> {
+    vec!["s".to_string()]
+}
+fn default_toggle_help_keys() -> Vec<String> {
+    vec!["i".to_string()]
+}
+fn default_copy_path_keys() -> Vec<String> {
+    vec!["c".to_string()]
+}
+fn default_open_editor_keys() -> Vec<String> {
+    vec!["e".to_string()]
+}
+fn default_open_file_manager_keys() -> Vec<String> {
+    vec!["o".to_string()]
+}
+fn default_create_bookmark_keys() -> Vec<String> {
+    vec!["m".to_string()]
+}
+fn default_select_bookmark_keys() -> Vec<String> {
+    vec!["'".to_string()]
+}
+fn default_show_line_numbers_keys() -> Vec<String> {
+    vec!["l".to_string()]
+}
+fn default_toggle_wrap_keys() -> Vec<String> {
+    vec!["w".to_string()]
+}
+fn default_visual_mode_keys() -> Vec<String> {
+    vec!["V".to_string()]
+}
+fn default_visual_copy_keys() -> Vec<String> {
+    vec!["y".to_string(), "Y".to_string()]
+}
 
 impl KeybindingsConfig {
     /// Check if a key matches any of the configured keys in the list
@@ -273,7 +323,9 @@ impl KeybindingsConfig {
             _ => return false,
         };
 
-        configured_keys.iter().any(|k| k.eq_ignore_ascii_case(&key_str))
+        configured_keys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&key_str))
     }
 
     pub fn is_search(&self, key: KeyCode) -> bool {
@@ -346,7 +398,8 @@ impl Config {
 
     /// Get a color value (guaranteed to be Some after load())
     pub fn get_color(opt: &Option<String>) -> &str {
-        opt.as_ref().expect("Color should be resolved after config load")
+        opt.as_ref()
+            .expect("Color should be resolved after config load")
     }
 
     /// Load configuration from a file
@@ -407,7 +460,8 @@ impl Config {
                               2. Or delete the file - it will be recreated with defaults\n\
                             \n\
                             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                            global_path.display(), e
+                            global_path.display(),
+                            e
                         );
                     }
                 }
@@ -424,7 +478,10 @@ impl Config {
         // Helper macro to apply color resolution
         macro_rules! resolve_color {
             ($field:ident) => {
-                config.appearance.colors.$field = config.appearance.colors.$field
+                config.appearance.colors.$field = config
+                    .appearance
+                    .colors
+                    .$field
                     .or_else(|| preset.as_ref().and_then(|p| p.$field.clone()))
                     .or_else(|| fallback.$field.clone());
             };
@@ -454,7 +511,8 @@ impl Config {
         let file_manager = default_file_manager();
         let hex_editor = default_hex_editor();
 
-        let default_config = format!(r#"# dtree configuration file
+        let default_config = format!(
+            r#"# dtree configuration file
 # This file uses TOML format: https://toml.io
 
 [appearance]
@@ -583,12 +641,15 @@ toggle_wrap = ["w"]
 # Enter visual mode to select multiple lines with keyboard
 visual_mode = ["V"]          # Enter/exit visual selection mode (Shift+V)
 visual_copy = ["y", "Y"]     # Copy selected lines to clipboard and exit
-"#, editor, file_manager, hex_editor);
+"#,
+            editor, file_manager, hex_editor
+        );
 
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create config directory: {}", parent.display())
+            })?;
         }
 
         fs::write(path, default_config)
@@ -614,6 +675,9 @@ mod tests {
     fn test_color_parsing() {
         assert!(matches!(ThemeConfig::parse_color("red"), Color::Red));
         assert!(matches!(ThemeConfig::parse_color("blue"), Color::Blue));
-        assert!(matches!(ThemeConfig::parse_color("#FF0000"), Color::Rgb(255, 0, 0)));
+        assert!(matches!(
+            ThemeConfig::parse_color("#FF0000"),
+            Color::Rgb(255, 0, 0)
+        ));
     }
 }

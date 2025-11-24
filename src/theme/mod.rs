@@ -7,8 +7,7 @@ pub mod presets;
 /// All fields are Option<String>:
 /// - None means the color is not set (use preset theme value)
 /// - Some(value) means the color is explicitly set (override preset)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ThemeConfig {
     /// Color for selected items
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -62,7 +61,6 @@ pub struct ThemeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_color: Option<String>,
 }
-
 
 impl ThemeConfig {
     /// Parse a color string to ratatui Color
