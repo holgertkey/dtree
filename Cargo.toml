@@ -40,6 +40,10 @@ crossbeam-channel = "0.5"
 fuzzy-matcher = "0.3"
 which = "6.0"
 
+[[bin]]
+name = "dtree"
+path = "src/main.rs"
+
 [dev-dependencies]
 tempfile = "3.13"
 
