@@ -5,7 +5,6 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![CI](https://github.com/holgertkey/dtree/actions/workflows/ci.yml/badge.svg)](https://github.com/holgertkey/dtree/actions/workflows/ci.yml)
-[![Release](https://github.com/holgertkey/dtree/actions/workflows/release.yml/badge.svg)](https://github.com/holgertkey/dtree/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/holgertkey/dtree)](https://github.com/holgertkey/dtree/releases/latest)
 [![Crates.io](https://img.shields.io/crates/v/dtree-tui)](https://crates.io/crates/dtree-tui)
 [![Downloads](https://img.shields.io/crates/d/dtree-tui)](https://crates.io/crates/dtree-tui)
