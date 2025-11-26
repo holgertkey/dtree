@@ -1,0 +1,263 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          # Extract changelog for current version
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          CHANGELOG=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$ d' | tail -n +2)
+
+          # If no changelog found, use a default message
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="Release version $VERSION
+
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/v$VERSION/CHANGELOG.md) for details."
+          fi
+
+          # Save to file for multiline support
+          echo "$CHANGELOG" > /tmp/changelog.txt
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release v${{ steps.get_version.outputs.VERSION }}
+          body_path: /tmp/changelog.txt
+          draft: false
+          prerelease: false
+
+  build-release:
+    name: Build Release Binaries
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name: dtree-linux-x86_64
+            use_cross: false
+
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            asset_name: dtree-linux-x86_64-musl
+            use_cross: true
+
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            asset_name: dtree-linux-aarch64
+            use_cross: true
+
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset_name: dtree-macos-x86_64
+            use_cross: false
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: dtree-macos-aarch64
+            use_cross: false
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name: dtree-windows-x86_64.exe
+            use_cross: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Get version
+        id: get_version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+
+      - name: Prepare binary
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            BINARY="dtree.exe"
+          else
+            BINARY="dtree"
+          fi
+
+          # Strip binary if not on Windows
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then
+            strip "$BINARY" || true
+          fi
+
+          # Create archive
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a ../../../${{ matrix.asset_name }}.zip "$BINARY"
+          else
+            tar czf ../../../${{ matrix.asset_name }}.tar.gz "$BINARY"
+          fi
+
+      - name: Upload Release Asset (tar.gz)
+        if: matrix.os != 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.asset_name }}.tar.gz
+          asset_name: ${{ matrix.asset_name }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Release Asset (zip)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.asset_name }}.zip
+          asset_name: ${{ matrix.asset_name }}.zip
+          asset_content_type: application/zip
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    # Only publish to crates.io if CRATES_TOKEN is set
+    if: ${{ secrets.CRATES_TOKEN != '' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
+        run: cargo publish --token "${CARGO_REGISTRY_TOKEN}" --allow-dirty
+
+  update-release-notes:
+    name: Update Release Notes
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create enhanced release notes
+        run: |
+          cat > /tmp/enhanced_notes.md << 'EOF'
+          ## 📦 Installation
+
+          ### From crates.io (Recommended)
+          ```bash
+          cargo install dtree-tui
+          ```
+
+          ### From Binary
+          Download the appropriate binary for your platform below:
+
+          - **Linux x86_64**: `dtree-linux-x86_64.tar.gz` (glibc)
+          - **Linux x86_64 (musl)**: `dtree-linux-x86_64-musl.tar.gz` (static, no dependencies)
+          - **Linux ARM64**: `dtree-linux-aarch64.tar.gz`
+          - **macOS x86_64 (Intel)**: `dtree-macos-x86_64.tar.gz`
+          - **macOS ARM64 (Apple Silicon)**: `dtree-macos-aarch64.tar.gz`
+          - **Windows x86_64**: `dtree-windows-x86_64.exe.zip`
+
+          ### After Download
+          ```bash
+          # Linux/macOS
+          tar xzf dtree-*.tar.gz
+          chmod +x dtree
+          sudo mv dtree /usr/local/bin/
+
+          # Windows
+          # Extract the zip and add to PATH
+          ```
+
+          ## 📝 What's Changed
+
+          EOF
+
+          # Append existing changelog
+          sed -n "/## \[${{ steps.get_version.outputs.VERSION }}\]/,/## \[/p" CHANGELOG.md | sed '$ d' | tail -n +2 >> /tmp/enhanced_notes.md
+
+          cat >> /tmp/enhanced_notes.md << 'EOF'
+
+          ## 📚 Documentation
+
+          - [Getting Started](https://github.com/${{ github.repository }}/blob/v${{ steps.get_version.outputs.VERSION }}/docs/getting-started.md)
+          - [Full Documentation](https://github.com/${{ github.repository }}/blob/v${{ steps.get_version.outputs.VERSION }}/README.md)
+          - [Changelog](https://github.com/${{ github.repository }}/blob/v${{ steps.get_version.outputs.VERSION }}/CHANGELOG.md)
+
+          ## 🙏 Thank You!
+
+          Thank you for using dtree-tui! If you encounter any issues, please [open an issue](https://github.com/${{ github.repository }}/issues).
+          EOF
+
+      - name: Update release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/enhanced_notes.md', 'utf8');
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              body: body
+            });
