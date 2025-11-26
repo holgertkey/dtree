@@ -51,10 +51,6 @@ This document describes the GitHub Actions workflows configured for dtree-tui.
 - Creates archives (tar.gz for Unix, zip for Windows)
 - Uploads binaries as release assets
 
-#### Publish to crates.io
-- Automatically publishes to crates.io (if `CRATES_TOKEN` is set)
-- Only runs after successful builds
-
 #### Update Release Notes
 - Enhances release notes with installation instructions
 - Adds links to documentation
@@ -69,22 +65,6 @@ GitHub Actions is enabled by default for public repositories. For private reposi
 2. Select "Allow all actions and reusable workflows"
 
 ### 2. Configure Secrets (Optional)
-
-#### For crates.io Publishing
-
-If you want to automatically publish to crates.io on release:
-
-1. Get your crates.io API token:
-   ```bash
-   cargo login
-   # Token is in ~/.cargo/credentials
-   ```
-
-2. Add the token to GitHub:
-   - Go to repository Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Name: `CRATES_TOKEN`
-   - Value: Your crates.io API token
 
 #### For Code Coverage (Optional)
 
@@ -143,7 +123,6 @@ Protect your main branch to require CI checks:
    - Release workflow will build binaries
    - GitHub release will be created automatically
    - Binaries will be uploaded as assets
-   - (Optional) Package will be published to crates.io
 
 ### Automated Release Process (Future)
 
@@ -186,11 +165,6 @@ If a workflow fails:
   ```
 
 - **Binary upload fails**: Check GitHub API rate limits or token permissions
-
-- **crates.io publish fails**:
-  - Ensure `CRATES_TOKEN` is set correctly
-  - Check that version doesn't already exist on crates.io
-  - Verify `Cargo.toml` metadata is complete
 
 ## Workflow Badges
 

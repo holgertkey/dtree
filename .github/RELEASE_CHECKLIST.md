@@ -104,7 +104,6 @@ git push origin vX.Y.Z
 - [ ] Watch the Release workflow:
   - [ ] Create Release job completes
   - [ ] Build Release Binaries jobs complete (all platforms)
-  - [ ] Publish to crates.io completes (if configured)
   - [ ] Update Release Notes completes
 
 ### 5. Verify Release
@@ -125,15 +124,6 @@ git push origin vX.Y.Z
   wget https://github.com/holgertkey/dtree/releases/download/vX.Y.Z/dtree-linux-x86_64.tar.gz
   tar xzf dtree-linux-x86_64.tar.gz
   ./dtree --version
-  ```
-
-### 6. Verify crates.io (if auto-publish enabled)
-
-- [ ] Check package appears on [crates.io/crates/dtree-tui](https://crates.io/crates/dtree-tui)
-- [ ] Verify correct version is published
-- [ ] Test installation from crates.io:
-  ```bash
-  cargo install dtree-tui --version X.Y.Z
   ```
 
 ## Post-Release
@@ -197,12 +187,7 @@ If the release has critical issues:
    git push origin :refs/tags/vX.Y.Z
    ```
 
-3. Yank from crates.io (if published):
-   ```bash
-   cargo yank --vers X.Y.Z dtree-tui
-   ```
-
-4. Fix issues, increment version, and release again
+3. Fix issues, increment version, and release again
 
 ## Version Numbering Guide
 
@@ -236,4 +221,3 @@ Follow [Semantic Versioning](https://semver.org/):
 - [Keep a Changelog](https://keepachangelog.com/)
 - [Semantic Versioning](https://semver.org/)
 - [GitHub Actions Documentation](.github/WORKFLOWS.md)
-- [crates.io Publishing Guide](https://doc.rust-lang.org/cargo/reference/publishing.html)

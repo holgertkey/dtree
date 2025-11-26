@@ -74,27 +74,6 @@ When you're ready to create a new release:
    - Watch the "Release" workflow build binaries
    - Check releases: https://github.com/holgertkey/dtree/releases
 
-## Optional: Set Up crates.io Auto-Publishing
-
-To automatically publish to crates.io on release:
-
-1. Get your crates.io token:
-   ```bash
-   # Login to crates.io
-   cargo login
-
-   # Token is saved in ~/.cargo/credentials
-   cat ~/.cargo/credentials
-   ```
-
-2. Add token to GitHub:
-   - Go to: https://github.com/holgertkey/dtree/settings/secrets/actions
-   - Click "New repository secret"
-   - Name: `CRATES_TOKEN`
-   - Value: Your token from ~/.cargo/credentials
-
-3. Next release will automatically publish to crates.io!
-
 ## What Happens Now?
 
 ### On Every Push to Main/Develop
@@ -119,7 +98,6 @@ The Release workflow automatically:
   - macOS ARM64 (Apple Silicon)
   - Windows x86_64
 - ✅ Uploads binaries to the release
-- ✅ Publishes to crates.io (if configured)
 - ✅ Updates release notes with installation instructions
 
 ## Status Badges
@@ -168,8 +146,7 @@ Your README now includes these badges:
 
 1. ✅ Commit and push the GitHub Actions files
 2. ✅ Verify CI workflow passes
-3. ✅ (Optional) Set up crates.io token for auto-publishing
-4. ✅ When ready, create a new release following the checklist
+3. ✅ When ready, create a new release following the checklist
 
 ## Learn More
 
